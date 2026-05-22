@@ -1574,10 +1574,12 @@
       if (state.label) params.set("label", state.label);
       if (state.url) params.set("url", state.url);
       if (state.sheet) params.set("sheet", state.sheet);
+      if (state.classFilter) params.set("class", state.classFilter);
       if (state.subject && state.subject !== "all") params.set("subject", state.subject);
     } else if (state && state.open) {
       params.set("open", state.open);
       if (state.sheet) params.set("sheet", state.sheet);
+      if (state.classFilter) params.set("class", state.classFilter);
       if (state.subject && state.subject !== "all") params.set("subject", state.subject);
     }
     var q = params.toString();
@@ -1598,6 +1600,9 @@
       activeSheetView =
         resolvePreferredSheetTab(sheetList, restore.sheet) || activeSheetView;
     }
+    if (restore.classFilter || restore.class) {
+      activeClassFilter = restore.classFilter || restore.class;
+    }
     if (restore.subject) {
       var subjectOk = getSubjectFilterOptions().some(function (o) {
         return o.id === restore.subject;
@@ -1613,6 +1618,7 @@
         label: adminSetupLabel,
         url: adminSetupUrl,
         sheet: activeSheetView,
+        classFilter: activeClassFilter,
         subject: activeSubjectView,
       });
       return;
@@ -1621,6 +1627,7 @@
       replaceIndexPageUrl({
         open: currentLaunchEntry.id,
         sheet: activeSheetView,
+        classFilter: activeClassFilter,
         subject: activeSubjectView,
       });
     }
@@ -3005,9 +3012,19 @@
       if (!hasData) throw new Error("시트에 데이터가 없습니다. 공개 공유 설정을 확인하세요.");
       sheetsData[id] = sheetInputs;
       lastMultiResult = analyzeAllSheets(sheetInputs, masterRoster);
-      activeSheetView = resolveInitialActiveSheetTab(entry, lastMultiResult.sheets);
       activeSubjectView = "all";
-      applyRestoreView(restoreView);
+      activeClassFilter = null;
+      applyInitialClassView(entry, getClassTabsConfig());
+      applyRestoreView(
+        Object.assign({}, restoreView || {}, {
+          classFilter:
+            restoreView && restoreView.classFilter
+              ? restoreView.classFilter
+              : restoreView && restoreView.class
+                ? restoreView.class
+                : activeClassFilter,
+        })
+      );
       renderResults(getActiveAnalysis(), id, lastMultiResult);
       syncViewUrl();
       document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -3025,6 +3042,7 @@
     }
   }
   var activeSheetView = null;
+  var activeClassFilter = null;
   var activeSubjectView = null;
   var currentLaunchEntry = null;
   var adminSetupMode = false;
@@ -3099,6 +3117,7 @@
       if (!prev) return;
       if (prev.label) cls.label = prev.label;
       if (prev.sheetName) cls.sheetName = prev.sheetName;
+      if (prev.classKey) cls.classKey = prev.classKey;
       if (prev.enabled !== undefined) cls.enabled = prev.enabled !== false;
       if (prev.order != null) cls.order = prev.order;
     });
@@ -3237,42 +3256,121 @@
     return categories;
   }
 
-  function slugClassId(sheetName) {
-    var norm = normalizeSheetClassKey(sheetName);
+  function slugClassId(classKey) {
+    var norm = normalizeSheetClassKey(classKey);
     if (!norm) return "class-unknown";
     return "class-" + norm.replace(/[^a-z0-9가-힣]/g, "-").slice(0, 32);
+  }
+
+  function isClassLikeSheetName(name) {
+    return /(\d+)\s*반/.test(String(name || "").trim());
+  }
+
+  function resolveRowClassLabel(row) {
+    if (!row) return "";
+    var classVal = row.반 && row.반 !== "(미입력)" ? coerceText(row.반) : "";
+    if (classVal) {
+      var m = classVal.match(/(\d+)\s*반/);
+      return m ? m[1] + "반" : classVal;
+    }
+    var raw = row._raw || {};
+    var sid = "";
+    Object.keys(raw).forEach(function (k) {
+      if (sid) return;
+      var nk = normalizeHeader(k);
+      if (
+        STUDENT_ID_ALIASES.some(function (a) {
+          return normalizeHeader(a) === nk || nk.indexOf(normalizeHeader(a)) >= 0;
+        })
+      ) {
+        sid = raw[k];
+      }
+    });
+    if (!sid && raw[Object.keys(raw)[SURVEY_COL_STUDENT_ID]]) {
+      sid = raw[Object.keys(raw)[SURVEY_COL_STUDENT_ID]];
+    }
+    var parsed = parseStudentId(sid);
+    if (parsed.반 != null) return parsed.반 + "반";
+    return "";
+  }
+
+  function rowMatchesClassFilter(row, classKey) {
+    if (!classKey) return true;
+    var target = normalizeSheetClassKey(classKey);
+    if (!target) return true;
+    var rowClass = resolveRowClassLabel(row);
+    return normalizeSheetClassKey(rowClass) === target;
+  }
+
+  function countRowsForClass(sheet, classKey) {
+    if (!sheet || !sheet.rows) return 0;
+    if (!classKey || normalizeSheetClassKey(classKey) === normalizeSheetClassKey(sheet.sheetName)) {
+      return sheet.summary ? sheet.summary.총응답 : sheet.rows.length;
+    }
+    return sheet.rows.filter(function (row) {
+      return rowMatchesClassFilter(row, classKey);
+    }).length;
+  }
+
+  function filterSheetAnalysisByClass(sheet, classKey) {
+    if (!sheet) return null;
+    if (!classKey || normalizeSheetClassKey(classKey) === normalizeSheetClassKey(sheet.sheetName)) {
+      return sheet;
+    }
+    var rows = (sheet.rows || []).filter(function (row) {
+      return rowMatchesClassFilter(row, classKey);
+    });
+    var payload = buildAnalysisPayload(
+      sheet.headers || [],
+      rows,
+      Object.assign({}, sheet.meta || {}, { classFilter: classKey })
+    );
+    return Object.assign({}, sheet, payload, {
+      rows: rows,
+      participation: sheet.participation,
+    });
   }
 
   function deriveClassesFromAnalysis(multi) {
     var registry = {};
     var orderList = [];
 
-    function registerClass(sheetName, count) {
-      var name = coerceText(sheetName);
-      if (!name || isListSheetTab(name)) return;
-      var m = name.match(/(\d+)\s*반/);
-      var label = m ? m[1] + "반" : name;
-      var id = slugClassId(label);
+    function registerClass(hostSheetName, classKey, label, count) {
+      var host = coerceText(hostSheetName);
+      var key = normalizeSheetClassKey(classKey || label);
+      if (!host || !key || isListSheetTab(host)) return;
+      var m = String(label || classKey || "").match(/(\d+)\s*반/);
+      var display = m ? m[1] + "반" : coerceText(label || classKey);
+      var id = slugClassId(key);
       if (!registry[id]) {
         registry[id] = {
           id: id,
-          sheetName: name,
-          label: label,
+          sheetName: host,
+          classKey: key,
+          label: display,
           enabled: true,
           count: 0,
           firstOrder: orderList.length,
         };
         orderList.push(id);
       }
-      registry[id].count = Math.max(registry[id].count, count || 0);
+      registry[id].count += count || 0;
     }
 
     (multi && multi.sheets ? multi.sheets : []).forEach(function (sheet) {
       if (isListSheetTab(sheet.sheetName)) return;
-      var cnt = sheet.summary ? sheet.summary.총응답 : 0;
-      registerClass(sheet.sheetName, cnt);
+      if (isClassLikeSheetName(sheet.sheetName)) {
+        registerClass(
+          sheet.sheetName,
+          normalizeSheetClassKey(sheet.sheetName),
+          sheet.sheetName,
+          sheet.summary ? sheet.summary.총응답 : sheet.rows.length
+        );
+      }
       (sheet.rows || []).forEach(function (row) {
-        if (row.반 && row.반 !== "(미입력)") registerClass(row.반, 0);
+        var rowClass = resolveRowClassLabel(row);
+        if (!rowClass) return;
+        registerClass(sheet.sheetName, rowClass, rowClass, 1);
       });
     });
 
@@ -3288,6 +3386,7 @@
       return {
         id: item.id,
         sheetName: item.sheetName,
+        classKey: item.classKey,
         label: item.label,
         enabled: true,
         order: idx,
@@ -3749,6 +3848,7 @@
         return {
           id: c.id,
           sheetName: c.sheetName,
+          classKey: c.classKey || normalizeSheetClassKey(c.label),
           label: c.label,
           enabled: c.enabled !== false,
           order: c.order != null ? c.order : i,
@@ -3854,29 +3954,19 @@
         adminSetupClasses = mergeSavedClassPrefs(adminSetupClasses, draft.classes);
       }
       renderAdminSetupPanels();
-      var allowed = getAllowedClassSheetNames();
-      if (allowed && allowed.length) {
-        activeSheetView = resolvePreferredSheetTab(
-          lastMultiResult.sheets.map(function (s) {
-            return { sheetName: s.sheetName };
-          }),
-          allowed[0]
-        );
-      } else {
-        var classNum = parseClassNumberFromLabel(label);
-        activeSheetView = classNum
-          ? resolvePreferredSheetTab(
-              lastMultiResult.sheets.map(function (s) {
-                return { sheetName: s.sheetName };
-              }),
-              classNum + "반"
-            )
-          : lastMultiResult.sheets[0]
-            ? lastMultiResult.sheets[0].sheetName
-            : null;
-      }
       activeSubjectView = "all";
-      applyRestoreView(restoreView);
+      activeClassFilter = null;
+      applyInitialClassView(null, getClassTabsConfig());
+      applyRestoreView(
+        Object.assign({}, restoreView || {}, {
+          classFilter:
+            restoreView && restoreView.classFilter
+              ? restoreView.classFilter
+              : restoreView && restoreView.class
+                ? restoreView.class
+                : activeClassFilter,
+        })
+      );
       renderResults(getActiveAnalysis(), id, lastMultiResult);
       syncViewUrl();
       setFabStackVisible(true);
@@ -3897,11 +3987,38 @@
 
   function getActiveAnalysis() {
     if (!lastMultiResult || !activeSheetView) return null;
-    return (
-      lastMultiResult.sheets.find(function (s) {
-        return s.sheetName === activeSheetView;
-      }) || null
-    );
+    var sheet = lastMultiResult.sheets.find(function (s) {
+      return s.sheetName === activeSheetView;
+    });
+    if (!sheet) return null;
+    return filterSheetAnalysisByClass(sheet, activeClassFilter);
+  }
+
+  function applyInitialClassView(entry, classTabs) {
+    if (!classTabs || !classTabs.length || !lastMultiResult) return;
+    var first = classTabs[0];
+    activeSheetView = first.sheetName;
+    var hostKey = normalizeSheetClassKey(first.sheetName);
+    var classKey = first.classKey || normalizeSheetClassKey(first.label);
+    activeClassFilter = classKey && classKey !== hostKey ? classKey : null;
+    if (entry && entry.tab) {
+      var sheetList = lastMultiResult.sheets.map(function (s) {
+        return { sheetName: s.sheetName };
+      });
+      activeSheetView = resolvePreferredSheetTab(sheetList, entry.tab) || activeSheetView;
+      var match = classTabs.find(function (cls) {
+        return (
+          normalizeSheetClassKey(cls.sheetName) === normalizeSheetClassKey(activeSheetView) ||
+          normalizeSheetClassKey(cls.classKey) === normalizeSheetClassKey(entry.tab)
+        );
+      });
+      if (match) {
+        activeSheetView = match.sheetName;
+        var mk = match.classKey || normalizeSheetClassKey(match.label);
+        activeClassFilter =
+          mk && mk !== normalizeSheetClassKey(match.sheetName) ? mk : null;
+      }
+    }
   }
 
   function isTeacherMessageSection(sec) {
@@ -3952,9 +4069,17 @@
     );
   }
 
+  function resolveHostSheetForClass(cls, sheetByName) {
+    if (!cls || !sheetByName) return null;
+    if (cls.sheetName && sheetByName[cls.sheetName]) return sheetByName[cls.sheetName];
+    var names = Object.keys(sheetByName);
+    if (names.length === 1) return sheetByName[names[0]];
+    return findSheetForClassConfig(cls, sheetByName);
+  }
+
   function renderSheetTabs() {
-    var html = renderSubjectTabsOnly();
-    if (!lastMultiResult) return html;
+    var html = "";
+    if (!lastMultiResult) return renderSubjectTabsOnly();
 
     var sheetByName = {};
     lastMultiResult.sheets.forEach(function (sheet) {
@@ -3968,10 +4093,11 @@
 
     if (classTabs.length) {
       classTabs.forEach(function (cls) {
-        var sheet = findSheetForClassConfig(cls, sheetByName);
+        var sheet = resolveHostSheetForClass(cls, sheetByName);
         if (sheet) tabsToRender.push({ cls: cls, sheet: sheet });
       });
-    } else {
+    }
+    if (!tabsToRender.length) {
       lastMultiResult.sheets.forEach(function (sheet) {
         if (!isListSheetTab(sheet.sheetName)) {
           tabsToRender.push({ cls: null, sheet: sheet });
@@ -3979,24 +4105,34 @@
       });
     }
 
-    if (!tabsToRender.length) return html;
+    if (tabsToRender.length) {
+      html += '<div class="sheet-tabs" role="tablist" aria-label="반 선택">';
+      tabsToRender.forEach(function (item) {
+        var sheet = item.sheet;
+        var cls = item.cls;
+        var classKey = cls ? cls.classKey || normalizeSheetClassKey(cls.label) : "";
+        var hostKey = normalizeSheetClassKey(sheet.sheetName);
+        var useFilter = classKey && classKey !== hostKey;
+        var active =
+          activeSheetView === sheet.sheetName &&
+          (activeClassFilter || "") === (useFilter ? classKey : "");
+        var tabLabel = cls && cls.label ? cls.label : sheet.sheetName;
+        var count = countRowsForClass(sheet, useFilter ? classKey : null);
+        html +=
+          '<button type="button" class="sheet-tab' +
+          active +
+          '" data-sheet="' +
+          esc(sheet.sheetName) +
+          '" data-class="' +
+          esc(useFilter ? classKey : "") +
+          '" role="tab">';
+        html += esc(tabLabel);
+        html += '<span class="count">' + esc(String(count)) + "건</span></button>";
+      });
+      html += "</div>";
+    }
 
-    html += '<div class="sheet-tabs" role="tablist" aria-label="반 선택">';
-    tabsToRender.forEach(function (item) {
-      var sheet = item.sheet;
-      var cls = item.cls;
-      var active = activeSheetView === sheet.sheetName ? " active" : "";
-      var tabLabel = cls && cls.label ? cls.label : sheet.sheetName;
-      html +=
-        '<button type="button" class="sheet-tab' +
-        active +
-        '" data-sheet="' +
-        esc(sheet.sheetName) +
-        '" role="tab">';
-      html += esc(tabLabel);
-      html += '<span class="count">' + esc(String(sheet.summary.총응답)) + "건</span></button>";
-    });
-    html += "</div>";
+    html += renderSubjectTabsOnly();
     return html;
   }
 
@@ -4093,7 +4229,12 @@
 
   function renderParticipationBanner(data, classLabel) {
     var p = data.participation;
-    var label = classLabel || (data.meta && data.meta.sheetName) || activeSheetView || "";
+    var label =
+      activeClassFilter ||
+      classLabel ||
+      (data.meta && data.meta.sheetName) ||
+      activeSheetView ||
+      "";
     if (!label && (!p || !p.maxExpected)) return "";
     var html =
       '<div class="participation-banner participation-banner--row" role="status" aria-live="polite">';
@@ -4301,6 +4442,7 @@
       if (setupPanel) setupPanel.hidden = true;
     }
     activeSheetView = null;
+    activeClassFilter = null;
     activeSubjectView = null;
     if (!adminSetupMode) currentLaunchEntry = null;
     if (errorEl) errorEl.hidden = true;
@@ -4391,6 +4533,7 @@
     el.querySelectorAll(".sheet-tab").forEach(function (btn) {
       btn.addEventListener("click", function () {
         activeSheetView = btn.getAttribute("data-sheet");
+        activeClassFilter = btn.getAttribute("data-class") || null;
         renderResults(getActiveAnalysis(), spreadsheetId, lastMultiResult);
         syncViewUrl();
       });
@@ -4483,10 +4626,12 @@
       label: label,
       url: url,
       sheet: params.get("sheet"),
+      class: params.get("class"),
       subject: params.get("subject"),
     });
     launchAdminSetup(label, url, {
       sheet: params.get("sheet"),
+      class: params.get("class"),
       subject: params.get("subject"),
     });
   })();
@@ -4504,6 +4649,7 @@
     if (entry) {
       launchSheetAnalysis(entry, null, {
         sheet: params.get("sheet"),
+        class: params.get("class"),
         subject: params.get("subject"),
       });
     }
