@@ -57,12 +57,14 @@ def parse_student_id(student_id: str | Any) -> tuple[int | None, int | None, int
     except ValueError:
         pass
     digits = re.sub(r"\D", "", cleaned)
+    if len(digits) > 4:
+        digits = digits[-4:]
+    if len(digits) == 3:
+        digits = "1" + digits
     if len(digits) == 4:
         return int(digits[0]), int(digits[1]), int(digits[2:])
     if len(digits) == 5:
         return int(digits[0]), int(digits[1:3]), int(digits[3:])
-    if len(digits) == 3:
-        return 1, int(digits[0]), int(digits[1:])
     return None, None, None
 
 

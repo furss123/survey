@@ -2129,39 +2129,70 @@
     return -1;
   }
 
-  /** 학번 4자리: 학년(1)+반(1)+번호(2). 예) 1101→1학년1반1번, 1320→1학년3반20번, 1408→1학년4반8번 */
+  /** 학번 4자리: 학년(1)+반(1)+번호(2). 예) 1101→1학년1반1번, 1320→1학년3반20번 */
+  function normalizeStudentIdDigits(digits) {
+    if (!digits) return "";
+    if (digits.length > 4) return digits.slice(-4);
+    if (digits.length === 3) return "1" + digits;
+    return digits;
+  }
+
+  function formatStudentIdFromParsed(parsed) {
+    if (parsed.grade == null || parsed.반 == null || parsed.번호 == null) return "";
+    return (
+      String(parsed.grade) +
+      String(parsed.반) +
+      String(parsed.번호).padStart(2, "0")
+    );
+  }
+
   function parseStudentId(value) {
     var s = coerceText(value);
-    if (!s) return { grade: null, 반: null, 번호: null };
+    if (!s) return { grade: null, 반: null, 번호: null, 학번: "" };
     var cleaned = s.replace(/,/g, "");
     var asNum = Number(cleaned);
     if (Number.isFinite(asNum) && asNum >= 0 && asNum === Math.floor(asNum)) {
       cleaned = String(Math.floor(asNum));
     }
-    var digits = cleaned.replace(/\D/g, "");
+    var digits = normalizeStudentIdDigits(cleaned.replace(/\D/g, ""));
     if (digits.length === 4) {
-      return {
+      var parsed4 = {
         grade: parseInt(digits.charAt(0), 10),
         반: parseInt(digits.charAt(1), 10),
         번호: parseInt(digits.slice(2), 10),
       };
+      parsed4.학번 = formatStudentIdFromParsed(parsed4);
+      return parsed4;
     }
     if (digits.length === 5) {
-      return {
+      var parsed5 = {
         grade: parseInt(digits.charAt(0), 10),
         반: parseInt(digits.slice(1, 3), 10),
         번호: parseInt(digits.slice(3), 10),
       };
-    }
-    if (digits.length === 3) {
-      return {
-        grade: 1,
-        반: parseInt(digits.charAt(0), 10),
-        번호: parseInt(digits.slice(1), 10),
-      };
+      parsed5.학번 = formatStudentIdFromParsed(parsed5);
+      return parsed5;
     }
     var num = coerceNumber(s);
-    return { grade: null, 반: null, 번호: num };
+    return { grade: null, 반: null, 번호: num, 학번: "" };
+  }
+
+  function findSurveyHeaderRowIndex(rawValues) {
+    if (!rawValues || !rawValues.length) return SURVEY_HEADER_ROW_INDEX;
+    var max = Math.min(10, rawValues.length);
+    for (var i = 0; i < max; i++) {
+      var headerRow = rawValues[i].map(coerceText);
+      if (findColumnIndex(headerRow, STUDENT_ID_ALIASES) >= 0) return i;
+      if (findColumnIndex(headerRow, NAME_ALIASES) >= 0) return i;
+      if (
+        headerRow.some(function (h) {
+          return normalizeHeader(h).indexOf("타임스탬프") >= 0;
+        })
+      ) {
+        return i;
+      }
+    }
+    return SURVEY_HEADER_ROW_INDEX;
   }
 
   function resolveSurveyColumnIndices(headerRow) {
@@ -2422,8 +2453,9 @@
       return buildAnalysisPayload(profile.headers, profile.rows, Object.assign({}, profile.meta, { format: "profile" }));
     }
 
-    var headerRow = rawValues[SURVEY_HEADER_ROW_INDEX].map(coerceText);
-    var dataRows = rawValues.slice(SURVEY_HEADER_ROW_INDEX + 1).filter(function (row) {
+    var headerRowIndex = findSurveyHeaderRowIndex(rawValues);
+    var headerRow = rawValues[headerRowIndex].map(coerceText);
+    var dataRows = rawValues.slice(headerRowIndex + 1).filter(function (row) {
       return row.some(function (cell) { return coerceText(cell) !== ""; });
     });
 
@@ -2431,9 +2463,12 @@
 
     var rows = dataRows.map(function (raw, rowIndex) {
       var cells = headerRow.map(function (_, i) { return coerceText(raw[i]); });
-      var sidParsed = parseStudentId(
-        cols.studentIdIdx >= 0 ? raw[cols.studentIdIdx] : ""
-      );
+      var sidRaw = cols.studentIdIdx >= 0 ? raw[cols.studentIdIdx] : "";
+      var sidParsed = parseStudentId(sidRaw);
+      var studentId =
+        sidParsed.학번 ||
+        formatStudentIdFromParsed(sidParsed) ||
+        coerceText(sidRaw).replace(/\D/g, "");
       var classVal = cols.classIdx >= 0 ? coerceText(raw[cols.classIdx]) : "";
       if (!classVal && sidParsed.반 != null) classVal = sidParsed.반 + "반";
       var numberVal =
@@ -2456,6 +2491,8 @@
           : inferCompletionFromRow(cells, skipCols);
       var row = {
         id: rowIndex + 1,
+        학번: studentId || null,
+        학년: sidParsed.grade,
         반: classVal || "(미입력)",
         번호: numberVal,
         이름: nameVal,
@@ -2631,6 +2668,14 @@
     };
   }
 
+  function participationMatchKey(entry) {
+    if (!entry) return "";
+    var num = entry.번호 != null ? Number(entry.번호) : 0;
+    if (!num || num <= 0) return "";
+    var ban = entry.반 && entry.반 !== "(미입력)" ? normalizeSheetClassKey(entry.반) : "";
+    return ban ? ban + ":" + num : String(num);
+  }
+
   function computeSheetParticipation(rows, rosterOrMax, referenceSheetName, rosterSource, sheetName) {
     if (Array.isArray(rosterOrMax) && rosterOrMax.length) {
       var rosterSlice = sheetName
@@ -2638,10 +2683,12 @@
         : rosterOrMax.slice();
       var present = {};
       (rows || []).forEach(function (r) {
-        if (r.번호 != null && r.번호 > 0) present[Number(r.번호)] = true;
+        var key = participationMatchKey(r);
+        if (key) present[key] = true;
       });
       var missingStudents = rosterSlice.filter(function (entry) {
-        return entry.번호 != null && !present[Number(entry.번호)];
+        var key = participationMatchKey(entry);
+        return key && !present[key];
       });
       return {
         referenceSheetName: referenceSheetName || "list",
@@ -3272,6 +3319,10 @@
 
   function resolveRowClassLabel(row) {
     if (!row) return "";
+    if (row.학번) {
+      var fromId = parseStudentId(row.학번);
+      if (fromId.반 != null) return fromId.반 + "반";
+    }
     var classVal = row.반 && row.반 !== "(미입력)" ? coerceText(row.반) : "";
     if (classVal) {
       var m = classVal.match(/(\d+)\s*반/);
