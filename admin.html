@@ -290,10 +290,23 @@
       background: linear-gradient(180deg, #4a7ab0 0%, var(--school-navy) 100%);
       color: #fff;
     }
+    .admin-btn-edit {
+      border-color: var(--school-accent);
+      color: var(--school-navy-dark);
+      background: var(--school-accent-soft);
+    }
+    .admin-btn-edit:hover {
+      border-color: var(--school-navy-light);
+      background: #fff8e6;
+    }
     .admin-btn-danger {
       border-color: var(--school-danger);
       color: var(--school-danger);
       background: #fef2f2;
+    }
+    .registry-actions {
+      margin: 0;
+      flex-shrink: 0;
     }
     .admin-form label {
       display: block;
@@ -408,7 +421,8 @@
             <label for="adminSheetUrl">구글 시트 주소</label>
             <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
             <div class="admin-actions">
-              <button type="submit" class="admin-btn admin-btn-primary">시트 추가</button>
+              <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn">시트 추가</button>
+              <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>
               <button type="button" class="admin-btn" id="adminLogoutBtn">로그아웃</button>
             </div>
           </form>
@@ -490,6 +504,51 @@
     });
   }
 
+  var editingSheetId = null;
+
+  function setSheetFormMode(mode) {
+    var submitBtn = document.getElementById("adminSheetSubmitBtn");
+    var cancelBtn = document.getElementById("adminSheetCancelEditBtn");
+    var labelInput = document.getElementById("adminSheetLabel");
+    if (mode === "edit") {
+      if (submitBtn) submitBtn.textContent = "변경 저장";
+      if (cancelBtn) cancelBtn.hidden = false;
+      if (labelInput) labelInput.focus();
+    } else {
+      editingSheetId = null;
+      if (submitBtn) submitBtn.textContent = "시트 추가";
+      if (cancelBtn) cancelBtn.hidden = true;
+    }
+  }
+
+  function startEditSheet(id) {
+    var entry = findRegistryEntry(id);
+    if (!entry) {
+      alert("시트 정보를 찾을 수 없습니다.");
+      return;
+    }
+    editingSheetId = id;
+    document.getElementById("adminSheetLabel").value = entry.label || "";
+    document.getElementById("adminSheetUrl").value = entry.url || "";
+    setSheetFormMode("edit");
+    document.getElementById("adminSheetForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function cancelEditSheet() {
+    document.getElementById("adminSheetForm").reset();
+    setSheetFormMode("add");
+  }
+
+  function updateRegistryEntry(id, label, url) {
+    var registry = loadSheetRegistry();
+    var idx = registry.findIndex(function (item) {
+      return item.id === id;
+    });
+    if (idx < 0) throw new Error("수정할 시트를 찾을 수 없습니다.");
+    registry[idx] = Object.assign({}, registry[idx], { label: label, url: url });
+    saveSheetRegistry(registry);
+  }
+
   function renderAdminRegistryList() {
     var listEl = document.getElementById("adminRegistryList");
     if (!listEl) return;
@@ -505,9 +564,11 @@
           esc(item.label) +
           "</strong><span>" +
           esc(item.url) +
-          "</span></div><div class=\"admin-actions\" style=\"margin:0;\"><button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
+          "</span></div><div class=\"admin-actions registry-actions\"><button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
           esc(item.id) +
-          "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
+          "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-edit-id=\"" +
+          esc(item.id) +
+          "\">수정</button><button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
           esc(item.id) +
           "\">삭제</button></div></li>"
         );
@@ -519,10 +580,17 @@
         if (id) location.href = "index.html?open=" + encodeURIComponent(id);
       });
     });
+    listEl.querySelectorAll("[data-edit-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-edit-id");
+        if (id) startEditSheet(id);
+      });
+    });
     listEl.querySelectorAll("[data-delete-id]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-delete-id");
         if (!confirm("이 시트를 목록에서 삭제할까요?")) return;
+        if (editingSheetId === id) cancelEditSheet();
         var next = loadSheetRegistry().filter(function (item) {
           return item.id !== id;
         });
@@ -562,6 +630,10 @@
     location.href = "admin-login.html";
   });
 
+  document.getElementById("adminSheetCancelEditBtn").addEventListener("click", function () {
+    cancelEditSheet();
+  });
+
   document.getElementById("adminSheetForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var label = coerceText(document.getElementById("adminSheetLabel").value);
@@ -574,6 +646,18 @@
       parseSpreadsheetId(url);
     } catch (err) {
       alert(err.message || "구글 시트 주소 형식을 확인해 주세요.");
+      return;
+    }
+    if (editingSheetId) {
+      try {
+        updateRegistryEntry(editingSheetId, label, url);
+      } catch (err) {
+        alert(err.message || "시트 수정에 실패했습니다.");
+        return;
+      }
+      cancelEditSheet();
+      renderAdminRegistryList();
+      alert("시트 정보가 수정되었습니다.");
       return;
     }
     var registry = loadSheetRegistry();
