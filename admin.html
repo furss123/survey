@@ -420,6 +420,29 @@
       color: var(--theme-text-muted);
       text-align: center;
     }
+    .admin-logout-dock {
+      position: fixed;
+      right: var(--content-pad);
+      bottom: calc(var(--site-footer-h) + var(--space-4));
+      z-index: 900;
+    }
+    .admin-btn-logout {
+      border-radius: 999px;
+      padding: 10px 22px;
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      color: var(--theme-text);
+      box-shadow: var(--shadow-sm);
+    }
+    .admin-btn-logout:hover {
+      border-color: var(--school-navy-light);
+      background: var(--theme-bg-muted);
+    }
+    @media (min-width: 1020px) {
+      .admin-logout-dock {
+        right: calc((100vw - var(--content-max)) / 2 + var(--content-pad));
+      }
+    }
     @media (max-width: 720px) {
       .panel-section { padding: var(--space-5) var(--space-4); }
       .site-header-inner { flex-wrap: wrap; }
@@ -472,7 +495,6 @@
             <div class="admin-actions">
               <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn" hidden>시트 추가</button>
               <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>
-              <button type="button" class="admin-btn" id="adminLogoutBtn">로그아웃</button>
             </div>
           </form>
           <ul id="adminRegistryList" class="admin-registry-list" aria-label="등록된 시트"></ul>
@@ -484,6 +506,10 @@
   <footer class="site-footer" id="siteFooterRoot">
     <div class="site-footer-inner">남악고등학교 설문 · 관리자</div>
   </footer>
+
+  <div class="admin-logout-dock">
+    <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
+  </div>
 
   <script>
 (function () {
