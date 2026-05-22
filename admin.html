@@ -98,6 +98,20 @@
       height: 3px;
       background: linear-gradient(90deg, var(--school-navy-dark) 0%, var(--school-navy-light) 55%, var(--school-accent) 100%);
     }
+    .school-logo-link {
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+      display: block;
+      line-height: 0;
+      border-radius: 50%;
+      text-decoration: none;
+      transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    }
+    .school-logo-link:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
     .school-logo {
       position: relative;
       z-index: 1;
@@ -361,7 +375,9 @@
 <body>
   <header class="site-header">
     <div class="site-header-inner">
-      <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="94" height="94">
+      <a href="index.html" class="school-logo-link" aria-label="설문 조회 홈">
+        <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="94" height="94">
+      </a>
       <div class="site-header-text">
         <p class="header-school">남악고등학교 1학년</p>
         <h1><span class="header-em">설문조사 결과</span> 조회</h1>

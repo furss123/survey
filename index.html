@@ -218,7 +218,23 @@
       border: 1px solid var(--school-border-light);
       border-radius: 999px;
     }
-    .header-home-btn,
+    .school-logo-link {
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+      display: block;
+      line-height: 0;
+      border-radius: 50%;
+      transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    }
+    .school-logo-link:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+    .school-logo-link:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
     .theme-toggle {
       position: relative;
       z-index: 2;
@@ -236,20 +252,16 @@
       justify-content: center;
       transition: background 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--ease);
     }
-    .header-home-btn[hidden] { display: none !important; }
-    .header-home-btn:hover,
     .theme-toggle:hover {
       background: rgba(255, 255, 255, 0.95);
       border-color: var(--school-navy-light);
       transform: translateY(-1px);
     }
-    .header-home-btn svg,
     .theme-toggle svg {
       width: 20px;
       height: 20px;
       display: block;
     }
-    html[data-theme="dark"] .header-home-btn,
     html[data-theme="dark"] .theme-toggle {
       border-color: rgba(226, 232, 240, 0.28);
       background: rgba(255, 255, 255, 0.1);
@@ -1144,12 +1156,9 @@
 <body>
   <header class="site-header no-print">
     <div class="site-header-inner">
-      <button type="button" class="header-home-btn no-print" id="headerHomeBtn" hidden aria-label="홈" title="처음 화면">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 4l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"/>
-        </svg>
-      </button>
-      <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="94" height="94">
+      <a href="index.html" class="school-logo-link" id="headerLogoHome" aria-label="처음 화면" title="처음 화면">
+        <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="94" height="94">
+      </a>
       <div class="site-header-text">
         <p class="header-school">남악고등학교 1학년</p>
         <h1><span class="header-em">설문조사 결과</span> 조회</h1>
@@ -2814,9 +2823,7 @@
 
   function showResultsView() {
     var homePanel = document.getElementById("homePanel");
-    var homeBtn = document.getElementById("headerHomeBtn");
     if (homePanel) homePanel.hidden = true;
-    if (homeBtn) homeBtn.hidden = false;
     updateViewTracker(null);
   }
 
@@ -2824,12 +2831,10 @@
     var homePanel = document.getElementById("homePanel");
     var results = document.getElementById("results");
     var errorEl = document.getElementById("error");
-    var homeBtn = document.getElementById("headerHomeBtn");
     activeSheetView = null;
     activeSubjectView = null;
     if (errorEl) errorEl.hidden = true;
     if (homePanel) homePanel.hidden = false;
-    if (homeBtn) homeBtn.hidden = true;
     if (results) {
       results.classList.remove("visible");
       results.innerHTML = "";
@@ -2934,9 +2939,19 @@
     if (entry) launchSheetAnalysis(entry, null);
   })();
 
-  document.getElementById("headerHomeBtn").addEventListener("click", function () {
-    showHomeView();
-  });
+  var headerLogoHome = document.getElementById("headerLogoHome");
+  if (headerLogoHome) {
+    headerLogoHome.addEventListener("click", function (e) {
+      var results = document.getElementById("results");
+      if (results && results.classList.contains("visible")) {
+        e.preventDefault();
+        showHomeView();
+        if (history.replaceState) {
+          history.replaceState(null, "", location.pathname || "index.html");
+        }
+      }
+    });
+  }
 
   document.getElementById("fabTop").addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: "smooth" });
