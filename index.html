@@ -762,7 +762,7 @@
       gap: 4px;
       width: 100%;
       min-width: 0;
-      min-height: 4.25rem;
+      min-height: 3.25rem;
       padding: 12px 10px;
       border: 2px solid var(--border-strong);
       border-radius: var(--radius-md);
@@ -787,20 +787,12 @@
       color: var(--chip-active-text);
       box-shadow: var(--shadow-md);
     }
-    .class-select-option__count {
-      font-size: var(--text-xs);
-      font-weight: 600;
-      opacity: 0.88;
-    }
-    .class-select-option.active .class-select-option__count {
-      opacity: 0.95;
-    }
     @media (max-width: 720px) {
       .class-picker-bar__grid {
         grid-template-columns: repeat(auto-fit, minmax(4.25rem, 1fr));
       }
       .class-select-option {
-        min-height: 3.75rem;
+        min-height: 2.85rem;
         font-size: 1rem;
         padding: 10px 6px;
       }
@@ -4846,8 +4838,6 @@
       var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
       var tabLabel = cls.label || classKey || hostSheet.sheetName;
       var hostKey = normalizeSheetClassKey(hostSheet.sheetName);
-      var useFilter = classKey && classKey !== hostKey;
-      var count = countRowsForClass(hostSheet, useFilter ? classKey : null);
       var active = isClassTabActive(cls, hostSheet);
       html +=
         '<button type="button" class="class-select-option class-tab' +
@@ -4860,9 +4850,7 @@
         (active ? "true" : "false") +
         '">' +
         esc(tabLabel) +
-        '<span class="class-select-option__count">' +
-        esc(String(count)) +
-        "명</span></button>";
+        "</button>";
     });
     html += "</div></nav>";
     return html;
