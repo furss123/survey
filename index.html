@@ -1186,10 +1186,14 @@
       color: var(--theme-text-muted);
     }
     .admin-category-config {
+      margin-bottom: var(--space-4);
+    }
+    .admin-cat-sortable {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: var(--space-4);
+      align-items: center;
+      margin-top: 8px;
     }
     .admin-cat-chip {
       display: inline-flex;
@@ -1201,8 +1205,41 @@
       background: var(--theme-bg-muted);
       font-size: var(--text-sm);
       font-weight: 600;
-      cursor: pointer;
+      cursor: default;
       user-select: none;
+    }
+    .admin-cat-chip--draggable {
+      cursor: grab;
+    }
+    .admin-cat-chip--draggable:active {
+      cursor: grabbing;
+    }
+    .admin-cat-chip.is-dragging {
+      opacity: 0.45;
+    }
+    .admin-cat-chip.is-drag-over {
+      box-shadow: 0 0 0 2px var(--school-navy-light);
+    }
+    .admin-cat-drag {
+      color: var(--theme-text-muted);
+      font-size: 0.7rem;
+      line-height: 1;
+      letter-spacing: -1px;
+      cursor: grab;
+    }
+    .admin-cat-label {
+      outline: none;
+      min-width: 2ch;
+      cursor: text;
+    }
+    .admin-cat-label:focus {
+      color: var(--theme-text);
+      border-bottom: 1px dashed var(--school-navy-light);
+    }
+    .admin-cat-count {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--theme-text-muted);
     }
     .admin-cat-chip:has(input:checked) {
       border-color: var(--school-navy-light);
@@ -2715,10 +2752,61 @@
     { id: "teacher", label: "담임선생님께!", enabled: true },
   ];
 
+  function sortCategoriesByOrder(a, b) {
+    if (a.id === "all") return -1;
+    if (b.id === "all") return 1;
+    return (a.order == null ? 999 : a.order) - (b.order == null ? 999 : b.order);
+  }
+
   function cloneCategoryOptions(list) {
-    return (list || []).map(function (opt) {
-      return { id: opt.id, label: opt.label, enabled: opt.enabled !== false };
+    return (list || [])
+      .map(function (opt, i) {
+        return {
+          id: opt.id,
+          label: opt.label,
+          enabled: opt.enabled !== false,
+          order: opt.order != null ? opt.order : i,
+        };
+      })
+      .sort(sortCategoriesByOrder);
+  }
+
+  function categoryDisplayLabel(title) {
+    var t = simplifySectionTitle(title || "");
+    if (!t) return "";
+    if (t === TEACHER_MESSAGE_TITLE) return "담임선생님께!";
+    if (t.length > 28) return t.slice(0, 28).trim();
+    return t;
+  }
+
+  function isSkippableCategoryHeader(name) {
+    var n = normalizeHeader(name);
+    if (!n) return true;
+    var skipWords = ["타임스탬프", "timestamp", "이메일", "email", "제출", "응답시간"];
+    for (var i = 0; i < skipWords.length; i++) {
+      if (n.indexOf(skipWords[i]) >= 0) return true;
+    }
+    if (findColumnIndex([name], CLASS_ALIASES) >= 0) return true;
+    if (findColumnIndex([name], NUMBER_ALIASES) >= 0) return true;
+    if (findColumnIndex([name], NAME_ALIASES) >= 0) return true;
+    if (findColumnIndex([name], COMPLETION_ALIASES) >= 0) return true;
+    return false;
+  }
+
+  function mergeSavedCategoryPrefs(derived, saved) {
+    if (!saved || !saved.length) return derived;
+    var map = {};
+    saved.forEach(function (c) {
+      map[c.id] = c;
     });
+    derived.forEach(function (c) {
+      var prev = map[c.id];
+      if (!prev) return;
+      if (prev.label) c.label = prev.label;
+      if (prev.enabled !== undefined) c.enabled = prev.enabled !== false;
+      if (prev.order != null) c.order = prev.order;
+    });
+    return derived.slice().sort(sortCategoriesByOrder);
   }
 
   function slugCategoryId(title) {
@@ -2745,93 +2833,188 @@
   }
 
   function deriveCategoriesFromAnalysis(multi) {
-    var categories = cloneCategoryOptions(DEFAULT_SUBJECT_FILTER_OPTIONS);
-    var found = {};
+    var registry = {};
+    var orderList = [];
+
+    function registerTitle(rawTitle) {
+      var label = categoryDisplayLabel(rawTitle);
+      if (!label || isMarkerOnlyTitle(label)) return;
+      var id = matchCategoryIdForTitle(rawTitle || label);
+      if (!registry[id]) {
+        registry[id] = {
+          id: id,
+          label: label,
+          enabled: true,
+          count: 0,
+          firstOrder: orderList.length,
+        };
+        orderList.push(id);
+      }
+      registry[id].count += 1;
+    }
+
     (multi && multi.sheets ? multi.sheets : []).forEach(function (sheet) {
       (sheet.rows || []).forEach(function (row) {
+        if (!rowHasSections(row)) return;
         (row.sections || []).forEach(function (sec) {
           if (!isMeaningfulSection(sec)) return;
-          var title = simplifySectionTitle(sec.title || "");
-          if (!title) return;
-          found[title] = (found[title] || 0) + 1;
+          registerTitle(sec.title || "");
         });
       });
+      (sheet.headers || []).forEach(function (headerName) {
+        if (isSkippableCategoryHeader(headerName)) return;
+        registerTitle(headerName);
+      });
+      (sheet.columnInsights || []).forEach(function (col) {
+        if (!col || !col.열 || col.입력건수 <= 0) return;
+        if (isSkippableCategoryHeader(col.열)) return;
+        registerTitle(col.열);
+      });
     });
-    categories.forEach(function (cat) {
-      if (cat.id === "all") {
-        cat.enabled = true;
-        return;
-      }
-      cat.enabled = false;
-      for (var title in found) {
-        if (!found.hasOwnProperty(title)) continue;
-        var matchedId = matchCategoryIdForTitle(title);
-        if (matchedId === cat.id) cat.enabled = true;
-      }
-    });
-    for (var titleKey in found) {
-      if (!found.hasOwnProperty(titleKey)) continue;
-      var id = matchCategoryIdForTitle(titleKey);
-      if (categories.some(function (c) { return c.id === id; })) continue;
-      categories.push({
-        id: id,
-        label: titleKey,
-        enabled: true,
+
+    if (multi && multi.combined && multi.combined.commonThemes) {
+      multi.combined.commonThemes.forEach(function (theme) {
+        if (theme && theme.주제) registerTitle(theme.주제);
       });
     }
-    var enabledCount = categories.filter(function (c) {
-      return c.enabled && c.id !== "all";
-    }).length;
-    if (!enabledCount) {
-      categories.forEach(function (c) {
-        if (c.id !== "all") c.enabled = true;
+
+    orderList.sort(function (a, b) {
+      var ca = registry[a].count;
+      var cb = registry[b].count;
+      if (cb !== ca) return cb - ca;
+      return registry[a].firstOrder - registry[b].firstOrder;
+    });
+
+    var categories = [{ id: "all", label: "모든 과목", enabled: true, order: 0 }];
+    orderList.forEach(function (id, idx) {
+      var item = registry[id];
+      categories.push({
+        id: item.id,
+        label: item.label,
+        enabled: true,
+        order: idx + 1,
+        count: item.count,
+      });
+    });
+
+    if (categories.length === 1) {
+      categories.push({
+        id: "cat-responses",
+        label: "설문 응답",
+        enabled: true,
+        order: 1,
+        count: 0,
       });
     }
     return categories;
   }
 
   function getSubjectFilterOptions() {
+    var list = [];
     if (adminSetupMode && adminSetupCategories.length) {
-      return adminSetupCategories.filter(function (opt) {
+      list = adminSetupCategories.filter(function (opt) {
         return opt.enabled !== false;
       });
-    }
-    if (currentLaunchEntry && currentLaunchEntry.categories && currentLaunchEntry.categories.length) {
-      var enabled = currentLaunchEntry.categories.filter(function (opt) {
+    } else if (
+      currentLaunchEntry &&
+      currentLaunchEntry.categories &&
+      currentLaunchEntry.categories.length
+    ) {
+      list = currentLaunchEntry.categories.filter(function (opt) {
         return opt.enabled !== false;
       });
-      if (enabled.length) return enabled;
+    } else {
+      list = DEFAULT_SUBJECT_FILTER_OPTIONS.slice();
     }
-    return DEFAULT_SUBJECT_FILTER_OPTIONS;
+    return list.slice().sort(sortCategoriesByOrder);
+  }
+
+  function syncCategoryOrdersFromDom() {
+    var sortable = document.getElementById("adminCatSortable");
+    if (!sortable) return;
+    var allCat = adminSetupCategories.find(function (c) {
+      return c.id === "all";
+    });
+    var ordered = [];
+    sortable.querySelectorAll(".admin-cat-chip[data-cat-id]").forEach(function (chip, idx) {
+      var id = chip.getAttribute("data-cat-id");
+      var cat = adminSetupCategories.find(function (c) {
+        return c.id === id;
+      });
+      if (cat) {
+        cat.order = idx + 1;
+        ordered.push(cat);
+      }
+    });
+    adminSetupCategories = allCat ? [allCat].concat(ordered) : ordered;
+  }
+
+  function onAdminCategoryChanged() {
+    var opts = getSubjectFilterOptions();
+    if (
+      !opts.some(function (o) {
+        return o.id === activeSubjectView;
+      })
+    ) {
+      activeSubjectView = "all";
+    }
+    renderResults(getActiveAnalysis(), parseSpreadsheetId(adminSetupUrl), lastMultiResult);
   }
 
   function renderAdminCategoryConfig() {
     var box = document.getElementById("adminCategoryConfig");
     if (!box) return;
-    box.innerHTML = adminSetupCategories
+    var sorted = adminSetupCategories.slice().sort(sortCategoriesByOrder);
+    var allCat = sorted.find(function (c) {
+      return c.id === "all";
+    });
+    var rest = sorted.filter(function (c) {
+      return c.id !== "all";
+    });
+
+    var html = "";
+    if (allCat) {
+      html +=
+        '<label class="admin-cat-chip admin-cat-chip--locked"><input type="checkbox" data-cat-id="all" checked disabled /> ' +
+        esc(allCat.label) +
+        "</label>";
+    }
+    html += '<div class="admin-cat-sortable" id="adminCatSortable">';
+    html += rest
       .map(function (cat) {
-        var locked = cat.id === "all";
+        var countBadge =
+          cat.count > 0
+            ? '<span class="admin-cat-count">' + esc(String(cat.count)) + "</span>"
+            : "";
         return (
-          '<label class="admin-cat-chip' +
-          (locked ? " admin-cat-chip--locked" : "") +
-          '"><input type="checkbox" data-cat-id="' +
+          '<div class="admin-cat-chip admin-cat-chip--draggable" draggable="true" data-cat-id="' +
+          esc(cat.id) +
+          '"><span class="admin-cat-drag" title="드래그하여 순서 변경" aria-hidden="true">⋮⋮</span>' +
+          '<input type="checkbox" data-cat-id="' +
           esc(cat.id) +
           '" ' +
           (cat.enabled ? "checked" : "") +
-          (locked ? " disabled" : "") +
-          " /> " +
+          ' /><span class="admin-cat-label" contenteditable="true" spellcheck="false" data-cat-id="' +
+          esc(cat.id) +
+          '">' +
           esc(cat.label) +
-          "</label>"
+          "</span>" +
+          countBadge +
+          "</div>"
         );
       })
       .join("");
-    box.querySelectorAll("input[data-cat-id]").forEach(function (input) {
+    html += "</div>";
+    box.innerHTML = html;
+
+    box.querySelectorAll('input[type="checkbox"][data-cat-id]').forEach(function (input) {
+      if (input.getAttribute("data-cat-id") === "all") return;
       input.addEventListener("change", function () {
         var id = input.getAttribute("data-cat-id");
         var cat = adminSetupCategories.find(function (c) {
           return c.id === id;
         });
-        if (!cat || cat.id === "all") return;
+        if (!cat) return;
         cat.enabled = input.checked;
         if (
           !adminSetupCategories.some(function (c) {
@@ -2843,15 +3026,76 @@
           alert("최소 하나의 카테고리를 선택해 주세요.");
           return;
         }
-        var opts = getSubjectFilterOptions();
-        if (
-          !opts.some(function (o) {
-            return o.id === activeSubjectView;
-          })
-        ) {
-          activeSubjectView = "all";
+        onAdminCategoryChanged();
+      });
+    });
+
+    box.querySelectorAll(".admin-cat-label[data-cat-id]").forEach(function (labelEl) {
+      labelEl.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+      labelEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          labelEl.blur();
         }
-        renderResults(getActiveAnalysis(), parseSpreadsheetId(adminSetupUrl), lastMultiResult);
+      });
+      labelEl.addEventListener("blur", function () {
+        var id = labelEl.getAttribute("data-cat-id");
+        var cat = adminSetupCategories.find(function (c) {
+          return c.id === id;
+        });
+        if (!cat) return;
+        var text = coerceText(labelEl.textContent);
+        if (!text) {
+          labelEl.textContent = cat.label;
+          return;
+        }
+        if (text.length > 28) text = text.slice(0, 28);
+        cat.label = text;
+        labelEl.textContent = cat.label;
+        onAdminCategoryChanged();
+      });
+    });
+
+    var sortable = document.getElementById("adminCatSortable");
+    var dragId = null;
+    if (!sortable) return;
+
+    sortable.querySelectorAll(".admin-cat-chip--draggable").forEach(function (chip) {
+      chip.addEventListener("dragstart", function (e) {
+        dragId = chip.getAttribute("data-cat-id");
+        chip.classList.add("is-dragging");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", dragId);
+        }
+      });
+      chip.addEventListener("dragend", function () {
+        chip.classList.remove("is-dragging");
+        sortable.querySelectorAll(".is-drag-over").forEach(function (el) {
+          el.classList.remove("is-drag-over");
+        });
+        syncCategoryOrdersFromDom();
+        onAdminCategoryChanged();
+      });
+      chip.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        chip.classList.add("is-drag-over");
+      });
+      chip.addEventListener("dragleave", function () {
+        chip.classList.remove("is-drag-over");
+      });
+      chip.addEventListener("drop", function (e) {
+        e.preventDefault();
+        chip.classList.remove("is-drag-over");
+        var targetId = chip.getAttribute("data-cat-id");
+        if (!dragId || dragId === targetId) return;
+        var dragChip = sortable.querySelector('[data-cat-id="' + dragId + '"]');
+        if (!dragChip || dragChip === chip) return;
+        var rect = chip.getBoundingClientRect();
+        var before = e.clientX < rect.left + rect.width / 2;
+        sortable.insertBefore(dragChip, before ? chip : chip.nextSibling);
       });
     });
   }
@@ -2877,8 +3121,13 @@
       label: adminSetupLabel,
       url: adminSetupUrl,
       tab: preferredTab,
-      categories: adminSetupCategories.map(function (c) {
-        return { id: c.id, label: c.label, enabled: c.enabled !== false };
+      categories: adminSetupCategories.map(function (c, i) {
+        return {
+          id: c.id,
+          label: c.label,
+          enabled: c.enabled !== false,
+          order: c.order != null ? c.order : i,
+        };
       }),
     };
     if (adminSetupEditId) {
@@ -2950,10 +3199,12 @@
       try {
         if (draftRaw) draft = JSON.parse(draftRaw);
       } catch (e) { /* ignore */ }
+      adminSetupCategories = deriveCategoriesFromAnalysis(lastMultiResult);
       if (draft && draft.categories && draft.categories.length) {
-        adminSetupCategories = cloneCategoryOptions(draft.categories);
-      } else {
-        adminSetupCategories = deriveCategoriesFromAnalysis(lastMultiResult);
+        adminSetupCategories = mergeSavedCategoryPrefs(
+          adminSetupCategories,
+          draft.categories
+        );
       }
       renderAdminCategoryConfig();
       var classNum = parseClassNumberFromLabel(label);
