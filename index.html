@@ -1,0 +1,2782 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2026 ?®ÏïÖÍ≥†Îì±?ôÍµê 1?ôÎÖÑ ?§Î¨∏ Í≤∞Í≥º</title>
+  <!-- ui-version: 20260522-admin-password-gate-froms -->
+  <link rel="canonical" href="https://furss123.github.io/froms/" />
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg-page: #eef2f6;
+      --bg-surface: #ffffff;
+      --bg-muted: #f8fafc;
+      --bg-category: #f1f5f9;
+      --bg-accent-soft: #f0fdfa;
+      --bg-accent-banner: #ecfdf5;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --border-accent: #99f6e4;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-subtle: #475569;
+      --text-accent: #115e59;
+      --accent: #0d9488;
+      --accent-hover: #0f766e;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 2px 8px rgba(15, 23, 42, 0.08);
+      --chip-bg: #ffffff;
+      --chip-active-text: #ffffff;
+      --badge-done-bg: #ecfdf5;
+      --badge-done-text: #0f766e;
+      --badge-pending-bg: #f8fafc;
+      --badge-pending-text: #64748b;
+      --error-bg: #fef2f2;
+      --error-text: #b91c1c;
+      --danger-bg: #fef2f2;
+      --danger-text: #b91c1c;
+      --fab-bg: #ffffff;
+      --fab-print-start: #3b82f6;
+      --fab-print-end: #2563eb;
+      --scrollbar: #cbd5e1;
+    }
+    html[data-theme="dark"] {
+      --bg-page: #0b1220;
+      --bg-surface: #1e293b;
+      --bg-muted: #334155;
+      --bg-category: #2d3f56;
+      --bg-accent-soft: #134e4a;
+      --bg-accent-banner: #115e59;
+      --border: #334155;
+      --border-strong: #475569;
+      --border-accent: #0f766e;
+      --text: #f8fafc;
+      --text-muted: #cbd5e1;
+      --text-subtle: #e2e8f0;
+      --text-accent: #ccfbf1;
+      --accent: #2dd4bf;
+      --accent-hover: #5eead4;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+      --chip-bg: #1e293b;
+      --chip-active-text: #ffffff;
+      --badge-done-bg: #134e4a;
+      --badge-done-text: #99f6e4;
+      --badge-pending-bg: #334155;
+      --badge-pending-text: #e2e8f0;
+      --error-bg: #450a0a;
+      --error-text: #fca5a5;
+      --danger-bg: #450a0a;
+      --danger-text: #fca5a5;
+      --fab-bg: #1e293b;
+      --fab-print-start: #2563eb;
+      --fab-print-end: #1d4ed8;
+      --scrollbar: #475569;
+    }
+    html {
+      font-size: calc(14px + 1pt);
+    }
+    body {
+      margin: 0;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg-page);
+      transition: background 0.2s, color 0.2s;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-brand {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo {
+      flex-shrink: 0;
+      width: 2.75rem;
+      height: 2.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .header-logo img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+    .header-title {
+      min-width: 0;
+      margin: 0;
+      font-size: clamp(0.9rem, 3vw, 1.25rem);
+      font-weight: 700;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+    }
+    .header-home-btn,
+    .theme-toggle {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-surface);
+      color: var(--text-subtle);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .header-home-btn {
+      border: none;
+      background: transparent;
+      width: 1.75rem;
+      height: 1.75rem;
+    }
+    .header-home-btn:hover,
+    .theme-toggle:hover {
+      color: var(--accent);
+      border-color: var(--border-accent);
+      background: var(--bg-accent-soft);
+    }
+    .header-home-btn svg,
+    .theme-toggle svg {
+      width: 1.25rem;
+      height: 1.25rem;
+      display: block;
+    }
+    .header-home-btn svg {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+    .theme-toggle .icon-sun { display: none; }
+    html[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+    html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+    .wrap {
+      max-width: 210mm;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+    #homePanel[hidden] { display: none !important; }
+    .subtitle { margin: 6px 0 0; font-size: 0.875rem; color: #64748b; }
+    main { padding: 20px 16px 48px; }
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    #homePanel.card {
+      width: 100%;
+      max-width: 100%;
+    }
+    #sheetButtonGrid { display: none !important; }
+    .home-admin-gate {
+      width: 100%;
+      padding: 20px 16px;
+      border-radius: 12px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+    }
+    .home-admin-gate[hidden] { display: none !important; }
+    .home-admin-gate .admin-panel-title {
+      margin: 0 0 14px;
+      text-align: center;
+    }
+    .home-admin-gate label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-subtle);
+    }
+    .home-admin-gate input[type="password"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      background: var(--bg-surface);
+      color: var(--text);
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    .home-admin-gate input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+    }
+    .home-admin-gate .admin-actions {
+      margin-top: 14px;
+      justify-content: center;
+    }
+    .home-admin-hint {
+      margin: 10px 0 0;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .home-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+    .admin-entry-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .admin-entry-btn:hover { border-color: var(--border-strong); color: var(--text); }
+    #adminPanel {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border);
+    }
+    #adminPanel[hidden] { display: none !important; }
+    .admin-panel-title {
+      margin: 0 0 12px;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .admin-form label {
+      display: block;
+      margin-top: 10px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-subtle);
+    }
+    .admin-form label:first-child { margin-top: 0; }
+    .admin-form input[type="text"],
+    .admin-form input[type="url"],
+    .admin-form input[type="password"] {
+      width: 100%;
+      margin-top: 6px;
+      padding: 9px 11px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      background: var(--bg-surface);
+      color: var(--text);
+    }
+    .admin-form input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+    }
+    .admin-actions {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-surface);
+      color: var(--text);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .admin-btn-primary {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+    }
+    .admin-btn-primary:hover { background: var(--accent-hover); }
+    .admin-btn-danger {
+      border-color: var(--danger-text);
+      color: var(--danger-text);
+      background: var(--danger-bg);
+    }
+    .admin-registry-list {
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .admin-registry-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-muted);
+      font-size: 0.8125rem;
+      margin-bottom: 8px;
+    }
+    .admin-registry-list .registry-meta {
+      min-width: 0;
+      flex: 1;
+    }
+    .admin-registry-list .registry-meta strong {
+      display: block;
+      color: var(--text);
+    }
+    .admin-registry-list .registry-meta span {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+    .admin-login-box {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+    }
+    .error {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--error-bg);
+      color: var(--error-text);
+      font-size: 0.875rem;
+    }
+    #results {
+      margin: 24px auto 0;
+      display: none;
+      width: 100%;
+      max-width: 210mm;
+    }
+    #results.visible { display: block; }
+    #results .sheet-banner,
+    #results .sheet-tabs,
+    #results .subject-tabs,
+    #results .participation-banner,
+    #results .responses-heading,
+    #results .student-cards,
+    #results .student-cards-list,
+    #results .student-card,
+    #results .student-cards-empty {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #results .sheet-banner {
+      text-align: center;
+    }
+    #results .sheet-tabs,
+    #results .subject-tabs {
+      justify-content: flex-start;
+    }
+    #results .responses-heading {
+      text-align: center;
+      width: 100%;
+    }
+    .muted { color: var(--text-muted); }
+    .preview { color: var(--text); word-break: break-word; line-height: 1.55; }
+    .student-cards,
+    .student-cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 8px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .student-card {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      max-width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px 0;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 0;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    @media (min-width: 640px) {
+      .student-card { padding: 14px 16px 0; }
+    }
+    .student-response-body {
+      flex: 1 1 auto;
+      width: 100%;
+      max-width: 100%;
+      padding-bottom: 14px;
+      box-sizing: border-box;
+    }
+    .student-card-divider {
+      margin: 0;
+      border: none;
+      border-top: 2px solid var(--border);
+      height: 0;
+    }
+    .student-card:last-child .student-card-divider {
+      border-top-color: var(--border);
+      opacity: 0.6;
+    }
+    .student-cards-empty {
+      padding: 24px 16px;
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      background: var(--bg-surface);
+      border: 1px dashed var(--border-strong);
+      border-radius: 12px;
+    }
+    .responses-heading {
+      margin: 0 0 4px;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .category-blocks {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .category-block {
+      width: 100%;
+      max-width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: var(--bg-category);
+      border: 1px solid var(--border-strong);
+      box-sizing: border-box;
+    }
+    .category-block .cat-title {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--accent-hover);
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+    .category-block .cat-body {
+      font-size: 0.875rem;
+      color: var(--text);
+      word-break: break-word;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .category-block .cat-field {
+      font-size: 0.875rem;
+      color: var(--text);
+      margin-top: 5px;
+      line-height: 1.55;
+    }
+    .category-block .cat-field span {
+      font-weight: 600;
+      color: var(--text-subtle);
+      margin-right: 4px;
+    }
+    .category-block--teacher {
+      background: var(--bg-accent-soft);
+      border-color: var(--border-accent);
+    }
+    .student-response-header {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px 12px;
+      flex-shrink: 0;
+      margin: 0 0 12px;
+      padding: 0 0 12px;
+      border-bottom: 2px solid var(--border);
+      font-weight: 600;
+      line-height: 1.35;
+    }
+    .student-response-header .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 6px 10px;
+      min-width: 0;
+    }
+    .student-response-header .student-class {
+      color: var(--accent-hover);
+      font-size: 0.9375rem;
+      font-weight: 700;
+    }
+    .student-response-header .student-num {
+      color: var(--text-subtle);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .student-response-header .student-name {
+      color: var(--text);
+      font-size: 1.125rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+    .status-badge {
+      flex-shrink: 0;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .status-badge.done {
+      background: var(--badge-done-bg);
+      color: var(--badge-done-text);
+      border: 1px solid var(--border-accent);
+    }
+    .status-badge.pending {
+      background: var(--badge-pending-bg);
+      color: var(--badge-pending-text);
+      border: 1px solid var(--border-strong);
+    }
+    .sheet-banner {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: var(--bg-accent-banner);
+      border: 1px solid var(--border-accent);
+      font-size: 0.875rem;
+      color: var(--text-accent);
+    }
+    .sheet-tabs,
+    .subject-tabs {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar) transparent;
+    }
+    .sheet-tabs::-webkit-scrollbar,
+    .subject-tabs::-webkit-scrollbar {
+      height: 5px;
+    }
+    .sheet-tabs::-webkit-scrollbar-thumb,
+    .subject-tabs::-webkit-scrollbar-thumb {
+      background: var(--scrollbar);
+      border-radius: 999px;
+    }
+    .sheet-tab {
+      flex-shrink: 0;
+      white-space: nowrap;
+      padding: 8px 15px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      background: var(--chip-bg);
+      font-size: calc(0.8125rem + 1pt);
+      font-weight: 600;
+      color: var(--text-subtle);
+      cursor: pointer;
+      line-height: 1.35;
+    }
+    .sheet-tab:hover { border-color: var(--accent); color: var(--accent-hover); }
+    .sheet-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--chip-active-text);
+    }
+    .sheet-tab .count {
+      margin-left: 6px;
+      font-size: calc(0.8125rem + 1pt);
+      font-weight: 400;
+      opacity: 0.85;
+    }
+    .subject-tab {
+      flex-shrink: 0;
+      white-space: nowrap;
+      padding: 8px 15px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      background: var(--chip-bg);
+      font-size: calc(0.8125rem + 1pt);
+      font-weight: 600;
+      color: var(--text-subtle);
+      cursor: pointer;
+      line-height: 1.35;
+    }
+    .subject-tab:hover { border-color: var(--accent); color: var(--accent-hover); }
+    .subject-tab.active {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: var(--chip-active-text);
+    }
+    .subject-empty {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+    .participation-banner {
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      line-height: 1.5;
+    }
+    .participation-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+    .participation-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-subtle);
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+    }
+    .participation-chip strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+    .participation-chip--primary {
+      background: var(--bg-accent-banner);
+      border-color: var(--border-accent);
+      color: var(--accent-hover);
+    }
+    .participation-chip--primary strong { color: var(--accent); }
+    .participation-chip--warn {
+      background: var(--bg-muted);
+      border-color: var(--border-strong);
+      color: var(--text-muted);
+    }
+    .participation-chip--warn strong { color: var(--text-subtle); }
+    .participation-banner .missing-list {
+      margin: 10px 0 0;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-align: center;
+      word-break: break-word;
+    }
+    .participation-banner .missing-list .missing-label {
+      font-weight: 700;
+      color: var(--text-subtle);
+    }
+    .participation-banner .missing-list--ok {
+      color: var(--accent-hover);
+      font-weight: 600;
+    }
+    .student-card--absent {
+      background: var(--bg-muted);
+      border-style: dashed;
+      border-color: var(--border-strong);
+      opacity: 0.92;
+    }
+    .student-card--absent .student-name {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .student-card--absent .absent-note {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+    .view-tracker {
+      position: fixed;
+      z-index: 999;
+      width: 170px;
+      padding: 16px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+      max-height: min(70vh, 368px);
+      overflow-y: auto;
+    }
+    .view-tracker[hidden] { display: none !important; }
+    .view-tracker-head {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.79rem;
+      font-weight: 700;
+      color: #0f766e;
+      letter-spacing: -0.01em;
+    }
+    .view-tracker-head svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      stroke: #0d9488;
+    }
+    .view-tracker-fields { margin: 0; }
+    .view-tracker-row {
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      gap: 5px 7px;
+      align-items: center;
+      margin-bottom: 9px;
+    }
+    .view-tracker-row:last-of-type { margin-bottom: 0; }
+    .view-tracker-row dt {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin: 0;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .view-tracker-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      stroke: #94a3b8;
+    }
+    .view-tracker-row dd {
+      margin: 0;
+      font-size: 0.93rem;
+      font-weight: 700;
+      color: #0f172a;
+      word-break: keep-all;
+    }
+    .view-tracker-status {
+      margin: 12px 0 0;
+      padding: 5px 9px;
+      border-radius: 7px;
+      background: #fff7ed;
+      color: #c2410c;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-align: center;
+    }
+    .view-tracker-status[hidden] { display: none !important; }
+    .fab-stack {
+      position: fixed;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 7px;
+    }
+    .fab-stack[hidden] { display: none !important; }
+    .fab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 63px;
+      height: 63px;
+      padding: 4px 5px;
+      border-radius: 8px;
+      border: 1px solid var(--border-strong);
+      background: var(--fab-bg);
+      color: #2563eb;
+      font-size: 0.703125rem;
+      font-weight: 700;
+      line-height: 1.2;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .fab:hover {
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+      filter: brightness(1.03);
+    }
+    .fab svg {
+      width: 22px;
+      height: 22px;
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+    .fab-top,
+    .fab-bottom {
+      background: var(--fab-bg);
+      border-color: var(--border-strong);
+      color: #2563eb;
+    }
+    .fab-print {
+      border: none;
+      background: linear-gradient(180deg, var(--fab-print-start) 0%, var(--fab-print-end) 100%);
+      color: #fff;
+    }
+    .fab-print svg { stroke: #fff; }
+    @media (min-width: 1240px) {
+      .view-tracker:not([hidden]) {
+        left: max(12px, calc(50vw - 105mm - 5mm - 170px));
+        top: 50%;
+        right: auto;
+        transform: translateY(-50%);
+      }
+      .fab-stack {
+        left: calc(50vw + 105mm + 5mm);
+        right: auto;
+        top: 50%;
+        bottom: auto;
+        transform: translateY(-50%);
+      }
+    }
+    @media (max-width: 1239px) {
+      .view-tracker { display: none !important; }
+      .fab-stack {
+        left: auto !important;
+        right: 12px !important;
+        bottom: 12px !important;
+        top: auto !important;
+        transform: none !important;
+      }
+    }
+    @media (max-width: 640px) {
+      .fab-stack {
+        gap: 7px;
+      }
+      .fab {
+        width: 56px;
+        height: 56px;
+      }
+    }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      .fab-stack,
+      .view-tracker,
+      #homePanel,
+      #adminPanel,
+      .home-toolbar { display: none !important; }
+      .wrap,
+      #results { max-width: 100%; }
+      .student-cards-list {
+        display: block;
+      }
+      .student-card {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        max-width: 100%;
+        margin-bottom: 12px;
+      }
+      #results { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap header-inner">
+      <button type="button" class="header-home-btn" id="headerHomeBtn" aria-label="?? title="Ï≤òÏùå ?îÎ©¥">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M3 10.5L12 4l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"/>
+        </svg>
+      </button>
+      <div class="header-brand">
+        <span class="header-logo">
+          <img src="../assets/namak-logo.png" width="44" height="44" alt="?®ÏïÖÍ≥†Îì±?ôÍµê" />
+        </span>
+        <h1 class="header-title">2026 ?®ÏïÖÍ≥†Îì±?ôÍµê 1?ôÎÖÑ ?§Î¨∏ Í≤∞Í≥º</h1>
+      </div>
+      <button type="button" class="theme-toggle" id="themeToggle" aria-label="?§ÌÅ¨ Î™®Îìú" title="?§ÌÅ¨ Î™®Îìú">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M21 14.5A8.5 8.5 0 1112.5 4 7 7 0 0021 14.5z"/>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="homePanel" class="card">
+      <div class="home-toolbar">
+        <button type="button" class="admin-entry-btn" id="adminEntryBtn">Í¥ÄÎ¶¨Ïûê</button>
+      </div>
+      <div id="sheetButtonGrid" class="sheet-btn-grid" hidden aria-hidden="true"></div>
+
+      <div id="homeAdminGate" class="home-admin-gate">
+        <p class="admin-panel-title">Í¥ÄÎ¶¨Ïûê ÎπÑÎ?Î≤àÌò∏</p>
+        <label for="homeAdminPasswordInput">ÎπÑÎ?Î≤àÌò∏Î•??ÖÎ†•?òÏÑ∏??/label>
+        <input type="password" id="homeAdminPasswordInput" autocomplete="current-password" placeholder="Í¥ÄÎ¶¨Ïûê ÎπÑÎ?Î≤àÌò∏" />
+        <div class="admin-actions">
+          <button type="button" class="admin-btn admin-btn-primary" id="homeAdminLoginBtn">?ïÏù∏</button>
+        </div>
+        <p class="home-admin-hint">Î°úÍ∑∏?????úÌä∏ ?±Î°ù¬∑Ï°∞ÌöåÍ∞Ä Í∞Ä?•Ìï©?àÎã§.</p>
+      </div>
+
+      <p id="error" class="error" hidden></p>
+
+      <div id="adminPanel" hidden>
+        <p class="admin-panel-title">?úÌä∏ ?±Î°ù (Í¥ÄÎ¶¨Ïûê)</p>
+        <form id="adminSheetForm" class="admin-form">
+          <label for="adminSheetLabel">?úÌä∏ ?¥Î¶Ñ (Î≤ÑÌäº ?úÏãú)</label>
+          <input type="text" id="adminSheetLabel" placeholder="?? 1Î∞? ?ÅÎã¥ 3?? required />
+          <label for="adminSheetUrl">Íµ¨Í? ?úÌä∏ Ï£ºÏÜå</label>
+          <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
+          <label for="adminSheetTab">Í∏∞Î≥∏ ??(?†ÌÉù)</label>
+          <input type="text" id="adminSheetTab" placeholder="?? 1Î∞?(ÎπÑÏö∞Î©?Ï≤???" />
+          <label for="adminNewPassword">Í¥ÄÎ¶¨Ïûê ÎπÑÎ?Î≤àÌò∏ Î≥ÄÍ≤?(?†ÌÉù)</label>
+          <input type="password" id="adminNewPassword" autocomplete="new-password" />
+          <div class="admin-actions">
+            <button type="submit" class="admin-btn admin-btn-primary">?úÌä∏ Ï∂îÍ?</button>
+            <button type="button" class="admin-btn" id="adminLogoutBtn">Î°úÍ∑∏?ÑÏõÉ</button>
+          </div>
+        </form>
+        <ul id="adminRegistryList" class="admin-registry-list" aria-label="?±Î°ù???úÌä∏"></ul>
+      </div>
+    </section>
+
+    <div id="results"></div>
+  </main>
+
+  <aside class="view-tracker" id="viewTracker" hidden aria-live="polite" aria-label="?ÑÏû¨ Î≥¥Í≥† ?àÎäî ?ôÏÉù">
+    <div class="view-tracker-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" stroke="currentColor"/>
+        <circle cx="12" cy="12" r="3" stroke="currentColor"/>
+      </svg>
+      <span>ÏßÄÍ∏?Î≥¥Îäî ?ôÏÉù</span>
+    </div>
+    <dl class="view-tracker-fields">
+      <div class="view-tracker-row">
+        <dt>
+          <svg class="view-tracker-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
+            <path d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" stroke="currentColor"/>
+            <path d="M9 22V12h6v10" stroke="currentColor"/>
+          </svg>
+          <span>Î∞?/span>
+        </dt>
+        <dd id="viewTrackerClass">??/dd>
+      </div>
+      <div class="view-tracker-row">
+        <dt>
+          <svg class="view-tracker-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
+            <path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18" stroke="currentColor"/>
+          </svg>
+          <span>Î≤àÌò∏</span>
+        </dt>
+        <dd id="viewTrackerNum">??/dd>
+      </div>
+      <div class="view-tracker-row">
+        <dt>
+          <svg class="view-tracker-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" stroke="currentColor"/>
+            <path d="M6 21v-1a6 6 0 0112 0v1" stroke="currentColor"/>
+          </svg>
+          <span>?¥Î¶Ñ</span>
+        </dt>
+        <dd id="viewTrackerName">??/dd>
+      </div>
+    </dl>
+    <p class="view-tracker-status" id="viewTrackerStatus" hidden>ÎØ∏Ï∞∏??/p>
+  </aside>
+
+  <nav class="fab-stack" id="fabStack" aria-label="?òÏù¥ÏßÄ ?ÑÍµ¨" hidden>
+    <button type="button" class="fab fab-top" id="fabTop" title="Îß??ÑÎ°ú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path d="M6 15l6-6 6 6"/>
+      </svg>
+      Îß???
+    </button>
+    <button type="button" class="fab fab-bottom" id="fabBottom" title="Îß??ÑÎûòÎ°?>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path d="M6 9l6 6 6-6"/>
+      </svg>
+      Îß??ÑÎûò
+    </button>
+    <button type="button" class="fab fab-print" id="fabPrint" title="?∏ÏáÑ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M6 14h12v7H6z"/>
+      </svg>
+      ?∏ÏáÑ
+    </button>
+  </nav>
+
+  <script>
+(function () {
+  "use strict";
+
+  const SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
+  const CLASS_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  const DEFAULT_RESPONSE_SHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
+  const SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
+  const ADMIN_PASSWORD_KEY = "school-admin-password-v1";
+  const ADMIN_SESSION_KEY = "school-admin-session-v1";
+  const DEFAULT_ADMIN_PASSWORD = "school-admin";
+  const PROFILE_PATTERN = /\[(\d+)Î∞?]\s*\[(\d+)\]\s*\[([^\]]+)\]/;
+
+  const CLASS_ALIASES = ["Î∞?, "class", "?ôÍ∏â", "?¥Îûò??, "Î∞òÎ™Ö"];
+  const NUMBER_ALIASES = ["Î≤àÌò∏", "number", "no", "no.", "?ôÎ≤à", "?úÎ≤à"];
+  const NAME_ALIASES = ["?¥Î¶Ñ", "name", "?±Î™Ö", "?ôÏÉù"];
+  const ROSTER_NAME_ALIASES = ["?¥Î¶Ñ", "name", "?±Î™Ö", "?±Ìï®", "studentname", "?ôÏÉù?¥Î¶Ñ"];
+  const COMPLETION_ALIASES = ["?ÑÎ£å", "?úÏ∂ú", "?ëÎãµ", "status", "?ÅÌÉú", "completed", "done", "Ï≤¥ÌÅ¨"];
+  const CONTENT_ALIASES = ["?ÅÎã¥", "?¥Ïö©", "?ëÎãµ", "Î©îÎ™®", "ÎπÑÍ≥†", "Í≥†Î?", "Ï£ºÏ†ú", "?ÑÎ°ú??, "Í∏∞Î°ù", "comment", "note"];
+  const THEME_KEYWORDS = [
+    { key: "ÏßÑÎ°ú", label: "ÏßÑÎ°ú¬∑ÏßÑÌïô" },
+    { key: "ÏπúÍµ¨", label: "?Ä?∏Í?Í≥? },
+    { key: "Í∞ÄÏ°?, label: "Í∞Ä?? },
+    { key: "?§Ìä∏?àÏä§", label: "?§Ìä∏?àÏä§¬∑?ïÏÑú" },
+    { key: "?ôÏäµ", label: "?ôÏäµ" },
+    { key: "Í±¥Í∞ï", label: "Í±¥Í∞ï" },
+    { key: "?êÎûò", label: "?êÎûò Í¥ÄÍ≥? },
+    { key: "Î∂àÏïà", label: "Î∂àÏïà" },
+  ];
+
+  function groupBy(arr, keyFn) {
+    const groups = {};
+    for (const item of arr) {
+      const key = keyFn(item);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    }
+    return groups;
+  }
+
+  function sumBy(arr, fn) {
+    return arr.reduce((s, x) => s + fn(x), 0);
+  }
+
+  function parseSpreadsheetId(url) {
+    if (!url || typeof url !== "string") {
+      throw new Error("?†Ìö®??Google Sheets URL???ÑÏöî?©Îãà??");
+    }
+    const trimmed = url.trim();
+    const match = trimmed.match(SPREADSHEET_ID_PATTERN);
+    if (match && match[1]) return match[1];
+    if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) return trimmed;
+    throw new Error("?§ÌîÑ?àÎìú?úÌä∏ IDÎ•?URL?êÏÑú Ï∞æÏùÑ ???ÜÏäµ?àÎã§. Í≥µÏú† ÎßÅÌÅ¨ ?ïÏãù???ïÏù∏??Ï£ºÏÑ∏??");
+  }
+
+  function parseGvizJson(text) {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start < 0 || end <= start) throw new Error("gviz ?ëÎãµ???åÏã±?????ÜÏäµ?àÎã§.");
+    return JSON.parse(text.slice(start, end + 1));
+  }
+
+  function parseTabsFromHtml(html) {
+    var tabs = [];
+    var re = /docs-sheet-tab[^>]*data-sheet-id="(\d+)"[^>]*aria-label="([^"]+)"/g;
+    var m;
+    while ((m = re.exec(html)) !== null) {
+      tabs.push({ gid: m[1], title: m[2] });
+    }
+    if (tabs.length) return tabs;
+    var captionRe = /docs-sheet-tab-caption">([^<]+)</g;
+    while ((m = captionRe.exec(html)) !== null) {
+      tabs.push({ gid: null, title: m[1].trim() });
+    }
+    if (tabs.length) return tabs;
+    var re2 = /"sheetId":(\d+)[^}]*"title":"((?:\\.|[^"\\])*)"/g;
+    while ((m = re2.exec(html)) !== null) {
+      var title = m[2].replace(/\\u([0-9a-fA-F]{4})/g, function (_, hex) {
+        return String.fromCharCode(parseInt(hex, 16));
+      });
+      tabs.push({ gid: m[1], title: title });
+    }
+    if (tabs.length) return tabs;
+    var re3 = /"gid":(\d+),"name":"((?:\\.|[^"\\])*)"/g;
+    while ((m = re3.exec(html)) !== null) {
+      tabs.push({ gid: m[1], title: m[2] });
+    }
+    return tabs;
+  }
+
+  function sheetProbeSignature(values) {
+    if (!values || !values.length) return "";
+    var sample = values.slice(0, 3).map(function (row) {
+      return (row || []).map(function (c) { return String(c || "").trim(); }).join(" ");
+    }).join(" ");
+    var m = sample.match(/\[(\d+Î∞?\]/);
+    return m ? m[1] : sample.slice(0, 80);
+  }
+
+  async function probeTabsByClassNames(spreadsheetId) {
+    var probed = [];
+    var seen = {};
+    for (var i = 1; i <= 20; i++) {
+      var title = i + "Î∞?;
+      try {
+        var values = await fetchSheetValuesGviz(spreadsheetId, { title: title });
+        if (!values || !values.length) break;
+        var sig = sheetProbeSignature(values);
+        if (!sig || seen[sig]) break;
+        seen[sig] = true;
+        if (sig.indexOf("Î∞?) < 0 && probed.length) break;
+        probed.push({ gid: null, title: title });
+      } catch (err) {
+        break;
+      }
+    }
+    return probed;
+  }
+
+  async function probeTabsBySheetIndex(spreadsheetId) {
+    var probed = [];
+    var seen = {};
+    for (var i = 1; i <= 20; i++) {
+      try {
+        var values = await fetchSheetValuesGviz(spreadsheetId, { title: "Sheet" + i });
+        if (!values || !values.length) break;
+        var sig = sheetProbeSignature(values);
+        if (!sig || seen[sig]) break;
+        seen[sig] = true;
+        probed.push({ gid: null, title: "Sheet" + i });
+      } catch (err) {
+        break;
+      }
+    }
+    return probed;
+  }
+
+  async function fetchSpreadsheetTabs(spreadsheetId) {
+    var urls = [
+      "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/edit?usp=sharing",
+      "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/edit",
+    ];
+    for (var u = 0; u < urls.length; u++) {
+      try {
+        var res = await fetch(urls[u]);
+        if (!res.ok) continue;
+        var tabs = parseTabsFromHtml(await res.text());
+        if (tabs.length) return tabs;
+      } catch (err) { /* CORS or network */ }
+    }
+    var feedUrl = "https://spreadsheets.google.com/feeds/worksheets/" + spreadsheetId + "/public/full?alt=json";
+    try {
+      var feedRes = await fetch(feedUrl);
+      if (feedRes.ok) {
+        var feed = await feedRes.json();
+        var entries = (feed && feed.feed && feed.feed.entry) || [];
+        if (entries.length) {
+          return entries.map(function (entry) {
+            var gidMatch = String(entry.id || "").match(/gid=(\d+)/);
+            return {
+              gid: gidMatch ? gidMatch[1] : null,
+              title: String(entry.title && entry.title.$t || entry.title || "?úÌä∏").trim(),
+            };
+          });
+        }
+      }
+    } catch (e) { /* feed unavailable */ }
+    var classTabs = await probeTabsByClassNames(spreadsheetId);
+    if (classTabs.length) return classTabs;
+    var sheetTabs = await probeTabsBySheetIndex(spreadsheetId);
+    if (sheetTabs.length) return sheetTabs;
+    throw new Error("?úÌä∏ ??ùÑ Ï∞æÏùÑ ???ÜÏäµ?àÎã§. URL¬∑Í≥µÍ∞ú Í≥µÏú† ?§Ï†ï???ïÏù∏?òÏÑ∏??");
+  }
+
+  function gvizTableToValues(json) {
+    var table = json && json.table;
+    if (!table || !table.rows || !table.rows.length) return [];
+    var headers = (table.cols || []).map(function (c) { return String((c && c.label) || "").trim(); });
+    var rows = table.rows.map(function (row) {
+      return (row.c || []).map(function (cell) {
+        if (cell == null) return "";
+        if (cell.v != null) return String(cell.v);
+        if (cell.f != null) return String(cell.f);
+        return "";
+      });
+    });
+    return [headers].concat(rows);
+  }
+
+  async function fetchSheetValuesGviz(spreadsheetId, tab) {
+    var params = new URLSearchParams({ tqx: "out:json" });
+    if (tab && tab.gid) params.set("gid", tab.gid);
+    else if (tab && tab.title) params.set("sheet", tab.title);
+    var url = "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/gviz/tq?" + params;
+    var res = await fetch(url);
+    if (!res.ok) throw new Error("Í≥µÍ∞ú ?úÌä∏ Ï°∞Ìöå ?§Ìå® (HTTP " + res.status + "). ?úÌä∏Í∞Ä 'ÎßÅÌÅ¨Í∞Ä ?àÎäî Î™®Îì† ?¨Ïö©???êÍ≤å Í≥µÍ∞ú?òÏñ¥ ?àÎäîÏßÄ ?ïÏù∏?òÏÑ∏??");
+    return gvizTableToValues(parseGvizJson(await res.text()));
+  }
+
+  async function fetchAllSheetsGviz(spreadsheetId) {
+    var tabs = await fetchSpreadsheetTabs(spreadsheetId);
+    if (!tabs.length) tabs = [{ gid: null, title: null }];
+    return Promise.all(tabs.map(async function (tab) {
+      var values = await fetchSheetValuesGviz(spreadsheetId, tab);
+      return {
+        sheetName: tab.title || "?úÌä∏1",
+        gid: tab.gid,
+        values: values,
+        analysis: analyzeSheetData(values),
+      };
+    }));
+  }
+
+  var PROFILE_HEADER_PATTERN = /^(?:?ë§\s*)?\[\d+Î∞?]\s*\[\d+\]\s*\[[^\]]+\]\s*?ôÏÉù\s*?ÑÎ°ú??s*/i;
+  var PROFILE_MARKERS_RE = /?ôÏÉù\s*?ÑÎ°ú???íå|?ìö|?ìñ|?ìù|?ÅÏó≠Î≥?s*\(|?†ÏÉù?òÍªò\s*?ÑÌïò??;
+  var SECTION_START_RE = /(?=(?:?íå|?ìö|?ìñ|?ìù|?èÔ∏è|?éØ)|?ÅÏó≠Î≥?s*\()/;
+  var SUBJECT_START_RE = /(?=Í≥ºÎ™©\s*\d+\s*\([^)]+\))/;
+  var PROFILE_KEYWORD_THEMES = [
+    { re: /Íµ?ñ¥|?òÌïô|?ÅÏñ¥|Í≥ºÌïô|?¨Ìöå|?åÏïÖ|Ï≤¥Ïú°|ÎØ∏Ïà†|??Ç¨|?ÑÎçï|Í∏∞Ïà†|?ïÎ≥¥/gi, label: "Í≥ºÎ™© ?∏Í∏â" },
+    { re: /?êÏã†Í∞?Î∂àÏïà|Í∏¥Ïû•|Í±±Ï†ï/gi, label: "?úÌóò¬∑?ïÏÑú" },
+    { re: /ÏπúÍµ¨|?êÎûò|Í¥ÄÍ≥?gi, label: "?Ä?∏Í?Í≥? },
+    { re: /ÏßëÏ§ë|Î≥µÏäµ|?àÏäµ|?ÑÍ∏∞/gi, label: "?ôÏäµ ?µÍ?" },
+    { re: /?†ÏÉù??Í∞êÏÇ¨|Í≥†Îßô/gi, label: "?†ÏÉù?ò¬∑Í∞ê?? }
+  ];
+
+  function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function isMarkerOnlyTitle(title) {
+    var t = String(title || "").trim();
+    if (!t) return true;
+    if (/^[\s?íå?ìö?ìñ?ìù?èÔ∏è?éØ‚≠êüîñ‚Ä?-?ë§]+$/.test(t)) return true;
+    if (/^?ë§\s*\[\d+Î∞?]/.test(t)) return true;
+    if (/?ôÏÉù\s*?ÑÎ°ú??s*$/i.test(t) && t.length < 120) return true;
+    return false;
+  }
+
+  function isMeaningfulSection(sec) {
+    if (!sec) return false;
+    if (sec.body && String(sec.body).trim()) return true;
+    if (sec.fields && sec.fields.length) return true;
+    return !isMarkerOnlyTitle(sec.title);
+  }
+
+  function hasProfileContent(text) {
+    var s = String(text || "").trim();
+    if (!s) return false;
+    return PROFILE_PATTERN.test(s) || PROFILE_MARKERS_RE.test(s);
+  }
+
+  function longestCellText(cells) {
+    var best = "";
+    for (var i = 0; i < (cells || []).length; i++) {
+      var c = String(cells[i] || "").trim();
+      if (c.length > best.length) best = c;
+    }
+    return best;
+  }
+
+  function stripProfileHeader(text, meta) {
+    var s = String(text || "").trim().replace(/^?ë§\s*/, "");
+    if (meta && meta.Î∞?!= null && meta.Î≤àÌò∏ != null && meta.?¥Î¶Ñ) {
+      var classNum = String(meta.Î∞?.replace(/Î∞?/, "");
+      var specific = new RegExp(
+        "^\\[?" + escapeRegex(classNum) + "Î∞?\]?\\s*\\[?" + meta.Î≤àÌò∏ + "\\]?\\s*\\[?" + escapeRegex(meta.?¥Î¶Ñ) + "\\]?\\s*?ôÏÉù\\s*?ÑÎ°ú??\s*",
+        "i"
+      );
+      s = s.replace(specific, "");
+    }
+    return s.replace(PROFILE_HEADER_PATTERN, "").trim();
+  }
+
+  function parseSectionFields(body) {
+    var fields = [];
+    var text = String(body || "").trim();
+    if (!text) return fields;
+    var re = /(?:^|[\n\r]|\s)-\s*([^:\n]+?)\s*:\s*([\s\S]*?)(?=(?:[\n\r]|\s)-\s*[^:]+:|$)/g;
+    var m;
+    while ((m = re.exec(text)) !== null) {
+      var key = m[1].trim();
+      var val = m[2].trim().replace(/\s+/g, " ");
+      if (key && val) fields.push({ key: key, value: val });
+    }
+    if (!fields.length) {
+      var inline = /-\s*([^:]+?)\s*:\s*([^-]+?)(?=\s*-\s*[^:]+:|$)/g;
+      while ((m = inline.exec(text)) !== null) {
+        fields.push({ key: m[1].trim(), value: m[2].trim() });
+      }
+    }
+    return fields;
+  }
+
+  /** Í≥ºÎ™© Î∏îÎ°ù ?úÎ™©?êÏÑú Í≥ºÎ™©Î™ÖÎßå Ï∂îÏ∂ú (?? Íµ?ñ¥, ?òÌïô, ?µÌï©Í≥ºÌïô) */
+  function simplifySectionTitle(title) {
+    if (!title) return "?ëÎãµ";
+    var t = String(title).trim();
+    if (/?íå|?†ÏÉù?òÍªò/.test(t)) return TEACHER_MESSAGE_TITLE;
+    var subjectMatch = t.match(/Í≥ºÎ™©\s*\d+\s*\(([^)]+)\)/);
+    if (subjectMatch) return subjectMatch[1].trim();
+    var lastParen = t.match(/\(([^)]+)\)\s*$/);
+    if (lastParen) {
+      var name = lastParen[1].trim();
+      if (/^(Íµ?ñ¥|?òÌïô|?ÅÏñ¥|?úÍµ≠???µÌï©?¨Ìöå|?µÌï©Í≥ºÌïô|Í≥ºÌïô|?¨Ìöå|?åÏïÖ|Ï≤¥Ïú°|ÎØ∏Ïà†|??Ç¨|?ÑÎçï|Í∏∞Ïà†|?ïÎ≥¥)$/.test(name)) {
+        return name;
+      }
+    }
+    return t;
+  }
+
+  function parseTeacherSection(chunk) {
+    var headerMatch = chunk.match(/^(?íå[^\n"]*)/);
+    var title = TEACHER_MESSAGE_TITLE;
+    var quoteMatch = chunk.match(/[""]([^""]+)[""]/s) || chunk.match(/[""]([^""]+)[""]/);
+    var body = quoteMatch ? quoteMatch[1].trim() : chunk.replace(/^?íå[^\n]*\n?/, "").replace(title, "").trim();
+    return { title: title, body: body, fields: [] };
+  }
+
+  function parseSubjectSections(chunk, parentTitle) {
+    var sections = [];
+    var parent = parentTitle || "";
+    var parts = chunk.split(SUBJECT_START_RE).map(function (p) { return p.trim(); }).filter(Boolean);
+    if (parts.length <= 1 && /Í≥ºÎ™©\s*\d+\s*\(/.test(chunk)) parts = [chunk];
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      var subjMatch = part.match(/^(Í≥ºÎ™©\s*\d+\s*\([^)]+\))/);
+      if (!subjMatch) continue;
+      var title = simplifySectionTitle(subjMatch[1].trim());
+      var bodyStart = part.slice(subjMatch[0].length).trim();
+      sections.push({ title: title, body: "", fields: parseSectionFields(bodyStart) });
+    }
+    return sections;
+  }
+
+  function parseSections(text, meta) {
+    var body = stripProfileHeader(text, meta);
+    if (!body) return [];
+    body = body.replace(/^?ë§\s*/, "").trim();
+    var sections = [];
+    var chunks = body.split(SECTION_START_RE).map(function (c) { return c.trim(); }).filter(Boolean);
+    var surveyParent = "";
+    for (var ci = 0; ci < chunks.length; ci++) {
+      var chunk = chunks[ci];
+      if (/^?íå/.test(chunk)) {
+        sections.push(parseTeacherSection(chunk));
+        continue;
+      }
+      if (/^?ìö|^?ÅÏó≠Î≥?.test(chunk)) {
+        var parentMatch = chunk.match(/^((?:?ìö\s*)??ÅÏó≠Î≥?s*\([^)]+\)\s*?ôÏäµ\s*?§Î¨∏[^\n]*)/)
+          || chunk.match(/^(?ìö[^\n]+)/)
+          || chunk.match(/^(?ÅÏó≠Î≥?s*\([^)]+\)[^\n]*)/);
+        surveyParent = parentMatch ? parentMatch[1].trim() : chunk.split(/\n/)[0].trim();
+        if (/Í≥ºÎ™©\s*\d+\s*\(/.test(chunk)) {
+          sections = sections.concat(parseSubjectSections(chunk, surveyParent));
+        } else if (!SUBJECT_START_RE.test(chunk)) {
+          var remainder = chunk.replace(surveyParent, "").trim();
+          if (remainder && !isMarkerOnlyTitle(surveyParent)) {
+            sections.push({ title: simplifySectionTitle(surveyParent), body: remainder, fields: [] });
+          }
+        }
+        continue;
+      }
+      if (/^Í≥ºÎ™©\s*\d+\s*\(/.test(chunk)) {
+        sections = sections.concat(parseSubjectSections(chunk, surveyParent));
+        continue;
+      }
+      var firstLine = chunk.split(/\n/)[0].trim();
+      if (firstLine) {
+        sections.push({
+          title: simplifySectionTitle(firstLine),
+          body: chunk.slice(firstLine.length).trim(),
+          fields: parseSectionFields(chunk),
+        });
+      }
+    }
+    return sections.filter(isMeaningfulSection);
+  }
+
+  function parseProfileCategories(text, meta) {
+    return parseSections(text, meta);
+  }
+
+  function rowHasSections(row) {
+    return !!(row && row.sections && row.sections.length);
+  }
+
+  function enrichRowWithProfile(row, profileText, meta) {
+    if (!hasProfileContent(profileText)) return row;
+    var m = meta || extractProfileMeta(profileText);
+    row.sections = parseSections(profileText, m);
+    if (m) {
+      if (!row.Î∞?|| row.Î∞?=== "(ÎØ∏ÏûÖ??") row.Î∞?= m.Î∞?
+      if (row.Î≤àÌò∏ == null) row.Î≤àÌò∏ = m.Î≤àÌò∏;
+      if (!row.?¥Î¶Ñ) row.?¥Î¶Ñ = m.?¥Î¶Ñ;
+    }
+    row._raw = row._raw || {};
+    row._raw.?ÑÎ°ú??= profileText;
+    return row;
+  }
+
+  function extractCommonThemes(rows) {
+    var categoryFill = {};
+    var keywordHits = {};
+    for (var ri = 0; ri < rows.length; ri++) {
+      var row = rows[ri];
+      var sections = row.sections || parseSections((row._raw && row._raw.?ÑÎ°ú?? || "", null);
+      for (var si = 0; si < sections.length; si++) {
+        var title = sections[si].title;
+        if (!title || /^[\s?íå?ìö?ìñ?ìù?èÔ∏è?éØ‚≠êüîñ‚Ä?-]+$/.test(title)) continue;
+        categoryFill[title] = (categoryFill[title] || 0) + 1;
+      }
+      var corpus = sections.map(function (s) {
+        return (s.body || "") + " " + (s.fields || []).map(function (f) { return f.value; }).join(" ");
+      }).join(" ");
+      for (var ti = 0; ti < PROFILE_KEYWORD_THEMES.length; ti++) {
+        var theme = PROFILE_KEYWORD_THEMES[ti];
+        var matches = corpus.match(theme.re);
+        if (matches && matches.length) {
+          keywordHits[theme.label] = (keywordHits[theme.label] || 0) + matches.length;
+        }
+      }
+    }
+    var themes = [];
+    for (var ckey in categoryFill) {
+      themes.push({ Ï£ºÏ†ú: ckey, ?∏Í∏â?? categoryFill[ckey], ?†Ìòï: "category" });
+    }
+    for (var kkey in keywordHits) {
+      themes.push({ Ï£ºÏ†ú: kkey, ?∏Í∏â?? keywordHits[kkey], ?†Ìòï: "keyword" });
+    }
+    themes.sort(function (a, b) { return b.?∏Í∏â??- a.?∏Í∏â?? });
+    return themes.slice(0, 10);
+  }
+
+  function extractProfileMeta(text) {
+    const match = String(text || "").match(PROFILE_PATTERN);
+    if (!match) return null;
+    return { Î∞? match[1] + "Î∞?, Î≤àÌò∏: Number(match[2]), ?¥Î¶Ñ: match[3].trim() };
+  }
+
+  function isProfileSheetFormat(rawValues) {
+    if (!rawValues || !rawValues.length) return false;
+    var sampleRows = rawValues.slice(0, Math.min(8, rawValues.length));
+    var hits = 0, checked = 0;
+    for (var i = 0; i < sampleRows.length; i++) {
+      var cells = sampleRows[i] || [];
+      var joined = cells.map(function (c) { return String(c || "").trim(); }).join(" ");
+      var longest = longestCellText(cells);
+      var text = longest.length > joined.length * 0.55 ? longest : joined;
+      if (!text) continue;
+      checked += 1;
+      if (hasProfileContent(text)) hits += 1;
+    }
+    return checked > 0 && hits >= Math.ceil(checked / 2);
+  }
+
+  function normalizeProfileSheet(rawValues) {
+    var dataRows = rawValues.filter(function (row) {
+      return row && row.some(function (cell) { return String(cell || "").trim() !== ""; });
+    });
+    var rows = dataRows.map(function (raw, rowIndex) {
+      var text = longestCellText(raw.map(function (c) { return String(c || "").trim(); }));
+      if (!text) text = raw.map(function (c) { return String(c || "").trim(); }).join("\n").trim();
+      var meta = extractProfileMeta(text);
+      if (!meta && !hasProfileContent(text)) return null;
+      if (!meta) meta = { Î∞? "(ÎØ∏ÏûÖ??", Î≤àÌò∏: rowIndex + 1, ?¥Î¶Ñ: "" };
+      var sections = parseSections(text, meta);
+      return {
+        id: rowIndex + 1,
+        Î∞? meta.Î∞?
+        Î≤àÌò∏: meta.Î≤àÌò∏,
+        ?¥Î¶Ñ: meta.?¥Î¶Ñ,
+        sections: sections,
+        _raw: { ?¥Î¶Ñ: meta.?¥Î¶Ñ, ?ÑÎ°ú?? text, Î≥∏Î¨∏: stripProfileHeader(text, meta) },
+        ?ÑÎ£å: true,
+      };
+    }).filter(Boolean);
+    rows.sort(function (a, b) {
+      var c = String(a.Î∞?.localeCompare(String(b.Î∞?, "ko");
+      if (c !== 0) return c;
+      return (a.Î≤àÌò∏ || 0) - (b.Î≤àÌò∏ || 0);
+    });
+    return {
+      headers: ["Î∞?, "Î≤àÌò∏", "?¥Î¶Ñ"],
+      rows: rows,
+      meta: { classColumn: "Î∞?, numberColumn: "Î≤àÌò∏", completionColumn: "(?ÑÎ°ú???úÏ∂ú)", format: "profile" },
+    };
+  }
+
+  function normalizeHeader(cell) {
+    return String(cell || "").trim().toLowerCase().replace(/\s+/g, "");
+  }
+
+  function findColumnIndex(headers, aliases) {
+    var normalized = headers.map(normalizeHeader);
+    for (var a = 0; a < aliases.length; a++) {
+      var key = normalizeHeader(aliases[a]);
+      for (var i = 0; i < normalized.length; i++) {
+        if (normalized[i] === key || normalized[i].indexOf(key) >= 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  function findColumnIndexExact(headers, aliases) {
+    var normalized = headers.map(normalizeHeader);
+    for (var a = 0; a < aliases.length; a++) {
+      var key = normalizeHeader(aliases[a]);
+      for (var i = 0; i < normalized.length; i++) {
+        if (normalized[i] === key) return i;
+      }
+    }
+    return -1;
+  }
+
+  function looksLikePersonName(value) {
+    var t = coerceText(value);
+    if (!t || t.length < 2 || t.length > 20) return false;
+    if (/^\d+([.,]\d+)?$/.test(t)) return false;
+    if (/[@./:\\]|https?:|^\d{4}[-/]/.test(t)) return false;
+    return /[Í∞Ä-?£a-zA-Z]/.test(t);
+  }
+
+  function inferRosterNameColumnIndex(headerRow, dataRows, excludeIndices) {
+    var exclude = {};
+    (excludeIndices || []).forEach(function (i) {
+      if (i >= 0) exclude[i] = true;
+    });
+    var exact = findColumnIndexExact(headerRow, ROSTER_NAME_ALIASES);
+    if (exact >= 0 && !exclude[exact]) return exact;
+
+    var sample = (dataRows || []).slice(0, 20);
+    var bestIdx = -1;
+    var bestScore = 0;
+    for (var col = 0; col < headerRow.length; col++) {
+      if (exclude[col]) continue;
+      var score = 0;
+      for (var r = 0; r < sample.length; r++) {
+        if (looksLikePersonName(sample[r][col])) score += 1;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = col;
+      }
+    }
+    return bestScore >= 2 ? bestIdx : -1;
+  }
+
+  function rosterEntriesForSheet(roster, sheetName) {
+    if (!roster || !roster.length) return [];
+    var filtered = rosterForSheet(roster, sheetName);
+    var byNumber = {};
+    filtered.forEach(function (entry) {
+      if (entry.Î≤àÌò∏ == null || entry.Î≤àÌò∏ <= 0) return;
+      var num = Number(entry.Î≤àÌò∏);
+      var prev = byNumber[num];
+      if (!prev) {
+        byNumber[num] = {
+          Î∞? entry.Î∞?|| "",
+          Î≤àÌò∏: num,
+          ?¥Î¶Ñ: coerceText(entry.?¥Î¶Ñ),
+        };
+        return;
+      }
+      if (!prev.?¥Î¶Ñ && entry.?¥Î¶Ñ) prev.?¥Î¶Ñ = coerceText(entry.?¥Î¶Ñ);
+      if (!prev.Î∞?&& entry.Î∞? prev.Î∞?= entry.Î∞?
+    });
+    return Object.keys(byNumber)
+      .map(function (k) {
+        return byNumber[k];
+      })
+      .sort(function (a, b) {
+        return a.Î≤àÌò∏ - b.Î≤àÌò∏;
+      });
+  }
+
+  function coerceNumber(value) {
+    if (value === null || value === undefined || value === "") return null;
+    var n = Number(String(value).replace(/[^\d.-]/g, ""));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function coerceText(value) {
+    if (value === null || value === undefined) return "";
+    return String(value).trim();
+  }
+
+  function isCompletedValue(value) {
+    var v = coerceText(value).toLowerCase();
+    if (!v) return false;
+    var done = ["y", "yes", "true", "1", "o", "?ÑÎ£å", "?úÏ∂ú", "?ëÎãµ?ÑÎ£å", "done", "complete", "completed", "??, "v"];
+    if (done.indexOf(v) >= 0) return true;
+    return v.indexOf("?ÑÎ£å") >= 0 || v.indexOf("?úÏ∂ú") >= 0;
+  }
+
+  function inferCompletionFromRow(cells, skipIndices) {
+    var skip = {};
+    for (var i = 0; i < skipIndices.length; i++) skip[skipIndices[i]] = true;
+    for (var j = 0; j < cells.length; j++) {
+      if (!skip[j] && isCompletedValue(cells[j])) return cells[j];
+    }
+    return "";
+  }
+
+  function pickContentPreview(headers, cells) {
+    var contentIdx = findColumnIndex(headers, CONTENT_ALIASES);
+    if (contentIdx >= 0) {
+      var text = cells[contentIdx];
+      return text.length > 120 ? text.slice(0, 120) + "?? : text;
+    }
+    var sorted = cells.filter(function (c) { return c.length > 8; }).sort(function (a, b) { return b.length - a.length; });
+    var longest = sorted[0];
+    if (!longest) return "";
+    return longest.length > 120 ? longest.slice(0, 120) + "?? : longest;
+  }
+
+  function emptyAnalysis() {
+    return {
+      summary: { Ï¥ùÏùë?? 0, ?ÑÎ£åÍ±¥Ïàò: 0, ?ÑÎ£å?? 0, ?ôÍ∏â?? 0, Î≤àÌò∏?ÖÎ†•: 0, ?¥Î¶Ñ?ÖÎ†•: 0, Î∞òÎ??ÖÎ†•: 0 },
+      byClass: [], columnInsights: [], themes: [], headers: [], rows: [], meta: { format: "empty" },
+    };
+  }
+
+  function buildColumnInsights(headers, rows) {
+    if (!headers || !headers.length || !rows.length) return [];
+    return headers.map(function (name, colIdx) {
+      var filled = rows.filter(function (r) {
+        var val = Object.values(r._raw || {})[colIdx];
+        return coerceText(val) !== "";
+      }).length;
+      var isContent = CONTENT_ALIASES.some(function (a) {
+        return normalizeHeader(name).indexOf(normalizeHeader(a)) >= 0;
+      });
+      return {
+        ?? name || "?? + (colIdx + 1),
+        ?ÖÎ†•Í±¥Ïàò: filled,
+        ?ÖÎ†•Î•? rows.length ? Math.round((filled / rows.length) * 1000) / 10 : 0,
+        ?ÅÎã¥?¥Ïö©?? isContent,
+      };
+    }).filter(function (c) { return c.?ÖÎ†•Í±¥Ïàò > 0; })
+      .sort(function (a, b) { return b.?ÖÎ†•Í±¥Ïàò - a.?ÖÎ†•Í±¥Ïàò; })
+      .slice(0, 8);
+  }
+
+  function detectThemes(rows) {
+    var corpus = rows.map(function (r) {
+      return Object.values(r._raw || {}).join(" ");
+    }).join(" ").toLowerCase();
+    var hits = THEME_KEYWORDS.map(function (t) {
+      var regex = new RegExp(t.key, "gi");
+      var count = (corpus.match(regex) || []).length;
+      return { Ï£ºÏ†ú: t.label, ?∏Í∏â?? count };
+    }).filter(function (t) { return t.?∏Í∏â??> 0; });
+    hits.sort(function (a, b) { return b.?∏Í∏â??- a.?∏Í∏â?? });
+    return hits.slice(0, 6);
+  }
+
+  function buildAnalysisPayload(headers, rows, meta) {
+    var grouped = groupBy(rows, function (r) { return r.Î∞? });
+    var total = rows.length;
+    var completed = sumBy(rows, function (r) { return r.?ÑÎ£å ? 1 : 0; });
+    var withNumber = rows.filter(function (r) { return r.Î≤àÌò∏ !== null; }).length;
+    var withName = rows.filter(function (r) { return r.?¥Î¶Ñ; }).length;
+    var missingClass = rows.filter(function (r) { return r.Î∞?=== "(ÎØ∏ÏûÖ??"; }).length;
+
+    var byClass = Object.keys(grouped).map(function (className) {
+      var classRows = grouped[className];
+      var classTotal = classRows.length;
+      var classCompleted = sumBy(classRows, function (r) { return r.?ÑÎ£å ? 1 : 0; });
+      return {
+        Î∞? className,
+        ?∏Ïõê: classTotal,
+        ?ÑÎ£å: classCompleted,
+        ?ÑÎ£å?? classTotal ? Math.round((classCompleted / classTotal) * 1000) / 10 : 0,
+      };
+    }).sort(function (a, b) { return String(a.Î∞?.localeCompare(String(b.Î∞?, "ko"); });
+
+    return {
+      summary: {
+        Ï¥ùÏùë?? total,
+        ?ÑÎ£åÍ±¥Ïàò: completed,
+        ?ÑÎ£å?? total ? Math.round((completed / total) * 1000) / 10 : 0,
+        ?ôÍ∏â?? Object.keys(grouped).length,
+        Î≤àÌò∏?ÖÎ†•: withNumber,
+        ?¥Î¶Ñ?ÖÎ†•: withName,
+        Î∞òÎ??ÖÎ†•: missingClass,
+      },
+      byClass: byClass,
+      columnInsights: buildColumnInsights(headers, rows),
+      themes: detectThemes(rows),
+      commonThemes: (meta.format === "profile" || rows.some(rowHasSections)) ? extractCommonThemes(rows) : [],
+      headers: headers,
+      rows: rows,
+      meta: Object.assign({}, meta, { totalRows: total, classCount: Object.keys(grouped).length }),
+    };
+  }
+
+  function analyzeSheetData(rawValues) {
+    if (!rawValues || !rawValues.length) return emptyAnalysis();
+
+    if (isProfileSheetFormat(rawValues)) {
+      var profile = normalizeProfileSheet(rawValues);
+      return buildAnalysisPayload(profile.headers, profile.rows, Object.assign({}, profile.meta, { format: "profile" }));
+    }
+
+    var headerRow = rawValues[0].map(coerceText);
+    var dataRows = rawValues.slice(1).filter(function (row) {
+      return row.some(function (cell) { return coerceText(cell) !== ""; });
+    });
+
+    var classIdx = findColumnIndex(headerRow, CLASS_ALIASES);
+    var numberIdx = findColumnIndex(headerRow, NUMBER_ALIASES);
+    var nameIdx = findColumnIndex(headerRow, NAME_ALIASES);
+    var completionIdx = findColumnIndex(headerRow, COMPLETION_ALIASES);
+    if (classIdx < 0 && headerRow.length > 0) classIdx = 0;
+    if (numberIdx < 0 && headerRow.length > 1) numberIdx = 1;
+
+    var rows = dataRows.map(function (raw, rowIndex) {
+      var cells = headerRow.map(function (_, i) { return coerceText(raw[i]); });
+      var classVal = coerceText(raw[classIdx]);
+      var numberVal = coerceNumber(raw[numberIdx]);
+      var nameVal = nameIdx >= 0 ? coerceText(raw[nameIdx]) : "";
+      var skipCols = [classIdx, numberIdx, nameIdx].filter(function (i) { return i >= 0; });
+      var completionRaw = completionIdx >= 0 ? raw[completionIdx] : inferCompletionFromRow(cells, skipCols);
+      var row = {
+        id: rowIndex + 1,
+        Î∞? classVal || "(ÎØ∏ÏûÖ??",
+        Î≤àÌò∏: numberVal,
+        ?¥Î¶Ñ: nameVal,
+        ?ÑÎ£å: isCompletedValue(completionRaw),
+        ÎØ∏Î¶¨Î≥¥Í∏∞: pickContentPreview(headerRow, cells),
+        _raw: Object.fromEntries(headerRow.map(function (h, i) { return [h || "col_" + i, cells[i]]; })),
+      };
+      var profileText = longestCellText(cells);
+      return enrichRowWithProfile(row, profileText, extractProfileMeta(profileText));
+    });
+
+    return buildAnalysisPayload(headerRow, rows, {
+      classColumn: headerRow[classIdx] || "Î∞?,
+      numberColumn: headerRow[numberIdx] || "Î≤àÌò∏",
+      nameColumn: nameIdx >= 0 ? headerRow[nameIdx] : null,
+      completionColumn: completionIdx >= 0 ? headerRow[completionIdx] : "(?êÎèô Ï∂îÎ°†)",
+      format: "table",
+    });
+  }
+
+  function normalizeTabTitle(title) {
+    return String(title || "").trim().toLowerCase().replace(/\s+/g, "");
+  }
+
+  function isListSheetTab(title) {
+    var n = normalizeTabTitle(title);
+    return n === "list" || n === "Î™ÖÎã®" || n === "?ôÏÉùÎ™ÖÎã®" || n === "studentlist";
+  }
+
+  function normalizeSheetClassKey(value) {
+    var t = String(value || "").trim();
+    if (!t) return "";
+    var m = t.match(/(\d+)\s*Î∞?);
+    if (m) return m[1] + "Î∞?;
+    return t.toLowerCase().replace(/\s+/g, "");
+  }
+
+  function isMatrixClassRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return false;
+    var headerRow = rawValues[0].map(coerceText);
+    var classCols = 0;
+    headerRow.forEach(function (h) {
+      if (/^\d+\s*Î∞?/.test(String(h || "").trim())) classCols += 1;
+    });
+    return classCols >= 2;
+  }
+
+  function parseMatrixClassRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return [];
+    var headerRow = rawValues[0].map(coerceText);
+    var dataRows = rawValues.slice(1).filter(function (row) {
+      return row && row.some(function (cell) { return coerceText(cell) !== ""; });
+    });
+    var numberIdx = findColumnIndexExact(headerRow, NUMBER_ALIASES);
+    if (numberIdx < 0) numberIdx = findColumnIndex(headerRow, NUMBER_ALIASES);
+    if (numberIdx < 0) numberIdx = 0;
+
+    var classColumns = [];
+    headerRow.forEach(function (h, idx) {
+      if (idx === numberIdx) return;
+      var m = String(h || "").trim().match(/^(\d+)\s*Î∞?/);
+      if (m) classColumns.push({ idx: idx, Î∞? m[1] + "Î∞? });
+    });
+    if (!classColumns.length) return [];
+
+    var roster = [];
+    dataRows.forEach(function (raw, rowIndex) {
+      var numberVal = numberIdx >= 0 ? coerceNumber(raw[numberIdx]) : null;
+      if (numberVal == null) numberVal = rowIndex + 1;
+      classColumns.forEach(function (col) {
+        var nameVal = coerceText(raw[col.idx]);
+        if (!nameVal) return;
+        roster.push({ Î∞? col.Î∞? Î≤àÌò∏: numberVal, ?¥Î¶Ñ: nameVal });
+      });
+    });
+    roster.sort(function (a, b) {
+      var classCmp = String(a.Î∞?.localeCompare(String(b.Î∞?, "ko");
+      if (classCmp !== 0) return classCmp;
+      return (a.Î≤àÌò∏ || 0) - (b.Î≤àÌò∏ || 0);
+    });
+    return roster;
+  }
+
+  async function fetchClassRosterFromMaster() {
+    var probeTitles = ["1Î∞?, "Î™ÖÎã®", "list"];
+    for (var i = 0; i < probeTitles.length; i++) {
+      try {
+        var values = await fetchSheetValuesGviz(CLASS_ROSTER_SPREADSHEET_ID, { title: probeTitles[i] });
+        if (isMatrixClassRoster(values)) return parseMatrixClassRoster(values);
+      } catch (err) { /* try next tab */ }
+    }
+    try {
+      var tabs = await fetchSpreadsheetTabs(CLASS_ROSTER_SPREADSHEET_ID);
+      if (tabs.length) {
+        var values = await fetchSheetValuesGviz(CLASS_ROSTER_SPREADSHEET_ID, tabs[0]);
+        if (isMatrixClassRoster(values)) return parseMatrixClassRoster(values);
+      }
+    } catch (err) { /* master roster unavailable */ }
+    return [];
+  }
+
+  function parseListRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return [];
+    if (isMatrixClassRoster(rawValues)) return parseMatrixClassRoster(rawValues);
+    var headerRow = rawValues[0].map(coerceText);
+    var dataRows = rawValues.slice(1).filter(function (row) {
+      return row && row.some(function (cell) { return coerceText(cell) !== ""; });
+    });
+    var classIdx = findColumnIndexExact(headerRow, CLASS_ALIASES);
+    if (classIdx < 0) classIdx = findColumnIndex(headerRow, CLASS_ALIASES);
+    var numberIdx = findColumnIndexExact(headerRow, NUMBER_ALIASES);
+    if (numberIdx < 0) numberIdx = findColumnIndex(headerRow, NUMBER_ALIASES);
+    if (numberIdx < 0 && headerRow.length > 0) numberIdx = 0;
+    var nameIdx = inferRosterNameColumnIndex(headerRow, dataRows, [classIdx, numberIdx]);
+
+    var roster = [];
+    dataRows.forEach(function (raw, rowIndex) {
+      var classVal = classIdx >= 0 ? coerceText(raw[classIdx]) : "";
+      var numberVal = numberIdx >= 0 ? coerceNumber(raw[numberIdx]) : null;
+      var nameVal = nameIdx >= 0 ? coerceText(raw[nameIdx]) : "";
+      if (numberVal == null && !nameVal) return;
+      if (numberVal == null) numberVal = rowIndex + 1;
+      roster.push({ Î∞? classVal, Î≤àÌò∏: numberVal, ?¥Î¶Ñ: nameVal });
+    });
+    roster.sort(function (a, b) {
+      return (a.Î≤àÌò∏ || 0) - (b.Î≤àÌò∏ || 0);
+    });
+    return roster;
+  }
+
+  function rosterForSheet(roster, sheetName) {
+    if (!roster || !roster.length) return [];
+    var hasClass = roster.some(function (r) { return r.Î∞? });
+    if (!hasClass) return roster.slice();
+    var sheetKey = normalizeSheetClassKey(sheetName);
+    if (!sheetKey) return roster.slice();
+    var filtered = roster.filter(function (r) {
+      var classKey = normalizeSheetClassKey(r.Î∞?;
+      return classKey === sheetKey || classKey.indexOf(sheetKey) >= 0 || sheetKey.indexOf(classKey) >= 0;
+    });
+    return filtered.length ? filtered : roster.slice();
+  }
+
+  function computeParticipationMeta(sheetAnalyses) {
+    if (!sheetAnalyses || !sheetAnalyses.length) {
+      return { maxExpected: 0, referenceSheetName: "", rosterSource: "responses" };
+    }
+    var ref = { name: sheetAnalyses[0].sheetName, count: sheetAnalyses[0].summary.Ï¥ùÏùë??|| 0 };
+    for (var i = 1; i < sheetAnalyses.length; i++) {
+      var c = sheetAnalyses[i].summary.Ï¥ùÏùë??|| 0;
+      if (c > ref.count) ref = { name: sheetAnalyses[i].sheetName, count: c };
+    }
+    return {
+      maxExpected: ref.count,
+      referenceSheetName: ref.name,
+      rosterSource: "responses",
+      roster: [],
+    };
+  }
+
+  function computeSheetParticipation(rows, rosterOrMax, referenceSheetName, rosterSource, sheetName) {
+    if (Array.isArray(rosterOrMax) && rosterOrMax.length) {
+      var rosterSlice = sheetName
+        ? rosterEntriesForSheet(rosterOrMax, sheetName)
+        : rosterOrMax.slice();
+      var present = {};
+      (rows || []).forEach(function (r) {
+        if (r.Î≤àÌò∏ != null && r.Î≤àÌò∏ > 0) present[Number(r.Î≤àÌò∏)] = true;
+      });
+      var missingStudents = rosterSlice.filter(function (entry) {
+        return entry.Î≤àÌò∏ != null && !present[Number(entry.Î≤àÌò∏)];
+      });
+      return {
+        referenceSheetName: referenceSheetName || "list",
+        rosterSource: rosterSource || "list",
+        maxExpected: rosterSlice.length,
+        participated: rosterSlice.length - missingStudents.length,
+        missingNumbers: missingStudents.map(function (s) { return s.Î≤àÌò∏; }),
+        missingStudents: missingStudents,
+        missingCount: missingStudents.length,
+      };
+    }
+
+    var maxExpected = typeof rosterOrMax === "number" ? rosterOrMax : 0;
+    if (!maxExpected) {
+      return {
+        referenceSheetName: referenceSheetName || "",
+        rosterSource: rosterSource || "responses",
+        maxExpected: 0,
+        participated: 0,
+        missingNumbers: [],
+        missingStudents: [],
+        missingCount: 0,
+      };
+    }
+    var presentNums = {};
+    (rows || []).forEach(function (r) {
+      if (r.Î≤àÌò∏ != null && r.Î≤àÌò∏ > 0) presentNums[r.Î≤àÌò∏] = true;
+    });
+    var missing = [];
+    for (var n = 1; n <= maxExpected; n++) {
+      if (!presentNums[n]) missing.push(n);
+    }
+    return {
+      referenceSheetName: referenceSheetName,
+      rosterSource: rosterSource || "responses",
+      maxExpected: maxExpected,
+      participated: maxExpected - missing.length,
+      missingNumbers: missing,
+      missingStudents: missing.map(function (num) { return { Î≤àÌò∏: num, ?¥Î¶Ñ: "" }; }),
+      missingCount: missing.length,
+    };
+  }
+
+  function analyzeAllSheets(sheetInputs, externalRoster) {
+    var listInput = null;
+    var responseInputs = [];
+    (sheetInputs || []).forEach(function (item) {
+      if (isListSheetTab(item.sheetName)) listInput = item;
+      else responseInputs.push(item);
+    });
+    var fullRoster =
+      externalRoster && externalRoster.length
+        ? externalRoster
+        : listInput
+          ? parseListRoster(listInput.values)
+          : [];
+    var rosterSource =
+      externalRoster && externalRoster.length
+        ? "master-roster"
+        : listInput
+          ? "list"
+          : "responses";
+
+    var sheetAnalyses = responseInputs.map(function (item) {
+      var analysis = analyzeSheetData(item.values);
+      analysis.meta = Object.assign({}, analysis.meta, { sheetName: item.sheetName });
+      return Object.assign({ sheetName: item.sheetName }, analysis);
+    });
+
+    var partMeta = fullRoster.length
+      ? {
+          maxExpected: fullRoster.length,
+          referenceSheetName:
+            rosterSource === "master-roster"
+              ? "Î™ÖÎ†¨??
+              : listInput
+                ? listInput.sheetName
+                : "",
+          rosterSource: rosterSource,
+          roster: fullRoster,
+          listTabName: listInput ? listInput.sheetName : null,
+        }
+      : computeParticipationMeta(sheetAnalyses);
+
+    if (fullRoster.length) {
+      partMeta.maxExpected = Math.max.apply(
+        null,
+        sheetAnalyses.map(function (sheet) {
+          return rosterEntriesForSheet(fullRoster, sheet.sheetName).length;
+        }).concat([0])
+      );
+    }
+
+    sheetAnalyses.forEach(function (sheet) {
+      if (fullRoster.length) {
+        sheet.participation = computeSheetParticipation(
+          sheet.rows,
+          fullRoster,
+          partMeta.referenceSheetName,
+          rosterSource,
+          sheet.sheetName
+        );
+      } else {
+        sheet.participation = computeSheetParticipation(
+          sheet.rows,
+          partMeta.maxExpected,
+          partMeta.referenceSheetName,
+          partMeta.rosterSource,
+          sheet.sheetName
+        );
+      }
+    });
+    var allRows = [];
+    sheetAnalyses.forEach(function (sheet) {
+      sheet.rows.forEach(function (row) {
+        allRows.push(Object.assign({}, row, { ?úÌä∏: sheet.sheetName }));
+      });
+    });
+    var combined = buildAnalysisPayload(
+      sheetAnalyses[0] && sheetAnalyses[0].headers ? sheetAnalyses[0].headers : [],
+      allRows,
+      { format: "multi", sheetCount: sheetAnalyses.length, sheetNames: sheetAnalyses.map(function (s) { return s.sheetName; }) }
+    );
+    return {
+      sheets: sheetAnalyses,
+      combined: combined,
+      participationMeta: partMeta,
+      sheetsMeta: {
+        total: sheetAnalyses.length,
+        listTab: listInput
+          ? { name: listInput.sheetName, rosterCount: fullRoster.length }
+          : null,
+        recognized: sheetAnalyses.filter(function (s) { return s.summary.Ï¥ùÏùë??> 0; }).length,
+        names: sheetAnalyses.map(function (s) { return s.sheetName; }),
+        perSheet: sheetAnalyses.map(function (s) {
+          return { name: s.sheetName, rows: s.summary.Ï¥ùÏùë??};
+        }),
+      },
+    };
+  }
+
+  var sheetsData = {};
+  var lastMultiResult = null;
+  var analysisInFlight = false;
+
+  function getDefaultSheetRegistry() {
+    return [];
+  }
+
+  function stripDefaultClassButtons(registry) {
+    if (!Array.isArray(registry)) return [];
+    return registry.filter(function (item) {
+      return !/^class-[1-8]$/.test(String(item && item.id || ""));
+    });
+  }
+
+  function loadSheetRegistry() {
+    try {
+      var raw = localStorage.getItem(SHEET_REGISTRY_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          var cleaned = stripDefaultClassButtons(parsed);
+          if (cleaned.length !== parsed.length) saveSheetRegistry(cleaned);
+          return cleaned;
+        }
+      }
+    } catch (err) { /* ignore */ }
+    return getDefaultSheetRegistry();
+  }
+
+  function saveSheetRegistry(registry) {
+    localStorage.setItem(SHEET_REGISTRY_KEY, JSON.stringify(registry));
+  }
+
+  function findRegistryEntry(id) {
+    return loadSheetRegistry().find(function (item) {
+      return item.id === id;
+    });
+  }
+
+  function getAdminPassword() {
+    return localStorage.getItem(ADMIN_PASSWORD_KEY) || DEFAULT_ADMIN_PASSWORD;
+  }
+
+  function setAdminPassword(password) {
+    localStorage.setItem(ADMIN_PASSWORD_KEY, password);
+  }
+
+  function isAdminSession() {
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
+  }
+
+  function setAdminSession(active) {
+    if (active) sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
+    else sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  }
+
+  function isFullWidthSheetLabel(label) {
+    return String(label || "").trim().length > 6;
+  }
+
+  function resolvePreferredSheetTab(sheets, preferredTab) {
+    if (!sheets || !sheets.length) return null;
+    if (!preferredTab) return sheets[0].sheetName;
+    var key = normalizeSheetClassKey(preferredTab);
+    var match = sheets.find(function (s) {
+      return normalizeSheetClassKey(s.sheetName) === key;
+    });
+    return match ? match.sheetName : sheets[0].sheetName;
+  }
+
+  function renderSheetButtonGrid() {
+    var grid = document.getElementById("sheetButtonGrid");
+    if (grid) grid.innerHTML = "";
+  }
+
+  function renderAdminRegistryList() {
+    var listEl = document.getElementById("adminRegistryList");
+    if (!listEl) return;
+    var registry = loadSheetRegistry();
+    listEl.innerHTML = registry
+      .map(function (item) {
+        return (
+          "<li><div class=\"registry-meta\"><strong>" +
+          esc(item.label) +
+          "</strong><span>" +
+          esc(item.url) +
+          (item.tab ? " ¬∑ ?? " + esc(item.tab) : "") +
+          "</span></div><div class=\"admin-actions\" style=\"margin:0;flex-shrink:0;\"><button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
+          esc(item.id) +
+          "\">Ï°∞Ìöå</button><button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
+          esc(item.id) +
+          "\">??†ú</button></div></li>"
+        );
+      })
+      .join("");
+    listEl.querySelectorAll("[data-open-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var entry = findRegistryEntry(btn.getAttribute("data-open-id"));
+        if (entry) launchSheetAnalysis(entry, btn);
+      });
+    });
+    listEl.querySelectorAll("[data-delete-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-delete-id");
+        var next = loadSheetRegistry().filter(function (item) {
+          return item.id !== id;
+        });
+        saveSheetRegistry(next);
+        renderSheetButtonGrid();
+        renderAdminRegistryList();
+      });
+    });
+  }
+
+  function updateAdminUi() {
+    var loggedIn = isAdminSession();
+    var panel = document.getElementById("adminPanel");
+    var gate = document.getElementById("homeAdminGate");
+    if (panel) panel.hidden = !loggedIn;
+    if (gate) gate.hidden = loggedIn;
+    if (loggedIn) renderAdminRegistryList();
+  }
+
+  function showAdminLogin() {
+    var input = document.getElementById("homeAdminPasswordInput");
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+    var gate = document.getElementById("homeAdminGate");
+    if (gate) gate.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function tryAdminLogin(password) {
+    if (password !== getAdminPassword()) {
+      alert("ÎπÑÎ?Î≤àÌò∏Í∞Ä ?¨Î∞îÎ•¥Ï? ?äÏäµ?àÎã§.");
+      return false;
+    }
+    setAdminSession(true);
+    updateAdminUi();
+    return true;
+  }
+
+  function setSheetButtonsDisabled(disabled) {
+    document.querySelectorAll(".sheet-launch-btn").forEach(function (btn) {
+      btn.disabled = disabled;
+      btn.classList.toggle("is-loading", disabled);
+    });
+  }
+
+  async function launchSheetAnalysis(entry, triggerBtn) {
+    if (analysisInFlight) return;
+    var errorEl = document.getElementById("error");
+    errorEl.hidden = true;
+    document.getElementById("results").classList.remove("visible");
+    document.getElementById("results").innerHTML = "";
+    teardownScrollStudentTracker();
+    setFabStackVisible(false);
+
+    analysisInFlight = true;
+    setSheetButtonsDisabled(true);
+    var prevLabel = triggerBtn ? triggerBtn.textContent : "";
+    if (triggerBtn) triggerBtn.textContent = "Î∂ÑÏÑù Ï§ë‚Ä?;
+
+    try {
+      var id = parseSpreadsheetId(entry.url);
+      var sheetInputs = await fetchAllSheetsGviz(id);
+      var masterRoster = await fetchClassRosterFromMaster();
+      var hasData = sheetInputs.some(function (s) {
+        return s.values && s.values.length;
+      });
+      if (!hasData) throw new Error("?úÌä∏???∞Ïù¥?∞Í? ?ÜÏäµ?àÎã§. Í≥µÍ∞ú Í≥µÏú† ?§Ï†ï???ïÏù∏?òÏÑ∏??");
+      sheetsData[id] = sheetInputs;
+      lastMultiResult = analyzeAllSheets(sheetInputs, masterRoster);
+      activeSheetView = null;
+      activeSubjectView = null;
+      renderResults(null, id, lastMultiResult);
+      document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      showHomeView();
+      errorEl.textContent = err.message || "Î∂ÑÏÑù???§Ìå®?àÏäµ?àÎã§.";
+      errorEl.hidden = false;
+      setFabStackVisible(false);
+    } finally {
+      analysisInFlight = false;
+      setSheetButtonsDisabled(false);
+      if (triggerBtn) triggerBtn.textContent = prevLabel || entry.label;
+    }
+  }
+  var activeSheetView = null;
+  var activeSubjectView = null;
+  var TEACHER_MESSAGE_TITLE = "?¥ÏûÑ ?†ÏÉù?òÍªò ?ÑÌïò???úÎßà??;
+  var SUBJECT_FILTER_OPTIONS = [
+    { id: "all", label: "Î™®Îì† Í≥ºÎ™©" },
+    { id: "Íµ?ñ¥", label: "Íµ?ñ¥" },
+    { id: "?òÌïô", label: "?òÌïô" },
+    { id: "?ÅÏñ¥", label: "?ÅÏñ¥" },
+    { id: "?úÍµ≠??, label: "?úÍµ≠?? },
+    { id: "?µÌï©?¨Ìöå", label: "?µÌï©?¨Ìöå" },
+    { id: "?µÌï©Í≥ºÌïô", label: "?µÌï©Í≥ºÌïô" },
+    { id: "teacher", label: "?¥ÏûÑ?†ÏÉù?òÍªò!" },
+  ];
+
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+
+  function getActiveAnalysis() {
+    if (!lastMultiResult || !activeSheetView) return null;
+    return (
+      lastMultiResult.sheets.find(function (s) {
+        return s.sheetName === activeSheetView;
+      }) || null
+    );
+  }
+
+  function isTeacherMessageSection(sec) {
+    return !!sec && simplifySectionTitle(sec.title || "") === TEACHER_MESSAGE_TITLE;
+  }
+
+  function sectionMatchesSubjectFilter(sec, subjectId) {
+    if (!isMeaningfulSection(sec)) return false;
+    if (subjectId === "teacher") return isTeacherMessageSection(sec);
+    if (!subjectId || subjectId === "all") return !isTeacherMessageSection(sec);
+    if (isTeacherMessageSection(sec)) return false;
+    var title = simplifySectionTitle(sec.title || "");
+    if (title === subjectId) return true;
+    if (title.indexOf(subjectId) >= 0) return true;
+    return false;
+  }
+
+  function renderSubjectTabsOnly() {
+    var html = '<div class="subject-tabs" role="tablist" aria-label="Í≥ºÎ™© ?ÑÌÑ∞">';
+    SUBJECT_FILTER_OPTIONS.forEach(function (opt) {
+      var active = activeSubjectView === opt.id ? " active" : "";
+      html +=
+        '<button type="button" class="subject-tab' +
+        active +
+        '" data-subject="' +
+        esc(opt.id) +
+        '" role="tab">' +
+        esc(opt.label) +
+        "</button>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function renderSheetTabs() {
+    if (!lastMultiResult) return "";
+    var html = "";
+    if (activeSheetView) {
+      html += '<div class="sheet-banner"><strong>' + esc(activeSheetView) + "</strong></div>";
+    }
+    html += renderSubjectTabsOnly();
+    html += '<div class="sheet-tabs" role="tablist">';
+    lastMultiResult.sheets.forEach(function (sheet) {
+      var active = activeSheetView === sheet.sheetName ? " active" : "";
+      html += '<button type="button" class="sheet-tab' + active + '" data-sheet="' + esc(sheet.sheetName) + '" role="tab">';
+      html += esc(sheet.sheetName);
+      html += '<span class="count">' + esc(sheet.summary.Ï¥ùÏùë?? + "Í±?/span></button>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function renderStudentResponseHeader(row) {
+    var classLabel = row.Î∞?&& row.Î∞?!== "(ÎØ∏ÏûÖ??" ? String(row.Î∞? : "";
+    var numLabel = row.Î≤àÌò∏ != null ? String(row.Î≤àÌò∏) + "Î≤? : "";
+    var nameLabel = row.?¥Î¶Ñ || (row._raw && row._raw.?¥Î¶Ñ) || "";
+    if (!classLabel && !numLabel && !nameLabel) return "";
+    var html = '<header class="student-response-header"><div class="header-meta">';
+    if (classLabel) html += '<span class="student-class">' + esc(classLabel) + "</span>";
+    if (numLabel) html += '<span class="student-num">' + esc(numLabel) + "</span>";
+    if (nameLabel) html += '<span class="student-name">' + esc(nameLabel) + "</span>";
+    html += "</div>";
+    if (row.?ÑÎ£å) {
+      html += '<span class="status-badge done">?ÑÎ£å</span>';
+    } else if (row.?ÑÎ£å === false) {
+      html += '<span class="status-badge pending">ÎØ∏ÏôÑÎ£?/span>';
+    }
+    html += "</header>";
+    return html;
+  }
+
+  function renderCategoryBlocks(row, subjectFilter) {
+    if (!subjectFilter) {
+      return '<p class="muted subject-empty">Í≥ºÎ™©???†ÌÉù??Ï£ºÏÑ∏??</p>';
+    }
+    var sections = row.sections || [];
+    var filtered = sections.filter(function (sec) {
+      return sectionMatchesSubjectFilter(sec, subjectFilter);
+    });
+    if (!filtered.length) {
+      if (subjectFilter === "teacher") {
+        return '<p class="muted subject-empty">?¥ÏûÑ ?†ÏÉù?òÍªò Î≥¥ÎÇ∏ ?úÎßà?îÍ? ?ÜÏäµ?àÎã§.</p>';
+      }
+      if (subjectFilter && subjectFilter !== "all") {
+        return '<p class="muted subject-empty">?¥Îãπ Í≥ºÎ™© ?ëÎãµ???ÜÏäµ?àÎã§.</p>';
+      }
+      return "";
+    }
+    var html = '<div class="category-blocks">';
+    filtered.forEach(function (sec) {
+      var isTeacher = isTeacherMessageSection(sec);
+      html += '<div class="category-block' + (isTeacher ? " category-block--teacher" : "") + '">';
+      if (!isTeacher) {
+        html += '<div class="cat-title">' + esc(simplifySectionTitle(sec.title || "?ëÎãµ")) + "</div>";
+      }
+      if (sec.body) {
+        var body = sec.body.length > 400 ? sec.body.slice(0, 400).trim() + "?? : sec.body;
+        html += '<div class="cat-body">' + esc(body) + "</div>";
+      }
+      if (sec.fields && sec.fields.length) {
+        sec.fields.forEach(function (f) {
+          html += '<div class="cat-field"><span>' + esc(f.key) + "</span> " + esc(f.value) + "</div>";
+        });
+      }
+      html += "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function renderStudentCard(row, hasCategories) {
+    var classVal =
+      row.Î∞?&& row.Î∞?!== "(ÎØ∏ÏûÖ??" ? String(row.Î∞? : activeSheetView || "";
+    var num = row.Î≤àÌò∏ != null ? String(row.Î≤àÌò∏) : "";
+    var name = row.?¥Î¶Ñ || (row._raw && row._raw.?¥Î¶Ñ) || "";
+    var html = '<article class="student-card"';
+    if (classVal) html += ' data-student-class="' + esc(classVal) + '"';
+    if (num) html += ' data-student-num="' + esc(num) + '"';
+    if (name) html += ' data-student-name="' + esc(name) + '"';
+    html += ">";
+    html += renderStudentResponseHeader(row);
+    html += '<div class="student-response-body">';
+    if (hasCategories && rowHasSections(row)) {
+      html += renderCategoryBlocks(row, activeSubjectView);
+    } else if (hasCategories) {
+      html += '<p class="muted">Î∂ÑÎ•ò???¥Ïö© ?ÜÏùå</p>';
+    } else {
+      html += '<div class="preview">' + esc(row.ÎØ∏Î¶¨Î≥¥Í∏∞ || (row._raw && row._raw.ÎØ∏Î¶¨Î≥¥Í∏∞) || "??) + "</div>";
+    }
+    html += "</div>";
+    html += '<hr class="student-card-divider" aria-hidden="true" />';
+    html += "</article>";
+    return html;
+  }
+
+  function formatMissingStudentLabel(student) {
+    if (!student) return "";
+    var num = student.Î≤àÌò∏ != null ? student.Î≤àÌò∏ + "Î≤? : "";
+    var name = student.?¥Î¶Ñ ? String(student.?¥Î¶Ñ) : "";
+    if (num && name) return num + " " + name;
+    return num || name || "";
+  }
+
+  function renderParticipationBanner(data) {
+    var p = data.participation;
+    if (!p || !p.maxExpected) return "";
+    var html = '<div class="participation-banner">';
+    html += '<div class="participation-stats">';
+    html +=
+      '<span class="participation-chip">Ï¥?<strong>' +
+      esc(p.maxExpected) +
+      "</strong>Î™?/span>";
+    html +=
+      '<span class="participation-chip participation-chip--primary">Ï∞∏Ïó¨ <strong>' +
+      esc(p.participated) +
+      "</strong>Î™?/span>";
+    if (p.missingCount > 0) {
+      html +=
+        '<span class="participation-chip participation-chip--warn">ÎØ∏Ï∞∏??<strong>' +
+        esc(p.missingCount) +
+        "</strong>Î™?/span>";
+    }
+    html += "</div>";
+    if (p.missingCount > 0) {
+      var labels = (p.missingStudents || []).map(formatMissingStudentLabel).filter(Boolean);
+      if (!labels.length && p.missingNumbers) {
+        labels = p.missingNumbers.map(function (n) { return n + "Î≤?; });
+      }
+      html +=
+        '<p class="missing-list"><span class="missing-label">ÎØ∏Ï∞∏??/span> ' +
+        esc(labels.join(", ")) +
+        "</p>";
+    } else {
+      html += '<p class="missing-list missing-list--ok">?ÑÏõê Ï∞∏Ïó¨</p>';
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function renderAbsentStudentCard(sheetName, student) {
+    var num = typeof student === "object" ? student.Î≤àÌò∏ : student;
+    var name =
+      typeof student === "object" && student.?¥Î¶Ñ ? String(student.?¥Î¶Ñ) : "(ÎØ∏Ìôï??";
+    var html = '<article class="student-card student-card--absent"';
+    if (sheetName) html += ' data-student-class="' + esc(sheetName) + '"';
+    if (num != null) html += ' data-student-num="' + esc(String(num)) + '"';
+    if (name) html += ' data-student-name="' + esc(name) + '"';
+    html += '><header class="student-response-header"><div class="header-meta">';
+    if (sheetName) html += '<span class="student-class">' + esc(sheetName) + "</span>";
+    if (num != null) html += '<span class="student-num">' + esc(num) + "Î≤?/span>";
+    html += '<span class="student-name">' + esc(name) + "</span>";
+    html += "</div>";
+    html += '<span class="status-badge pending">ÎØ∏Ï∞∏??/span></header>';
+    html += '<div class="student-response-body"><p class="absent-note">?§Î¨∏??Ï∞∏Ïó¨?òÏ? ?äÏïò?µÎãà??</p></div>';
+    html += '<hr class="student-card-divider" aria-hidden="true" />';
+    html += "</article>";
+    return html;
+  }
+
+  function renderStudentCards(data) {
+    var isProfile = data.meta && data.meta.format === "profile";
+    var hasCategories = isProfile || (data.rows && data.rows.some(rowHasSections));
+    var list = (data.rows || []).slice(0, 50);
+    var sheetLabel = (data.meta && data.meta.sheetName) || activeSheetView || "";
+    var html = '<h2 class="responses-heading">?ôÏÉù ?ëÎãµ Í≤∞Í≥º</h2>';
+    html += renderParticipationBanner(data);
+    html += '<div class="student-cards student-cards-list">';
+    list.forEach(function (row) {
+      html += renderStudentCard(row, hasCategories);
+    });
+    if (
+      data.participation &&
+      data.participation.missingCount > 0 &&
+      (!activeSubjectView || activeSubjectView === "all")
+    ) {
+      var missingList =
+        data.participation.missingStudents && data.participation.missingStudents.length
+          ? data.participation.missingStudents
+          : data.participation.missingNumbers.map(function (num) {
+              return { Î≤àÌò∏: num, ?¥Î¶Ñ: "" };
+            });
+      missingList.forEach(function (student) {
+        html += renderAbsentStudentCard(sheetLabel, student);
+      });
+    }
+    html += "</div>";
+    if (!list.length && !(data.participation && data.participation.missingNumbers.length)) {
+      return "";
+    }
+    return html;
+  }
+
+  var scrollStudentObserver = null;
+  var scrollStudentRatioMap = null;
+
+  function updateViewTracker(card) {
+    var panel = document.getElementById("viewTracker");
+    var classEl = document.getElementById("viewTrackerClass");
+    var numEl = document.getElementById("viewTrackerNum");
+    var nameEl = document.getElementById("viewTrackerName");
+    var statusEl = document.getElementById("viewTrackerStatus");
+    if (!panel || !classEl || !numEl || !nameEl) return;
+    if (!card) {
+      panel.hidden = true;
+      classEl.textContent = "??;
+      numEl.textContent = "??;
+      nameEl.textContent = "??;
+      if (statusEl) statusEl.hidden = true;
+      return;
+    }
+    var cls = card.getAttribute("data-student-class") || activeSheetView || "";
+    var num = card.getAttribute("data-student-num");
+    var name = card.getAttribute("data-student-name") || "";
+    panel.hidden = false;
+    classEl.textContent = cls || "??;
+    numEl.textContent = num ? num + "Î≤? : "??;
+    nameEl.textContent = name || "??;
+    if (statusEl) {
+      statusEl.hidden = !card.classList.contains("student-card--absent");
+    }
+  }
+
+  function teardownScrollStudentTracker() {
+    if (scrollStudentObserver) {
+      scrollStudentObserver.disconnect();
+      scrollStudentObserver = null;
+    }
+    scrollStudentRatioMap = null;
+    updateViewTracker(null);
+  }
+
+  function setupScrollStudentTracker() {
+    teardownScrollStudentTracker();
+    var results = document.getElementById("results");
+    if (!results || !results.classList.contains("visible")) return;
+    var cards = results.querySelectorAll(".student-card[data-student-num], .student-card[data-student-name]");
+    if (!cards.length) return;
+
+    scrollStudentRatioMap = new Map();
+    var thresholds = [];
+    for (var t = 0; t <= 20; t++) thresholds.push(t / 20);
+
+    function pickCurrentCard() {
+      var best = null;
+      var bestRatio = 0;
+      cards.forEach(function (card) {
+        var ratio = scrollStudentRatioMap.get(card) || 0;
+        if (ratio > bestRatio) {
+          bestRatio = ratio;
+          best = card;
+        }
+      });
+      if (best && bestRatio > 0) {
+        updateViewTracker(best);
+      }
+    }
+
+    scrollStudentObserver = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          scrollStudentRatioMap.set(entry.target, entry.intersectionRatio);
+        });
+        pickCurrentCard();
+      },
+      { root: null, rootMargin: "-12% 0px -50% 0px", threshold: thresholds }
+    );
+
+    cards.forEach(function (card) {
+      scrollStudentRatioMap.set(card, 0);
+      scrollStudentObserver.observe(card);
+    });
+    updateViewTracker(cards[0]);
+  }
+
+  function setFabStackVisible(show) {
+    var fab = document.getElementById("fabStack");
+    if (fab) fab.hidden = !show;
+  }
+
+  function showResultsView() {
+    var homePanel = document.getElementById("homePanel");
+    if (homePanel) homePanel.hidden = true;
+    updateViewTracker(null);
+  }
+
+  function showHomeView() {
+    var homePanel = document.getElementById("homePanel");
+    var results = document.getElementById("results");
+    activeSheetView = null;
+    activeSubjectView = null;
+    if (homePanel) homePanel.hidden = false;
+    if (results) {
+      results.classList.remove("visible");
+      results.innerHTML = "";
+    }
+    teardownScrollStudentTracker();
+    setFabStackVisible(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function renderResults(data, spreadsheetId, multi) {
+    var el = document.getElementById("results");
+    var analysis = data || getActiveAnalysis();
+    showResultsView();
+    setFabStackVisible(true);
+
+    var html = "";
+    if (multi) {
+      html += renderSheetTabs();
+    } else {
+      html += renderSubjectTabsOnly();
+    }
+    if (!analysis) {
+      html += '<p class="student-cards-empty">?†ÏÉù?? ??™©???†ÌÉù??Ï£ºÏÑ∏??</p>';
+      el.innerHTML = html;
+      el.classList.add("visible");
+      teardownScrollStudentTracker();
+      bindSheetAndSubjectTabs(el, spreadsheetId);
+      return;
+    }
+
+    var s = analysis.summary;
+    if (!s.Ï¥ùÏùë??&& !(analysis.participation && analysis.participation.missingCount)) {
+      html += '<p class="student-cards-empty">????óê Î∂ÑÏÑù???∞Ïù¥?∞Í? ?ÜÏäµ?àÎã§.</p>';
+      el.innerHTML = html;
+      el.classList.add("visible");
+      teardownScrollStudentTracker();
+      bindSheetAndSubjectTabs(el, spreadsheetId);
+      return;
+    }
+
+    html += renderStudentCards(analysis);
+
+    el.innerHTML = html;
+    el.classList.add("visible");
+
+    bindSheetAndSubjectTabs(el, spreadsheetId);
+  }
+
+  function bindSheetAndSubjectTabs(el, spreadsheetId) {
+    el.querySelectorAll(".sheet-tab").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        activeSheetView = btn.getAttribute("data-sheet");
+        renderResults(getActiveAnalysis(), spreadsheetId, lastMultiResult);
+      });
+    });
+    el.querySelectorAll(".subject-tab").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        activeSubjectView = btn.getAttribute("data-subject") || "all";
+        renderResults(getActiveAnalysis(), spreadsheetId, lastMultiResult);
+      });
+    });
+  }
+
+  var THEME_STORAGE_KEY = "school-theme-v1";
+
+  function applyTheme(theme) {
+    var isDark = theme === "dark";
+    document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+    localStorage.setItem(THEME_STORAGE_KEY, isDark ? "dark" : "light");
+    var toggle = document.getElementById("themeToggle");
+    if (toggle) {
+      toggle.setAttribute("aria-label", isDark ? "?ºÏù¥??Î™®Îìú" : "?§ÌÅ¨ Î™®Îìú");
+      toggle.title = isDark ? "?ºÏù¥??Î™®Îìú" : "?§ÌÅ¨ Î™®Îìú";
+    }
+  }
+
+  function initTheme() {
+    var saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === "dark" || saved === "light") {
+      applyTheme(saved);
+      return;
+    }
+    applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  }
+
+  initTheme();
+  document.getElementById("themeToggle").addEventListener("click", function () {
+    var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    applyTheme(isDark ? "light" : "dark");
+  });
+
+  renderSheetButtonGrid();
+  updateAdminUi();
+
+  document.getElementById("headerHomeBtn").addEventListener("click", function () {
+    showHomeView();
+  });
+
+  document.getElementById("adminEntryBtn").addEventListener("click", function () {
+    if (isAdminSession()) {
+      updateAdminUi();
+      document.getElementById("adminPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      return;
+    }
+    showAdminLogin();
+  });
+
+  document.getElementById("homeAdminLoginBtn").addEventListener("click", function () {
+    var input = document.getElementById("homeAdminPasswordInput");
+    tryAdminLogin(input ? input.value : "");
+  });
+
+  document.getElementById("homeAdminPasswordInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      tryAdminLogin(e.target.value);
+    }
+  });
+
+  document.getElementById("adminLogoutBtn").addEventListener("click", function () {
+    setAdminSession(false);
+    updateAdminUi();
+    showAdminLogin();
+  });
+
+  document.getElementById("adminSheetForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!isAdminSession()) {
+      alert("Í¥ÄÎ¶¨Ïûê Î°úÍ∑∏?∏Ïù¥ ?ÑÏöî?©Îãà??");
+      return;
+    }
+    var label = coerceText(document.getElementById("adminSheetLabel").value);
+    var url = coerceText(document.getElementById("adminSheetUrl").value);
+    var tab = coerceText(document.getElementById("adminSheetTab").value);
+    var newPassword = coerceText(document.getElementById("adminNewPassword").value);
+    if (!label || !url) {
+      alert("?úÌä∏ ?¥Î¶ÑÍ≥?Ï£ºÏÜåÎ•??ÖÎ†•??Ï£ºÏÑ∏??");
+      return;
+    }
+    try {
+      parseSpreadsheetId(url);
+    } catch (err) {
+      alert(err.message || "Íµ¨Í? ?úÌä∏ Ï£ºÏÜå ?ïÏãù???ïÏù∏??Ï£ºÏÑ∏??");
+      return;
+    }
+    var registry = loadSheetRegistry();
+    registry.push({
+      id: "sheet-" + Date.now(),
+      label: label,
+      url: url,
+      tab: tab || null,
+    });
+    saveSheetRegistry(registry);
+    document.getElementById("adminSheetForm").reset();
+    if (newPassword) setAdminPassword(newPassword);
+    renderSheetButtonGrid();
+    renderAdminRegistryList();
+    alert("?úÌä∏Í∞Ä Ï∂îÍ??òÏóà?µÎãà??");
+  });
+
+  document.getElementById("fabTop").addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  document.getElementById("fabBottom").addEventListener("click", function () {
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+  });
+  document.getElementById("fabPrint").addEventListener("click", function () {
+    var results = document.getElementById("results");
+    if (!results.classList.contains("visible")) {
+      alert("Î®ºÏ? ?úÌä∏Î•?Ï°∞Ìöå?????∏ÏáÑ??Ï£ºÏÑ∏??");
+      return;
+    }
+    window.print();
+  });
+
+})();
+  </script>
+</body>
+</html>
