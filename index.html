@@ -700,6 +700,28 @@
     .class-results-panel {
       width: 100%;
     }
+    .results-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .results-sticky-chrome {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      margin: 0 0 16px;
+      padding-bottom: 2px;
+      background: var(--theme-bg-panel);
+    }
+    .results-sticky-chrome .class-picker-bar {
+      margin: 0;
+      position: static;
+      top: auto;
+      z-index: auto;
+    }
+    .results-main {
+      min-width: 0;
+    }
     .class-picker-bar {
       position: sticky;
       top: 0;
@@ -720,9 +742,25 @@
       text-align: center;
     }
     .class-picker-bar__grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: flex-start;
       gap: 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar) transparent;
+    }
+    .class-picker-bar__grid::-webkit-scrollbar {
+      height: 6px;
+    }
+    .class-picker-bar__grid::-webkit-scrollbar-thumb {
+      background: var(--scrollbar);
+      border-radius: 999px;
     }
     .class-select-option {
       display: flex;
@@ -730,6 +768,8 @@
       align-items: center;
       justify-content: center;
       gap: 4px;
+      flex: 0 0 auto;
+      min-width: 5.25rem;
       min-height: 4.25rem;
       padding: 12px 10px;
       border: 2px solid var(--border-strong);
@@ -764,10 +804,8 @@
       opacity: 0.95;
     }
     @media (max-width: 480px) {
-      .class-picker-bar__grid {
-        grid-template-columns: repeat(4, 1fr);
-      }
       .class-select-option {
+        min-width: 4.5rem;
         min-height: 3.75rem;
         font-size: 1rem;
         padding: 10px 6px;
@@ -1690,14 +1728,14 @@
         padding: 0 !important;
         background: #fff !important;
       }
-      body.is-printing-results .sheet-tabs,
+      body.is-printing-results .results-sticky-chrome,
       body.is-printing-results .class-picker-bar,
+      body.is-printing-results .survey-view-head,
+      body.is-printing-results .sheet-tabs,
       body.is-printing-results .class-jump-nav,
       body.is-printing-results .participation-banner {
-        margin: 0 0 8px;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 10pt;
+        display: none !important;
+        visibility: hidden !important;
       }
       body.is-printing-results .participation-class::after {
         content: none;
@@ -3550,7 +3588,12 @@
       lastMultiResult = analyzeAllSheets(sheetInputs, masterRoster);
       activeSubjectView = "all";
       activeClassFilter = null;
+      var launchSheets = lastMultiResult.sheets.filter(function (s) {
+        return !isListSheetTab(s.sheetName);
+      });
+      activeSheetView = resolveInitialActiveSheetTab(entry, launchSheets);
       applyInitialClassView(entry, getClassTabsConfig());
+      ensureClassSelectionForResults();
       applyRestoreView(
         Object.assign({}, restoreView || {}, {
           classFilter:
@@ -3916,9 +3959,9 @@
     });
 
     orderList.sort(function (a, b) {
-      var ca = registry[a].count;
-      var cb = registry[b].count;
-      if (cb !== ca) return cb - ca;
+      var oa = parseClassOrder(registry[a].label || registry[a].classKey);
+      var ob = parseClassOrder(registry[b].label || registry[b].classKey);
+      if (oa !== ob) return oa - ob;
       return registry[a].firstOrder - registry[b].firstOrder;
     });
 
@@ -3968,15 +4011,33 @@
   }
 
   function getClassTabsConfig() {
-    var sheet = getActiveSheetAnalysis();
-    if (sheet) {
-      var fromSheet = getSheetDerivedClassTabs(sheet);
-      if (fromSheet.length) return fromSheet;
+    if (!lastMultiResult) return [];
+    return sortClassTabsByBanOrder(deriveClassesFromAnalysis(lastMultiResult));
+  }
+
+  function ensureClassSelectionForResults() {
+    var classTabs = getClassTabsConfig();
+    if (!classTabs.length || !lastMultiResult) return;
+    var sheetByName = {};
+    lastMultiResult.sheets.forEach(function (s) {
+      if (!isListSheetTab(s.sheetName)) sheetByName[s.sheetName] = s;
+    });
+    var activeOk = classTabs.some(function (cls) {
+      var hostSheet =
+        resolveHostSheetForClass(cls, sheetByName) ||
+        sheetByName[cls.sheetName] ||
+        getActiveSheetAnalysis();
+      return hostSheet && isClassTabActive(cls, hostSheet);
+    });
+    if (!activeOk) {
+      if (!activeSheetView) {
+        var sheets = lastMultiResult.sheets.filter(function (s) {
+          return !isListSheetTab(s.sheetName);
+        });
+        activeSheetView = sheets.length ? sheets[0].sheetName : null;
+      }
+      setActiveClassFromTab(classTabs[0]);
     }
-    if (lastMultiResult) {
-      return sortClassTabsByBanOrder(deriveClassesFromAnalysis(lastMultiResult));
-    }
-    return [];
   }
 
   function findSheetForClassConfig(cls, sheetByName) {
@@ -4492,7 +4553,12 @@
       renderAdminSetupPanels();
       activeSubjectView = "all";
       activeClassFilter = null;
+      var setupSheets = lastMultiResult.sheets.filter(function (s) {
+        return !isListSheetTab(s.sheetName);
+      });
+      activeSheetView = setupSheets.length ? setupSheets[0].sheetName : null;
       applyInitialClassView(null, getClassTabsConfig());
+      ensureClassSelectionForResults();
       applyRestoreView(
         Object.assign({}, restoreView || {}, {
           classFilter:
@@ -4595,7 +4661,7 @@
 
   function applyInitialClassView(entry, classTabs) {
     if (!classTabs || !classTabs.length || !lastMultiResult) return;
-    var ordered = classTabs.slice().sort(sortCategoriesByOrder);
+    var ordered = sortClassTabsByBanOrder(classTabs);
     setActiveClassFromTab(ordered[0]);
     if (entry && entry.tab) {
       var sheetList = lastMultiResult.sheets.map(function (s) {
@@ -5259,22 +5325,38 @@
     }
   }
 
+  function wrapResultsHtml(pickerHtml, bodyHtml) {
+    var picker = pickerHtml || "";
+    var body = bodyHtml || "";
+    if (!picker) return body;
+    return (
+      '<div class="results-layout">' +
+      '<div class="results-sticky-chrome no-print">' +
+      picker +
+      "</div>" +
+      '<div class="results-main">' +
+      body +
+      "</div></div>"
+    );
+  }
+
   function renderResults(data, spreadsheetId, multi) {
     var el = document.getElementById("results");
+    ensureClassSelectionForResults();
     var sheet = getActiveSheetAnalysis();
     var analysis = data || getActiveAnalysis();
     showResultsView();
     setFabStackVisible(true);
     activeSubjectView = "all";
 
-    var html = renderClassPickerBar();
-    html += renderSurveyViewHeader();
+    var pickerHtml = renderClassPickerBar();
+    var bodyHtml = renderSurveyViewHeader();
     if (lastMultiResult) {
-      html += renderWorkbookSheetTabs();
+      bodyHtml += renderWorkbookSheetTabs();
     }
     if (!sheet) {
-      html += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
-      el.innerHTML = html;
+      bodyHtml += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
+      el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
       el.classList.add("visible");
       syncResultsPrintState(el);
       teardownScrollStudentTracker();
@@ -5284,8 +5366,8 @@
 
     var s = sheet.summary;
     if (!s.총응답 && !(sheet.participation && sheet.participation.missingCount)) {
-      html += '<p class="student-cards-empty">이 설문에 분석할 데이터가 없습니다.</p>';
-      el.innerHTML = html;
+      bodyHtml += '<p class="student-cards-empty">이 설문에 분석할 데이터가 없습니다.</p>';
+      el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
       el.classList.add("visible");
       syncResultsPrintState(el);
       teardownScrollStudentTracker();
@@ -5293,9 +5375,9 @@
       return;
     }
 
-    html += renderClassStudentList(analysis);
+    bodyHtml += renderClassStudentList(analysis);
 
-    el.innerHTML = html;
+    el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
     el.classList.add("visible");
     syncResultsPrintState(el);
 
