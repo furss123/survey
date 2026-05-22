@@ -353,6 +353,23 @@
       color: var(--theme-text-muted);
       line-height: 1.45;
     }
+    #adminSurveyName.is-suggested {
+      color: var(--theme-text-muted);
+      font-weight: 500;
+    }
+    #adminSurveyName:not(.is-suggested) {
+      color: var(--theme-text);
+      font-weight: 600;
+    }
+    #adminSurveyName.is-loading {
+      color: var(--theme-text-muted);
+      font-style: italic;
+    }
+    .admin-survey-name-hint {
+      margin: 6px 0 0;
+      font-size: 0.75rem;
+      color: var(--theme-text-muted);
+    }
     .admin-registry-list {
       margin: var(--space-4) 0 0;
       padding: 0;
@@ -438,13 +455,20 @@
         <div class="section-label">시트 등록·관리</div>
         <div id="adminPanel">
           <form id="adminSheetForm" class="admin-form">
-            <label for="adminSheetLabel">시트 이름 (버튼 표시)</label>
-            <input type="text" id="adminSheetLabel" placeholder="예: 1반, 상담 3월" required />
             <label for="adminSheetUrl">구글 시트 주소</label>
             <div class="admin-url-row">
               <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
               <button type="button" class="admin-btn admin-btn-primary" id="adminSheetPreviewBtn">조회</button>
             </div>
+            <label for="adminSurveyName">설문 이름</label>
+            <input
+              type="text"
+              id="adminSurveyName"
+              maxlength="20"
+              placeholder="주소 입력 후 시트 분석으로 추천됩니다"
+              autocomplete="off"
+            />
+            <p class="admin-survey-name-hint" id="adminSurveyNameHint">시트 제목·내용을 분석해 20자 이내 이름을 추천합니다. 클릭하면 수정할 수 있습니다.</p>
             <p class="admin-form-hint">새 시트는 <strong>조회</strong>로 카테고리별 미리보기·구성 후 등록합니다. (바로 추가하지 않음)</p>
             <div class="admin-actions">
               <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn" hidden>시트 추가</button>
@@ -532,11 +556,259 @@
   }
 
   var editingSheetId = null;
+  var surveyNameSuggested = "";
+  var surveyNameUserEdited = false;
+  var surveyNameFetchToken = 0;
+
+  function truncateSurveyName(text) {
+    return String(text || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 20);
+  }
+
+  function getSurveyNameInput() {
+    return document.getElementById("adminSurveyName");
+  }
+
+  function getSurveyNameValue() {
+    var input = getSurveyNameInput();
+    if (!input) return "";
+    var value = truncateSurveyName(input.value);
+    if (!value && surveyNameSuggested && !surveyNameUserEdited) {
+      return surveyNameSuggested;
+    }
+    return value;
+  }
+
+  function applySuggestedSurveyName(name, asSuggested) {
+    var input = getSurveyNameInput();
+    if (!input) return;
+    surveyNameSuggested = truncateSurveyName(name);
+    if (surveyNameUserEdited && !asSuggested) return;
+    input.value = surveyNameSuggested;
+    input.classList.toggle("is-suggested", !!asSuggested && !!surveyNameSuggested);
+    input.classList.remove("is-loading");
+  }
+
+  function setSurveyNameLoading(loading) {
+    var input = getSurveyNameInput();
+    if (!input || surveyNameUserEdited) return;
+    if (loading) {
+      input.classList.add("is-loading");
+      input.classList.remove("is-suggested");
+      input.value = "이름 분석 중…";
+    } else {
+      input.classList.remove("is-loading");
+    }
+  }
+
+  function parseGvizJson(text) {
+    var start = text.indexOf("{");
+    var end = text.lastIndexOf("}");
+    if (start < 0 || end <= start) throw new Error("gviz 응답 파싱 실패");
+    return JSON.parse(text.slice(start, end + 1));
+  }
+
+  function gvizTableToValues(json) {
+    var table = json && json.table;
+    if (!table || !table.rows || !table.rows.length) return [];
+    var headers = (table.cols || []).map(function (c) {
+      return String((c && c.label) || "").trim();
+    });
+    var rows = table.rows.map(function (row) {
+      return (row.c || []).map(function (cell) {
+        if (cell == null) return "";
+        if (cell.v != null) return String(cell.v);
+        if (cell.f != null) return String(cell.f);
+        return "";
+      });
+    });
+    return [headers].concat(rows);
+  }
+
+  async function fetchSheetValuesGviz(spreadsheetId, tab) {
+    var params = new URLSearchParams({ tqx: "out:json" });
+    if (tab && tab.gid) params.set("gid", tab.gid);
+    else if (tab && tab.title) params.set("sheet", tab.title);
+    var url =
+      "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/gviz/tq?" + params;
+    var res = await fetch(url);
+    if (!res.ok) throw new Error("시트 조회 실패");
+    return gvizTableToValues(parseGvizJson(await res.text()));
+  }
+
+  function parseTabsFromHtml(html) {
+    var tabs = [];
+    var re = /docs-sheet-tab[^>]*data-sheet-id="(\d+)"[^>]*aria-label="([^"]+)"/g;
+    var m;
+    while ((m = re.exec(html)) !== null) {
+      tabs.push({ gid: m[1], title: m[2] });
+    }
+    return tabs;
+  }
+
+  async function fetchSpreadsheetMeta(spreadsheetId) {
+    var docTitle = "";
+    var tabTitles = [];
+    try {
+      var res = await fetch(
+        "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/edit"
+      );
+      if (res.ok) {
+        var html = await res.text();
+        var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch) {
+          docTitle = titleMatch[1]
+            .replace(/\s*-\s*Google\s*Sheets.*$/i, "")
+            .replace(/\s*-\s*Google\s*스프레드시트.*$/i, "")
+            .trim();
+        }
+        tabTitles = parseTabsFromHtml(html).map(function (t) {
+          return t.title;
+        });
+      }
+    } catch (err) { /* ignore */ }
+
+    var values = [];
+    try {
+      var tab = tabTitles.length ? { title: tabTitles[0], gid: null } : null;
+      values = await fetchSheetValuesGviz(spreadsheetId, tab);
+    } catch (err) { /* ignore */ }
+
+    return { docTitle: docTitle, tabTitles: tabTitles, values: values };
+  }
+
+  function buildSurveyNameSuggestion(meta) {
+    var ranked = [];
+    function add(name, weight) {
+      name = truncateSurveyName(name);
+      if (name.length < 2) return;
+      ranked.push({ name: name, weight: weight });
+    }
+
+    if (meta.docTitle) {
+      add(meta.docTitle, 12);
+    }
+
+    var headers = meta.values && meta.values[0] ? meta.values[0].map(String) : [];
+    var headerText = headers.join(" ");
+    var sampleRows = (meta.values || []).slice(1, 6);
+    var sampleText = sampleRows
+      .map(function (row) {
+        return (row || []).join(" ");
+      })
+      .join(" ");
+
+    if (/전공.*탐색|학과.*선호|선호도.*조사/.test(headerText + sampleText)) {
+      add("전공 탐색·학과 선호", 11);
+    } else if (/전공|학과|계열/.test(headerText)) {
+      add("전공·학과 설문", 10);
+    } else if (/진로|진학|취업/.test(headerText + sampleText)) {
+      add("진로·진학 설문", 10);
+    } else if (/SMART|학습\s*설문|영역별/.test(headerText + sampleText)) {
+      add("SMART 학습 설문", 9);
+    } else if (/담임\s*선생님|한마디/.test(headerText + sampleText)) {
+      add("담임 선생님 한마디", 8);
+    }
+
+    var titleMatch = (headerText + " " + sampleText).match(
+      /([가-힣0-9A-Za-z·\s]{3,28}?(?:설문|조사|탐색))/
+    );
+    if (titleMatch) add(titleMatch[1], 7);
+
+    var tabs = meta.tabTitles || [];
+    var classTabs = tabs.filter(function (t) {
+      return /^\d+\s*반$/.test(String(t).trim());
+    });
+    if (classTabs.length >= 2) add("1학년 반별 설문", 6);
+    else if (tabs.length === 1 && tabs[0] && tabs[0] !== "Sheet1") add(tabs[0], 5);
+
+    ranked.sort(function (a, b) {
+      return b.weight - a.weight;
+    });
+    if (ranked.length) return ranked[0].name;
+    return truncateSurveyName(meta.docTitle || tabs[0] || "설문 결과");
+  }
+
+  var suggestSurveyNameTimer = null;
+  function scheduleSurveyNameSuggestion(url) {
+    if (suggestSurveyNameTimer) clearTimeout(suggestSurveyNameTimer);
+    suggestSurveyNameTimer = setTimeout(function () {
+      suggestSurveyNameTimer = null;
+      runSurveyNameSuggestion(url);
+    }, 650);
+  }
+
+  async function runSurveyNameSuggestion(url) {
+    if (surveyNameUserEdited || editingSheetId) return;
+    var trimmed = coerceText(url);
+    if (!trimmed) {
+      surveyNameSuggested = "";
+      var input = getSurveyNameInput();
+      if (input) {
+        input.value = "";
+        input.classList.remove("is-suggested", "is-loading");
+      }
+      return;
+    }
+    var token = ++surveyNameFetchToken;
+    setSurveyNameLoading(true);
+    try {
+      var spreadsheetId = parseSpreadsheetId(trimmed);
+      var meta = await fetchSpreadsheetMeta(spreadsheetId);
+      if (token !== surveyNameFetchToken || surveyNameUserEdited) return;
+      var suggestion = buildSurveyNameSuggestion(meta);
+      applySuggestedSurveyName(suggestion, true);
+    } catch (err) {
+      if (token !== surveyNameFetchToken || surveyNameUserEdited) return;
+      var input = getSurveyNameInput();
+      if (input) {
+        input.classList.remove("is-loading", "is-suggested");
+        if (input.value === "이름 분석 중…") input.value = "";
+      }
+    }
+  }
+
+  function bindSurveyNameField() {
+    var input = getSurveyNameInput();
+    var urlInput = document.getElementById("adminSheetUrl");
+    if (!input) return;
+
+    input.addEventListener("focus", function () {
+      input.classList.remove("is-suggested", "is-loading");
+      if (input.value === "이름 분석 중…") input.value = surveyNameSuggested || "";
+    });
+
+    input.addEventListener("input", function () {
+      surveyNameUserEdited = true;
+      input.classList.remove("is-suggested", "is-loading");
+      if (input.value.length > 20) input.value = input.value.slice(0, 20);
+    });
+
+    input.addEventListener("blur", function () {
+      if (!coerceText(input.value) && surveyNameSuggested && !surveyNameUserEdited) {
+        applySuggestedSurveyName(surveyNameSuggested, true);
+      }
+    });
+
+    if (urlInput) {
+      urlInput.addEventListener("input", function () {
+        if (!editingSheetId) {
+          surveyNameUserEdited = false;
+          scheduleSurveyNameSuggestion(urlInput.value);
+        }
+      });
+      urlInput.addEventListener("blur", function () {
+        if (!editingSheetId) scheduleSurveyNameSuggestion(urlInput.value);
+      });
+    }
+  }
 
   function setSheetFormMode(mode) {
     var submitBtn = document.getElementById("adminSheetSubmitBtn");
     var cancelBtn = document.getElementById("adminSheetCancelEditBtn");
-    var labelInput = document.getElementById("adminSheetLabel");
+    var labelInput = getSurveyNameInput();
     if (mode === "edit") {
       if (submitBtn) {
         submitBtn.textContent = "변경 저장";
@@ -561,7 +833,13 @@
       return;
     }
     editingSheetId = id;
-    document.getElementById("adminSheetLabel").value = entry.label || "";
+    surveyNameUserEdited = true;
+    surveyNameSuggested = entry.label || "";
+    var nameInput = getSurveyNameInput();
+    if (nameInput) {
+      nameInput.value = entry.label || "";
+      nameInput.classList.remove("is-suggested", "is-loading");
+    }
     document.getElementById("adminSheetUrl").value = entry.url || "";
     setSheetFormMode("edit");
     document.getElementById("adminSheetForm").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -569,6 +847,11 @@
 
   function cancelEditSheet() {
     document.getElementById("adminSheetForm").reset();
+    surveyNameUserEdited = false;
+    surveyNameSuggested = "";
+    surveyNameFetchToken++;
+    var nameInput = getSurveyNameInput();
+    if (nameInput) nameInput.classList.remove("is-suggested", "is-loading");
     setSheetFormMode("add");
   }
 
@@ -682,6 +965,8 @@
     renderAdminRegistryList();
   }
 
+  bindSurveyNameField();
+
   document.getElementById("adminLogoutBtn").addEventListener("click", function () {
     clearAdminSession();
     location.href = "admin-login.html";
@@ -692,7 +977,7 @@
   });
 
   document.getElementById("adminSheetPreviewBtn").addEventListener("click", function () {
-    var label = coerceText(document.getElementById("adminSheetLabel").value);
+    var label = getSurveyNameValue();
     var url = coerceText(document.getElementById("adminSheetUrl").value);
     if (!url) {
       alert("구글 시트 주소를 입력해 주세요.");
@@ -704,7 +989,10 @@
       alert(err.message || "구글 시트 주소 형식을 확인해 주세요.");
       return;
     }
-    if (!label) label = "새 시트";
+    if (!label) {
+      alert("설문 이름을 입력하거나 추천 이름이 나올 때까지 잠시 기다려 주세요.");
+      return;
+    }
     sessionStorage.setItem(
       ADMIN_SETUP_DRAFT_KEY,
       JSON.stringify({ label: label, url: url, ts: Date.now() })
@@ -718,14 +1006,14 @@
 
   document.getElementById("adminSheetForm").addEventListener("submit", function (e) {
     e.preventDefault();
-    var label = coerceText(document.getElementById("adminSheetLabel").value);
+    var label = getSurveyNameValue();
     var url = coerceText(document.getElementById("adminSheetUrl").value);
     if (!editingSheetId) {
       alert("새 시트는 주소 옆 「조회」로 미리보기·구성 후 등록해 주세요.");
       return;
     }
     if (!label || !url) {
-      alert("시트 이름과 주소를 입력해 주세요.");
+      alert("설문 이름과 주소를 입력해 주세요.");
       return;
     }
     try {
