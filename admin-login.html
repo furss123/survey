@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <script>
+  (function () {
+    var k = "school-theme-v1";
+    var t = localStorage.getItem(k);
+    if (t !== "light" && t !== "dark") {
+      t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>관리자 로그인 · 남악고 설문 결과</title>
+  <link rel="icon" href="assets/namak-logo.png" type="image/png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --school-navy: #1e3a5f;
+      --school-navy-dark: #0f2440;
+      --school-navy-light: #3d6b9e;
+      --school-accent: #c4a035;
+      --school-accent-soft: #faf6eb;
+      --shadow-md: 0 8px 24px rgba(15, 36, 64, 0.08);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --content-max: 980px;
+      --content-pad: 20px;
+      --text-sm: 0.8125rem;
+      --text-lg: 1.125rem;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --focus-ring: 0 0 0 3px rgba(61, 107, 158, 0.14);
+      --theme-bg-page: #eef2f7;
+      --theme-bg-panel: #fff;
+      --theme-bg-muted: #f8fafc;
+      --theme-text: #1a2332;
+      --theme-text-muted: #64748b;
+      --theme-border: #d4dce8;
+      --theme-border-light: #e8edf4;
+      --site-footer-h: 32px;
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --theme-bg-page: #0f172a;
+      --theme-bg-panel: #1e293b;
+      --theme-bg-muted: #334155;
+      --theme-text: #e2e8f0;
+      --theme-text-muted: #94a3b8;
+      --theme-border: #475569;
+      --theme-border-light: #334155;
+      --focus-ring: 0 0 0 3px rgba(61, 107, 158, 0.35);
+    }
+    body {
+      margin: 0;
+      padding: 0 0 var(--site-footer-h);
+      font-family: "Pretendard", "Malgun Gothic", sans-serif;
+      font-size: 1rem;
+      line-height: 1.55;
+      color: var(--theme-text);
+      background: var(--theme-bg-page);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .site-header {
+      max-width: var(--content-max);
+      margin: var(--space-5) auto 0;
+      padding: 0 var(--content-pad);
+      width: 100%;
+    }
+    .site-header-inner {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+      padding: var(--space-5) 28px;
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .site-header-inner::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--school-navy-dark) 0%, var(--school-navy-light) 55%, var(--school-accent) 100%);
+    }
+    .school-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 1px solid var(--theme-border-light);
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .site-header-text { flex: 1; min-width: 0; }
+    .header-school {
+      margin: 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--school-navy);
+    }
+    .site-header-text h1 {
+      margin: 4px 0 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--school-navy-dark);
+    }
+    .back-link {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-sm);
+      background: var(--theme-bg-panel);
+      color: var(--school-navy);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .back-link:hover {
+      border-color: var(--school-navy-light);
+      background: var(--school-accent-soft);
+    }
+    .app-layout {
+      flex: 1;
+      width: 100%;
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: var(--space-5) var(--content-pad) var(--space-6);
+    }
+    .search-container {
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .panel-section { padding: var(--space-6) 28px; }
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--school-navy);
+      margin-bottom: var(--space-4);
+    }
+    .section-label::before {
+      content: "";
+      width: 3px;
+      height: 1.1em;
+      border-radius: 3px;
+      background: linear-gradient(180deg, var(--school-accent) 0%, var(--school-navy-light) 100%);
+    }
+    .login-gate label {
+      display: block;
+      margin-top: 12px;
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+    .login-gate label:first-of-type { margin-top: 0; }
+    .login-gate input {
+      width: 100%;
+      margin-top: 6px;
+      padding: 11px 12px;
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-sm);
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    .login-gate input:focus {
+      outline: none;
+      border-color: var(--school-navy-light);
+      box-shadow: var(--focus-ring);
+    }
+    .login-gate {
+      padding: var(--space-5);
+      border-radius: var(--radius-md);
+      background: var(--theme-bg-muted);
+      border: 1px solid var(--theme-border-light);
+    }
+    .admin-actions { margin-top: var(--space-4); }
+    .admin-btn-primary {
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, #4a7ab0 0%, var(--school-navy) 100%);
+      color: #fff;
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .login-hint {
+      margin: 10px 0 0;
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+    }
+    .login-error {
+      margin: 0 0 var(--space-4);
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: #fef2f2;
+      color: #b91c1c;
+      font-size: var(--text-sm);
+    }
+    .login-error[hidden] { display: none !important; }
+    .site-footer {
+      margin-top: auto;
+      border-top: 1px solid var(--theme-border);
+      background: var(--theme-bg-panel);
+    }
+    #siteFooterRoot {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 850;
+    }
+    .site-footer-inner {
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: 3px var(--content-pad);
+      font-size: 0.78rem;
+      color: var(--theme-text-muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="64" height="64">
+      <div class="site-header-text">
+        <p class="header-school">남악고등학교 1학년</p>
+        <h1>관리자 로그인</h1>
+      </div>
+      <a href="index.html" class="back-link">← 설문 조회</a>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <div class="search-container">
+      <section class="panel-section">
+        <div class="section-label">관리자 로그인</div>
+        <p id="loginError" class="login-error" hidden>아이디 또는 비밀번호가 올바르지 않습니다.</p>
+        <form id="loginForm" class="login-gate">
+          <label for="adminIdInput">아이디</label>
+          <input type="text" id="adminIdInput" name="username" autocomplete="username" placeholder="아이디" required />
+          <label for="adminPasswordInput">비밀번호</label>
+          <input type="password" id="adminPasswordInput" name="password" autocomplete="current-password" placeholder="비밀번호" required />
+          <div class="admin-actions">
+            <button type="submit" class="admin-btn-primary">로그인</button>
+          </div>
+          <p class="login-hint">로그인에 성공하면 시트 관리 페이지로 이동합니다.</p>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <footer class="site-footer" id="siteFooterRoot">
+    <div class="site-footer-inner">남악고등학교 설문 · 관리자 로그인</div>
+  </footer>
+
+  <script>
+(function () {
+  "use strict";
+
+  var ADMIN_LOGIN_ID = "furss123";
+  var ADMIN_LOGIN_PASSWORD = "rlagytjd1!";
+  var ADMIN_SESSION_KEY = "school-admin-session-v1";
+
+  function coerceText(value) {
+    if (value == null) return "";
+    return String(value).trim();
+  }
+
+  if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "1") {
+    location.replace("admin.html");
+    return;
+  }
+
+  document.getElementById("loginForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var errEl = document.getElementById("loginError");
+    var id = coerceText(document.getElementById("adminIdInput").value);
+    var pw = document.getElementById("adminPasswordInput").value;
+    if (id !== ADMIN_LOGIN_ID || pw !== ADMIN_LOGIN_PASSWORD) {
+      if (errEl) errEl.hidden = false;
+      return;
+    }
+    if (errEl) errEl.hidden = true;
+    sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
+    location.href = "admin.html";
+  });
+})();
+  </script>
+</body>
+</html>

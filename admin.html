@@ -224,8 +224,6 @@
       color: var(--school-danger);
       background: #fef2f2;
     }
-    #adminPanel[hidden],
-    #loginGate[hidden] { display: none !important; }
     .admin-form label {
       display: block;
       margin-top: 12px;
@@ -321,18 +319,8 @@
   <div class="app-layout">
     <div class="search-container">
       <section class="panel-section">
-        <div class="section-label">관리자 로그인</div>
-        <div id="loginGate" class="login-gate">
-          <label for="adminIdInput">아이디</label>
-          <input type="text" id="adminIdInput" autocomplete="username" placeholder="아이디" />
-          <label for="adminPasswordInput">비밀번호</label>
-          <input type="password" id="adminPasswordInput" autocomplete="current-password" placeholder="비밀번호" />
-          <div class="admin-actions">
-            <button type="button" class="admin-btn admin-btn-primary" id="adminLoginBtn">로그인</button>
-          </div>
-          <p class="login-hint">로그인 후 구글 시트를 등록·삭제할 수 있습니다.</p>
-        </div>
-        <div id="adminPanel" hidden>
+        <div class="section-label">시트 등록·관리</div>
+        <div id="adminPanel">
           <form id="adminSheetForm" class="admin-form">
             <label for="adminSheetLabel">시트 이름 (버튼 표시)</label>
             <input type="text" id="adminSheetLabel" placeholder="예: 1반, 상담 3월" required />
@@ -359,8 +347,6 @@
 (function () {
   "use strict";
 
-  var ADMIN_LOGIN_ID = "furss123";
-  var ADMIN_LOGIN_PASSWORD = "rlagytjd1!";
   var ADMIN_SESSION_KEY = "school-admin-session-v1";
   var SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
@@ -383,16 +369,6 @@
   function setAdminSession(active) {
     if (active) sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
     else sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  }
-
-  function tryAdminLogin(id, password) {
-    if (id !== ADMIN_LOGIN_ID || password !== ADMIN_LOGIN_PASSWORD) {
-      alert("아이디 또는 비밀번호가 올바르지 않습니다.");
-      return false;
-    }
-    setAdminSession(true);
-    updateAdminUi();
-    return true;
   }
 
   function parseSpreadsheetId(url) {
@@ -467,41 +443,19 @@
     });
   }
 
-  function updateAdminUi() {
-    var loggedIn = isAdminSession();
-    var panel = document.getElementById("adminPanel");
-    var gate = document.getElementById("loginGate");
-    if (panel) panel.hidden = !loggedIn;
-    if (gate) gate.hidden = loggedIn;
-    if (loggedIn) renderAdminRegistryList();
+  if (!isAdminSession()) {
+    location.replace("admin-login.html");
+  } else {
+    renderAdminRegistryList();
   }
-
-  document.getElementById("adminLoginBtn").addEventListener("click", function () {
-    var id = coerceText(document.getElementById("adminIdInput").value);
-    var pw = document.getElementById("adminPasswordInput").value;
-    tryAdminLogin(id, pw);
-  });
-
-  document.getElementById("adminPasswordInput").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      document.getElementById("adminLoginBtn").click();
-    }
-  });
 
   document.getElementById("adminLogoutBtn").addEventListener("click", function () {
     setAdminSession(false);
-    document.getElementById("adminIdInput").value = "";
-    document.getElementById("adminPasswordInput").value = "";
-    updateAdminUi();
+    location.href = "admin-login.html";
   });
 
   document.getElementById("adminSheetForm").addEventListener("submit", function (e) {
     e.preventDefault();
-    if (!isAdminSession()) {
-      alert("관리자 로그인이 필요합니다.");
-      return;
-    }
     var label = coerceText(document.getElementById("adminSheetLabel").value);
     var url = coerceText(document.getElementById("adminSheetUrl").value);
     var tab = coerceText(document.getElementById("adminSheetTab").value);
@@ -528,7 +482,6 @@
     alert("시트가 추가되었습니다. 메인 목록에서 확인할 수 있습니다.");
   });
 
-  updateAdminUi();
 })();
   </script>
 </body>
