@@ -861,20 +861,49 @@
       color: var(--text-muted);
     }
     .participation-banner {
-      margin-bottom: 16px;
-      padding: 14px 16px;
+      margin: 16px 0 12px;
+      padding: 12px 16px;
       border-radius: 12px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
+      background: var(--bg-accent-banner);
+      border: 1px solid var(--border-accent);
       box-shadow: var(--shadow-sm);
-      line-height: 1.5;
+      line-height: 1.4;
+    }
+    .participation-banner--row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 16px;
+    }
+    .participation-class {
+      flex: 0 0 auto;
+      min-width: 3.5rem;
+      font-size: calc(0.9375rem + 2pt);
+      font-weight: 800;
+      color: var(--text-accent);
+      letter-spacing: -0.02em;
     }
     .participation-stats {
+      flex: 1 1 auto;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
       justify-content: center;
+      min-width: 0;
+    }
+    .participation-missing {
+      flex: 0 1 auto;
+      max-width: 100%;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: right;
+      word-break: break-word;
+    }
+    .participation-missing--ok {
+      color: var(--accent-hover);
+      font-weight: 600;
     }
     .participation-chip {
       display: inline-flex;
@@ -904,23 +933,18 @@
       color: var(--text-muted);
     }
     .participation-chip--warn strong { color: var(--text-subtle); }
-    .participation-banner .missing-list {
-      margin: 10px 0 0;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-      font-size: 0.8125rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      text-align: center;
-      word-break: break-word;
-    }
-    .participation-banner .missing-list .missing-label {
-      font-weight: 700;
-      color: var(--text-subtle);
-    }
-    .participation-banner .missing-list--ok {
-      color: var(--accent-hover);
-      font-weight: 600;
+    @media (max-width: 640px) {
+      .participation-banner--row {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+      }
+      .participation-stats {
+        justify-content: center;
+      }
+      .participation-missing {
+        text-align: center;
+      }
     }
     .student-card--absent {
       background: var(--bg-muted);
@@ -1231,20 +1255,18 @@
       body.is-printing-results .subject-tabs,
       body.is-printing-results .sheet-tabs,
       body.is-printing-results .participation-banner {
-        display: none !important;
-      }
-      body.is-printing-results .sheet-banner {
-        margin: 0 0 6px;
-        padding: 6px 12px;
+        margin: 0 0 8px;
+        padding: 8px 12px;
         border-radius: 6px;
-        font-size: 11pt;
+        font-size: 10pt;
       }
-      body.is-printing-results .sheet-banner::after {
+      body.is-printing-results .participation-class::after {
         content: none;
       }
-      body.is-printing-results.print-teacher-mode .sheet-banner::after {
-        content: " · 담임 선생님께";
+      body.is-printing-results.print-teacher-mode .participation-class::after {
+        content: " · 담임";
         font-weight: 600;
+        font-size: 9pt;
       }
       body.is-printing-results:not(.print-teacher-mode) .student-cards-list {
         display: block;
@@ -3126,37 +3148,51 @@
     return num || name || "";
   }
 
-  function renderParticipationBanner(data) {
+  function renderParticipationBanner(data, classLabel) {
     var p = data.participation;
-    if (!p || !p.maxExpected) return "";
-    var html = '<div class="participation-banner">';
-    html += '<div class="participation-stats">';
-    html +=
-      '<span class="participation-chip">총 <strong>' +
-      esc(p.maxExpected) +
-      "</strong>명</span>";
-    html +=
-      '<span class="participation-chip participation-chip--primary">참여 <strong>' +
-      esc(p.participated) +
-      "</strong>명</span>";
-    if (p.missingCount > 0) {
+    var label = classLabel || (data.meta && data.meta.sheetName) || activeSheetView || "";
+    if (!label && (!p || !p.maxExpected)) return "";
+    var html =
+      '<div class="participation-banner participation-banner--row" role="status" aria-live="polite">';
+    html += '<div class="participation-class">' + esc(label || "—") + "</div>";
+    if (p && p.maxExpected) {
+      html += '<div class="participation-stats">';
       html +=
-        '<span class="participation-chip participation-chip--warn">미참여 <strong>' +
-        esc(p.missingCount) +
+        '<span class="participation-chip">총 <strong>' +
+        esc(p.maxExpected) +
         "</strong>명</span>";
-    }
-    html += "</div>";
-    if (p.missingCount > 0) {
-      var labels = (p.missingStudents || []).map(formatMissingStudentLabel).filter(Boolean);
-      if (!labels.length && p.missingNumbers) {
-        labels = p.missingNumbers.map(function (n) { return n + "번"; });
+      html +=
+        '<span class="participation-chip participation-chip--primary">참여 <strong>' +
+        esc(p.participated) +
+        "</strong>명</span>";
+      if (p.missingCount > 0) {
+        html +=
+          '<span class="participation-chip participation-chip--warn">미참여 <strong>' +
+          esc(p.missingCount) +
+          "</strong>명</span>";
+      }
+      html += "</div>";
+      var missingText = "";
+      if (p.missingCount > 0) {
+        var labels = (p.missingStudents || []).map(formatMissingStudentLabel).filter(Boolean);
+        if (!labels.length && p.missingNumbers) {
+          labels = p.missingNumbers.map(function (n) {
+            return n + "번";
+          });
+        }
+        missingText = labels.join(", ");
+      } else {
+        missingText = "전원 참여";
       }
       html +=
-        '<p class="missing-list"><span class="missing-label">미참여</span> ' +
-        esc(labels.join(", ")) +
-        "</p>";
+        '<div class="participation-missing' +
+        (p.missingCount > 0 ? "" : " participation-missing--ok") +
+        '">' +
+        esc(missingText) +
+        "</div>";
     } else {
-      html += '<p class="missing-list missing-list--ok">전원 참여</p>';
+      html += '<div class="participation-stats"></div>';
+      html += '<div class="participation-missing"></div>';
     }
     html += "</div>";
     return html;
@@ -3187,8 +3223,7 @@
     var hasCategories = isProfile || (data.rows && data.rows.some(rowHasSections));
     var list = (data.rows || []).slice(0, 50);
     var sheetLabel = (data.meta && data.meta.sheetName) || activeSheetView || "";
-    var html = renderActiveSheetBanner();
-    html += renderParticipationBanner(data);
+    var html = renderParticipationBanner(data, sheetLabel);
     html += '<div class="student-cards student-cards-list">';
     list.forEach(function (row) {
       html += renderStudentCard(row, hasCategories);
