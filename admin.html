@@ -117,8 +117,8 @@
       position: relative;
       display: flex;
       align-items: center;
-      gap: var(--space-5);
-      padding: var(--space-5) 28px;
+      gap: 18px;
+      padding: 18px 24px;
       background: var(--theme-bg-panel);
       border: 1px solid var(--theme-border);
       border-radius: var(--radius-lg);
@@ -149,8 +149,8 @@
     .school-logo {
       position: relative;
       z-index: 1;
-      width: 94px;
-      height: 94px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
       object-fit: contain;
       background: #fff;
@@ -163,45 +163,47 @@
       z-index: 1;
       flex: 1;
       min-width: 0;
-      min-height: 94px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: flex-start;
-      gap: 4pt;
+      gap: 8px;
+    }
+    .header-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 12px;
     }
     .header-school {
       margin: 0;
       padding: 0;
-      font-size: calc(clamp(0.95rem, 1.55vw, 1.125rem) + 1pt);
+      font-size: clamp(1.02rem, 1.75vw, 1.2rem);
       font-weight: 700;
       letter-spacing: -0.02em;
-      line-height: 1.25;
-      color: var(--theme-heading);
+      line-height: 1.2;
+      color: var(--theme-heading-strong);
+      white-space: nowrap;
     }
     .site-header-text h1 {
       margin: 0;
       padding: 0;
-      font-size: calc(clamp(1.5rem, 3.4vw, 1.85rem) + 1pt);
+      font-size: clamp(1.28rem, 2.6vw, 1.62rem);
       font-weight: 800;
       letter-spacing: -0.035em;
-      line-height: 1.2;
+      line-height: 1.15;
       color: var(--theme-heading-strong);
     }
     .site-header-text h1 .header-em { color: var(--theme-heading-accent); }
-    .header-subline {
-      margin: 0;
-      padding: 0;
-      line-height: 1;
-    }
     .header-subtitle {
       display: inline-flex;
       align-items: center;
+      flex-shrink: 0;
       margin: 0;
-      padding: 4px 11px;
-      font-size: calc(clamp(0.82rem, 1.25vw, 0.95rem) - 1pt);
+      padding: 5px 12px;
+      font-size: clamp(0.78rem, 1.1vw, 0.875rem);
       font-weight: 600;
-      line-height: 1.25;
+      line-height: 1.2;
       letter-spacing: -0.01em;
       color: var(--theme-heading);
       background: var(--theme-accent-soft);
@@ -487,7 +489,11 @@
     }
     @media (max-width: 720px) {
       .panel-section { padding: var(--space-5) var(--space-4); }
-      .site-header-inner { flex-wrap: wrap; }
+      .site-header-inner { flex-wrap: wrap; gap: 14px; padding: 14px 18px; }
+      .school-logo { width: 68px; height: 68px; }
+      .header-school { font-size: clamp(0.95rem, 4vw, 1.08rem); }
+      .site-header-text h1 { font-size: clamp(1.15rem, 5.2vw, 1.38rem); }
+      .header-subtitle { font-size: clamp(0.72rem, 2.8vw, 0.82rem); padding: 4px 10px; }
       .section-head-row {
         flex-wrap: wrap;
         align-items: flex-start;
@@ -503,12 +509,14 @@
   <header class="site-header">
     <div class="site-header-inner">
       <a href="index.html" class="school-logo-link" aria-label="설문 조회 홈">
-        <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="94" height="94">
+        <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="80" height="80">
       </a>
       <div class="site-header-text">
-        <p class="header-school">남악고등학교 1학년</p>
+        <div class="header-meta-row">
+          <p class="header-school">남악고등학교 1학년</p>
+          <span class="header-subtitle">2026학년도</span>
+        </div>
         <h1><span class="header-em">설문조사 관리자 모드</span></h1>
-        <p class="header-subline"><span class="header-subtitle">2026학년도</span></p>
       </div>
       <button type="button" class="theme-toggle" id="themeToggle" aria-label="다크 모드" title="다크 모드">
         <svg class="theme-toggle-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
