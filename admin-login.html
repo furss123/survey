@@ -346,7 +346,7 @@
           <div class="admin-actions">
             <button type="submit" class="admin-btn-primary">로그인</button>
           </div>
-          <p class="login-hint">로그인 상태는 이 창을 닫거나 로그아웃할 때까지 유지됩니다.</p>
+          <p class="login-hint">로그인 상태는 이 창을 닫거나 로그아웃할 때까지 유지됩니다. 1시간 동안 활동이 없으면 자동 로그아웃됩니다.</p>
         </form>
       </section>
     </div>
@@ -356,20 +356,21 @@
     <div class="site-footer-inner">남악고등학교 설문 · 관리자 로그인</div>
   </footer>
 
+  <script src="scripts/admin-session.js"></script>
   <script>
 (function () {
   "use strict";
 
   var ADMIN_LOGIN_ID = "furss123";
   var ADMIN_LOGIN_PASSWORD = "rlagytjd1!";
-  var ADMIN_SESSION_KEY = "school-admin-session-v1";
 
   function coerceText(value) {
     if (value == null) return "";
     return String(value).trim();
   }
 
-  if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "1") {
+  if (AdminSession.isValid()) {
+    AdminSession.touch();
     location.replace("admin.html");
     return;
   }
@@ -403,7 +404,7 @@
       return;
     }
     if (errEl) errEl.hidden = true;
-    sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
+    AdminSession.touch();
     location.href = "admin.html";
   });
 })();

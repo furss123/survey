@@ -498,11 +498,11 @@
     <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
   </div>
 
+  <script src="scripts/admin-session.js"></script>
   <script>
 (function () {
   "use strict";
 
-  var ADMIN_SESSION_KEY = "school-admin-session-v1";
   var ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
   var SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
@@ -516,19 +516,6 @@
   function coerceText(value) {
     if (value == null) return "";
     return String(value).trim();
-  }
-
-  function isAdminSession() {
-    return sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
-  }
-
-  function setAdminSession(active) {
-    if (active) sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
-    else sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  }
-
-  function clearAdminSession() {
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
   }
 
   function parseSpreadsheetId(url) {
@@ -911,16 +898,13 @@
     });
   })();
 
-  if (!isAdminSession()) {
-    location.replace("admin-login.html");
-  } else {
-    renderAdminRegistryList();
-  }
+  if (!AdminSession.require()) return;
 
+  renderAdminRegistryList();
   bindSurveyNameField();
 
   document.getElementById("adminLogoutBtn").addEventListener("click", function () {
-    clearAdminSession();
+    AdminSession.clear();
     location.href = "admin-login.html";
   });
 

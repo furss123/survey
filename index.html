@@ -1554,6 +1554,7 @@
     <div class="site-footer-inner">남악고등학교 1학년 설문 결과 · <span>survey</span></div>
   </footer>
 
+  <script src="scripts/admin-session.js"></script>
   <script>
 (function () {
   "use strict";
@@ -4374,6 +4375,13 @@
   (function initAdminSetupFromQuery() {
     var params = new URLSearchParams(location.search);
     if (params.get("adminSetup") !== "1") return;
+    if (typeof AdminSession === "undefined" || !AdminSession.isValid()) {
+      alert("관리자 로그인이 필요합니다. 다시 로그인해 주세요.");
+      location.href = "admin-login.html";
+      return;
+    }
+    AdminSession.touch();
+    AdminSession.bindActivity();
     var draft = null;
     try {
       var raw = sessionStorage.getItem(ADMIN_SETUP_DRAFT_KEY);
