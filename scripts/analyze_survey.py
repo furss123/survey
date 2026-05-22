@@ -45,14 +45,24 @@ def detect_column_type(column_name: str) -> str:
 
 
 def parse_student_id(student_id: str | Any) -> tuple[int | None, int | None, int | None]:
+    """4자리 학번: 학년(1)+반(1)+번호(2). 예) 1101→1학년1반1번, 1320→1학년3반20번."""
     s = str(student_id).strip()
     if not s or s.lower() in INVALID_STUDENT_VALUES:
         return None, None, None
-    digits = re.sub(r"\D", "", s)
+    cleaned = s.replace(",", "")
+    try:
+        num = float(cleaned)
+        if num >= 0 and num == int(num):
+            cleaned = str(int(num))
+    except ValueError:
+        pass
+    digits = re.sub(r"\D", "", cleaned)
     if len(digits) == 4:
         return int(digits[0]), int(digits[1]), int(digits[2:])
     if len(digits) == 5:
         return int(digits[0]), int(digits[1:3]), int(digits[3:])
+    if len(digits) == 3:
+        return 1, int(digits[0]), int(digits[1:])
     return None, None, None
 
 
