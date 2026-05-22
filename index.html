@@ -618,7 +618,7 @@
     #results .sheet-tabs {
       justify-content: flex-start;
     }
-    #results .class-select-box {
+    #results .class-picker-bar {
       max-width: 100%;
     }
     .survey-view-head {
@@ -663,38 +663,28 @@
     .class-results-panel {
       width: 100%;
     }
-    .class-select-box {
-      margin: 0 0 20px;
-      padding: 18px 20px;
+    .class-picker-bar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      margin: 0 0 16px;
+      padding: 16px 18px 14px;
       background: var(--theme-bg-panel);
       border: 1px solid var(--theme-border);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-md);
     }
-    .class-select-box__head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 8px 12px;
-      margin-bottom: 14px;
-    }
-    .class-select-box__label {
-      margin: 0;
+    .class-picker-bar__title {
+      margin: 0 0 12px;
       font-size: var(--text-sm);
       font-weight: 800;
       color: var(--school-navy-dark);
       letter-spacing: -0.02em;
+      text-align: center;
     }
-    .class-select-box__hint {
-      margin: 0;
-      font-size: var(--text-xs);
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .class-select-box__grid {
+    .class-picker-bar__grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
       gap: 10px;
     }
     .class-select-option {
@@ -737,7 +727,7 @@
       opacity: 0.95;
     }
     @media (max-width: 480px) {
-      .class-select-box__grid {
+      .class-picker-bar__grid {
         grid-template-columns: repeat(4, 1fr);
       }
       .class-select-option {
@@ -1618,6 +1608,7 @@
         background: #fff !important;
       }
       body.is-printing-results .sheet-tabs,
+      body.is-printing-results .class-picker-bar,
       body.is-printing-results .class-jump-nav,
       body.is-printing-results .participation-banner {
         margin: 0 0 8px;
@@ -1751,11 +1742,7 @@
         <strong id="adminSetupTitle">시트 구성 미리보기</strong>
         <span class="admin-setup-meta" id="adminSetupMeta"></span>
       </div>
-      <p class="admin-setup-desc">시트에서 감지한 <strong>반</strong>·<strong>카테고리</strong>를 선택·순서 변경·이름 수정한 뒤 등록하세요.</p>
-      <div class="admin-setup-section">
-        <p class="admin-setup-section-label">표시할 반 (시트 탭·데이터 기준)</p>
-        <div id="adminClassConfig" class="admin-category-config admin-class-config" role="group" aria-label="표시할 반"></div>
-      </div>
+      <p class="admin-setup-desc">시트 1행 헤더에서 감지한 <strong>카테고리</strong>만 선택·순서 변경·이름 수정한 뒤 등록하세요. 반 구분은 결과 화면에서 시트 데이터를 분석해 자동으로 표시됩니다.</p>
       <div class="admin-setup-section">
         <p class="admin-setup-section-label">표시할 카테고리 (1행 헤더·응답 기준)</p>
         <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
@@ -3885,15 +3872,21 @@
     );
   }
 
+  function buildRegistryClassesFromMulti(multi) {
+    if (!multi) return [];
+    return sortClassTabsByBanOrder(deriveClassesFromAnalysis(multi)).map(function (c, i) {
+      return {
+        id: c.id,
+        sheetName: c.sheetName,
+        classKey: c.classKey || normalizeSheetClassKey(c.label),
+        label: c.label,
+        enabled: true,
+        order: i,
+      };
+    });
+  }
+
   function getClassTabsConfig() {
-    if (adminSetupMode && adminSetupClasses.length) {
-      return adminSetupClasses
-        .filter(function (cls) {
-          return cls.enabled !== false;
-        })
-        .slice()
-        .sort(sortCategoriesByOrder);
-    }
     var sheet = getActiveSheetAnalysis();
     if (sheet) {
       var fromSheet = getSheetDerivedClassTabs(sheet);
@@ -4154,7 +4147,6 @@
   }
 
   function renderAdminSetupPanels() {
-    renderAdminClassConfig();
     renderAdminCategoryConfig();
   }
 
@@ -4300,15 +4292,6 @@
   function confirmAdminSetup() {
     if (!adminSetupLabel || !adminSetupUrl) return;
     if (
-      adminSetupClasses.length &&
-      !adminSetupClasses.some(function (c) {
-        return c.enabled;
-      })
-    ) {
-      alert("표시할 반을 하나 이상 선택해 주세요.");
-      return;
-    }
-    if (
       !adminSetupCategories.some(function (c) {
         return c.enabled && c.id !== "all";
       })
@@ -4317,33 +4300,18 @@
       return;
     }
     var registry = loadSheetRegistry();
-    var preferredTab = null;
-    var firstClass = adminSetupClasses.find(function (c) {
-      return c.enabled;
-    });
-    if (firstClass) preferredTab = firstClass.sheetName;
-    else {
-      var classNum = parseClassNumberFromLabel(adminSetupLabel);
-      preferredTab = classNum
-        ? classNum + "반"
+    var registryClasses = buildRegistryClassesFromMulti(lastMultiResult);
+    var preferredTab =
+      registryClasses.length && registryClasses[0].sheetName
+        ? registryClasses[0].sheetName
         : lastMultiResult && lastMultiResult.sheets[0]
           ? lastMultiResult.sheets[0].sheetName
           : null;
-    }
     var payload = {
       label: adminSetupLabel,
       url: adminSetupUrl,
       tab: preferredTab,
-      classes: adminSetupClasses.map(function (c, i) {
-        return {
-          id: c.id,
-          sheetName: c.sheetName,
-          classKey: c.classKey || normalizeSheetClassKey(c.label),
-          label: c.label,
-          enabled: c.enabled !== false,
-          order: c.order != null ? c.order : i,
-        };
-      }),
+      classes: registryClasses,
       categories: adminSetupCategories.map(function (c, i) {
         return {
           id: c.id,
@@ -4438,10 +4406,6 @@
           adminSetupCategories,
           draft.categories
         );
-      }
-      adminSetupClasses = deriveClassesFromAnalysis(lastMultiResult);
-      if (draft && draft.classes && draft.classes.length) {
-        adminSetupClasses = mergeSavedClassPrefs(adminSetupClasses, draft.classes);
       }
       renderAdminSetupPanels();
       activeSubjectView = "all";
@@ -4653,7 +4617,8 @@
     return !filterKey || filterKey === classKey || filterKey === hostKey;
   }
 
-  function renderClassSelectBox() {
+  function renderClassPickerBar() {
+    if (adminSetupMode) return "";
     var classTabs = getClassTabsConfig();
     if (!classTabs.length) return "";
     var sheet = getActiveSheetAnalysis();
@@ -4663,12 +4628,9 @@
       if (!isListSheetTab(s.sheetName)) sheetByName[s.sheetName] = s;
     });
     var html =
-      '<section class="class-select-box" aria-label="반 선택">' +
-      '<div class="class-select-box__head">' +
-      '<p class="class-select-box__label">반 선택</p>' +
-      '<p class="class-select-box__hint">시트 응답·학번·반 정보를 분석해 자동 구분했습니다</p>' +
-      "</div>" +
-      '<div class="class-select-box__grid" role="tablist">';
+      '<nav class="class-picker-bar" aria-label="담당 반 선택">' +
+      '<p class="class-picker-bar__title">담당 반을 선택하세요</p>' +
+      '<div class="class-picker-bar__grid" role="tablist">';
     classTabs.forEach(function (cls) {
       var hostSheet = resolveHostSheetForClass(cls, sheetByName) || sheet;
       var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
@@ -4692,7 +4654,7 @@
         esc(String(count)) +
         "명</span></button>";
     });
-    html += "</div></section>";
+    html += "</div></nav>";
     return html;
   }
 
@@ -5159,7 +5121,8 @@
     setFabStackVisible(true);
     activeSubjectView = "all";
 
-    var html = renderSurveyViewHeader();
+    var html = renderClassPickerBar();
+    html += renderSurveyViewHeader();
     if (lastMultiResult) {
       html += renderWorkbookSheetTabs();
     }
@@ -5184,7 +5147,6 @@
       return;
     }
 
-    html += renderClassSelectBox();
     html += renderClassStudentList(analysis);
 
     el.innerHTML = html;
