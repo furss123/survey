@@ -2836,6 +2836,27 @@
     return match ? match.sheetName : sheets[0].sheetName;
   }
 
+  function resolveInitialActiveSheetTab(entry, sheets) {
+    if (!sheets || !sheets.length) return null;
+    var sheetList = sheets.map(function (s) {
+      return { sheetName: s.sheetName };
+    });
+    if (entry && entry.tab) {
+      return resolvePreferredSheetTab(sheetList, entry.tab);
+    }
+    var classes = entry && entry.classes ? entry.classes : [];
+    var enabled = classes
+      .filter(function (cls) {
+        return cls.enabled !== false;
+      })
+      .slice()
+      .sort(sortCategoriesByOrder);
+    if (enabled.length) {
+      return resolvePreferredSheetTab(sheetList, enabled[0].sheetName);
+    }
+    return sheets[0].sheetName;
+  }
+
   function renderSheetButtonGrid() {
     var grid = document.getElementById("sheetButtonGrid");
     var hint = document.getElementById("homeEmptyHint");
@@ -2916,16 +2937,7 @@
       if (!hasData) throw new Error("시트에 데이터가 없습니다. 공개 공유 설정을 확인하세요.");
       sheetsData[id] = sheetInputs;
       lastMultiResult = analyzeAllSheets(sheetInputs, masterRoster);
-      activeSheetView = entry.tab
-        ? resolvePreferredSheetTab(
-            lastMultiResult.sheets.map(function (s) {
-              return { sheetName: s.sheetName };
-            }),
-            entry.tab
-          )
-        : lastMultiResult.sheets[0]
-          ? lastMultiResult.sheets[0].sheetName
-          : null;
+      activeSheetView = resolveInitialActiveSheetTab(entry, lastMultiResult.sheets);
       activeSubjectView = "all";
       renderResults(getActiveAnalysis(), id, lastMultiResult);
       document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4163,6 +4175,7 @@
     var errorEl = document.getElementById("error");
     if (!adminSetupMode) {
       document.body.classList.remove("admin-setup-mode");
+      setSiteHeaderAdminMode(false);
       var setupPanel = document.getElementById("adminSetupPanel");
       if (setupPanel) setupPanel.hidden = true;
     }
@@ -4312,12 +4325,12 @@
     var label = params.get("label") || (draft && draft.label) || "새 시트";
     var url = params.get("url") || (draft && draft.url) || "";
     if (!url) {
-      alert("시트 주소가 없습니다. 관리자에서 다시 조회해 주세요.");
+      alert("시트 주소가 없습니다. 관리자에서 「카테고리 구성」을 다시 실행해 주세요.");
       location.href = "admin.html";
       return;
     }
     if (draft && draft.ts && Date.now() - draft.ts > 2 * 60 * 60 * 1000) {
-      alert("미리보기 세션이 만료되었습니다. 관리자에서 다시 조회해 주세요.");
+      alert("미리보기 세션이 만료되었습니다. 관리자에서 「카테고리 구성」을 다시 실행해 주세요.");
       sessionStorage.removeItem(ADMIN_SETUP_DRAFT_KEY);
       location.href = "admin.html";
       return;
