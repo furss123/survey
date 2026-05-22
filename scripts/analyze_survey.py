@@ -20,6 +20,11 @@ INVALID_STUDENT_VALUES = {"0", "d", "D", "", "nan", "none", "null", "테스트"}
 CLASS_NAME_RE = re.compile(r"(\d+)\s*반")
 NUM_NAME_RE = re.compile(r"^(\d+)\s+(.+)$")
 
+# Google Forms 보내기 기본: 1행=카테고리(헤더), B열=학번, C열=이름
+SURVEY_HEADER_ROW_INDEX = 0
+SURVEY_COL_STUDENT_ID = 1
+SURVEY_COL_NAME = 2
+
 
 def detect_column_type(column_name: str) -> str:
     name = str(column_name).strip().lower()
@@ -119,12 +124,41 @@ def classify_columns(df: pd.DataFrame) -> dict[str, list[str]]:
         "college": [],
         "class": [],
         "student_selector": [],
+        "category": [],
     }
     for col in df.columns:
         col_type = detect_column_type(col)
         if col_type in groups:
             groups[col_type].append(col)
     return groups
+
+
+def resolve_survey_columns(df: pd.DataFrame) -> dict[str, list[str]]:
+    """키워드 탐지 + 기본 B=학번, C=이름 위치 적용."""
+    cols = classify_columns(df)
+    columns = list(df.columns)
+    if len(columns) > SURVEY_COL_STUDENT_ID:
+        col_b = columns[SURVEY_COL_STUDENT_ID]
+        if col_b not in cols["student_id"]:
+            cols["student_id"] = [col_b]
+    if len(columns) > SURVEY_COL_NAME:
+        col_c = columns[SURVEY_COL_NAME]
+        if col_c not in cols["name"]:
+            cols["name"] = [col_c]
+    skip = set()
+    for key in (
+        "timestamp",
+        "student_id",
+        "name",
+        "class",
+        "student_selector",
+        "major_field",
+        "major_detail",
+        "college",
+    ):
+        skip.update(cols.get(key) or [])
+    cols["category"] = [c for c in columns if c not in skip]
+    return cols
 
 
 def extract_student_info(row: pd.Series, cols: dict[str, list[str]]) -> dict[str, Any]:
@@ -187,7 +221,7 @@ def parse_timestamp(row: pd.Series, ts_cols: list[str]) -> datetime | None:
 
 
 def build_records(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
-    cols = classify_columns(df)
+    cols = resolve_survey_columns(df)
     records: list[dict[str, Any]] = []
     skipped = 0
 
@@ -198,6 +232,8 @@ def build_records(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
             continue
 
         majors = collect_values(row, cols["major_detail"])
+        if not majors:
+            majors = collect_values(row, cols["category"])
         colleges = collect_values(row, cols["college"])
         major_field = ""
         if cols["major_field"]:

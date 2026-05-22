@@ -1528,8 +1528,14 @@
   }
   const PROFILE_PATTERN = /\[(\d+)반\]\s*\[(\d+)\]\s*\[([^\]]+)\]/;
 
+  /** 설문 시트 기본 레이아웃: 1행=카테고리(헤더), B열=학번, C열=이름 */
+  const SURVEY_HEADER_ROW_INDEX = 0;
+  const SURVEY_COL_STUDENT_ID = 1;
+  const SURVEY_COL_NAME = 2;
+
   const CLASS_ALIASES = ["반", "class", "학급", "클래스", "반명"];
-  const NUMBER_ALIASES = ["번호", "number", "no", "no.", "학번", "순번"];
+  const STUDENT_ID_ALIASES = ["학번", "student_id", "학생번호", "studentid"];
+  const NUMBER_ALIASES = ["번호", "number", "no", "no."];
   const NAME_ALIASES = ["이름", "name", "성명", "학생"];
   const ROSTER_NAME_ALIASES = ["이름", "name", "성명", "성함", "studentname", "학생이름"];
   const COMPLETION_ALIASES = ["완료", "제출", "응답", "status", "상태", "completed", "done", "체크"];
@@ -2018,6 +2024,76 @@
     return -1;
   }
 
+  function parseStudentId(value) {
+    var s = coerceText(value);
+    if (!s) return { grade: null, 반: null, 번호: null };
+    var digits = s.replace(/\D/g, "");
+    if (digits.length === 4) {
+      return {
+        grade: parseInt(digits.charAt(0), 10),
+        반: parseInt(digits.charAt(1), 10),
+        번호: parseInt(digits.slice(2), 10),
+      };
+    }
+    if (digits.length === 5) {
+      return {
+        grade: parseInt(digits.charAt(0), 10),
+        반: parseInt(digits.slice(1, 3), 10),
+        번호: parseInt(digits.slice(3), 10),
+      };
+    }
+    var num = coerceNumber(s);
+    return { grade: null, 반: null, 번호: num };
+  }
+
+  function resolveSurveyColumnIndices(headerRow) {
+    var studentIdIdx = findColumnIndex(headerRow, STUDENT_ID_ALIASES);
+    var nameIdx = findColumnIndex(headerRow, NAME_ALIASES);
+    var classIdx = findColumnIndex(headerRow, CLASS_ALIASES);
+    var numberIdx = findColumnIndex(headerRow, NUMBER_ALIASES);
+    var completionIdx = findColumnIndex(headerRow, COMPLETION_ALIASES);
+
+    if (studentIdIdx < 0 && headerRow.length > SURVEY_COL_STUDENT_ID) {
+      studentIdIdx = SURVEY_COL_STUDENT_ID;
+    }
+    if (nameIdx < 0 && headerRow.length > SURVEY_COL_NAME) {
+      nameIdx = SURVEY_COL_NAME;
+    }
+    if (numberIdx === studentIdIdx) numberIdx = -1;
+    if (classIdx === studentIdIdx || classIdx === nameIdx) classIdx = -1;
+
+    return {
+      studentIdIdx: studentIdIdx,
+      nameIdx: nameIdx,
+      classIdx: classIdx,
+      numberIdx: numberIdx,
+      completionIdx: completionIdx,
+    };
+  }
+
+  function isFixedSurveyColumnIndex(colIdx) {
+    return colIdx === SURVEY_COL_STUDENT_ID || colIdx === SURVEY_COL_NAME;
+  }
+
+  function enrichRowWithTableCategories(row, headerRow, cells) {
+    var sections = [];
+    headerRow.forEach(function (title, colIdx) {
+      if (isSkippableCategoryHeader(title, colIdx)) return;
+      var body = coerceText(cells[colIdx]);
+      if (!body) return;
+      var sec = {
+        title: categoryDisplayLabel(title) || coerceText(title) || "응답",
+        body: body,
+        fields: parseSectionFields(body),
+      };
+      if (isMeaningfulSection(sec)) sections.push(sec);
+    });
+    if (sections.length) {
+      row.sections = sections;
+    }
+    return row;
+  }
+
   function findColumnIndexExact(headers, aliases) {
     var normalized = headers.map(normalizeHeader);
     for (var a = 0; a < aliases.length; a++) {
@@ -2139,23 +2215,32 @@
 
   function buildColumnInsights(headers, rows) {
     if (!headers || !headers.length || !rows.length) return [];
-    return headers.map(function (name, colIdx) {
-      var filled = rows.filter(function (r) {
-        var val = Object.values(r._raw || {})[colIdx];
-        return coerceText(val) !== "";
-      }).length;
-      var isContent = CONTENT_ALIASES.some(function (a) {
-        return normalizeHeader(name).indexOf(normalizeHeader(a)) >= 0;
-      });
-      return {
-        열: name || "열" + (colIdx + 1),
-        입력건수: filled,
-        입력률: rows.length ? Math.round((filled / rows.length) * 1000) / 10 : 0,
-        상담내용열: isContent,
-      };
-    }).filter(function (c) { return c.입력건수 > 0; })
-      .sort(function (a, b) { return b.입력건수 - a.입력건수; })
-      .slice(0, 8);
+    return headers
+      .map(function (name, colIdx) {
+        if (isSkippableCategoryHeader(name, colIdx)) return null;
+        var filled = rows.filter(function (r) {
+          var val = (r._raw || {})[name || "col_" + colIdx];
+          if (val == null) val = Object.values(r._raw || {})[colIdx];
+          return coerceText(val) !== "";
+        }).length;
+        var isContent = CONTENT_ALIASES.some(function (a) {
+          return normalizeHeader(name).indexOf(normalizeHeader(a)) >= 0;
+        });
+        return {
+          열: name || "열" + (colIdx + 1),
+          colIdx: colIdx,
+          입력건수: filled,
+          입력률: rows.length ? Math.round((filled / rows.length) * 1000) / 10 : 0,
+          상담내용열: isContent,
+        };
+      })
+      .filter(function (c) {
+        return c && c.입력건수 > 0;
+      })
+      .sort(function (a, b) {
+        return b.입력건수 - a.입력건수;
+      })
+      .slice(0, 12);
   }
 
   function detectThemes(rows) {
@@ -2219,25 +2304,38 @@
       return buildAnalysisPayload(profile.headers, profile.rows, Object.assign({}, profile.meta, { format: "profile" }));
     }
 
-    var headerRow = rawValues[0].map(coerceText);
-    var dataRows = rawValues.slice(1).filter(function (row) {
+    var headerRow = rawValues[SURVEY_HEADER_ROW_INDEX].map(coerceText);
+    var dataRows = rawValues.slice(SURVEY_HEADER_ROW_INDEX + 1).filter(function (row) {
       return row.some(function (cell) { return coerceText(cell) !== ""; });
     });
 
-    var classIdx = findColumnIndex(headerRow, CLASS_ALIASES);
-    var numberIdx = findColumnIndex(headerRow, NUMBER_ALIASES);
-    var nameIdx = findColumnIndex(headerRow, NAME_ALIASES);
-    var completionIdx = findColumnIndex(headerRow, COMPLETION_ALIASES);
-    if (classIdx < 0 && headerRow.length > 0) classIdx = 0;
-    if (numberIdx < 0 && headerRow.length > 1) numberIdx = 1;
+    var cols = resolveSurveyColumnIndices(headerRow);
 
     var rows = dataRows.map(function (raw, rowIndex) {
       var cells = headerRow.map(function (_, i) { return coerceText(raw[i]); });
-      var classVal = coerceText(raw[classIdx]);
-      var numberVal = coerceNumber(raw[numberIdx]);
-      var nameVal = nameIdx >= 0 ? coerceText(raw[nameIdx]) : "";
-      var skipCols = [classIdx, numberIdx, nameIdx].filter(function (i) { return i >= 0; });
-      var completionRaw = completionIdx >= 0 ? raw[completionIdx] : inferCompletionFromRow(cells, skipCols);
+      var sidParsed = parseStudentId(
+        cols.studentIdIdx >= 0 ? raw[cols.studentIdIdx] : ""
+      );
+      var classVal = cols.classIdx >= 0 ? coerceText(raw[cols.classIdx]) : "";
+      if (!classVal && sidParsed.반 != null) classVal = sidParsed.반 + "반";
+      var numberVal =
+        cols.numberIdx >= 0
+          ? coerceNumber(raw[cols.numberIdx])
+          : sidParsed.번호;
+      var nameVal = cols.nameIdx >= 0 ? coerceText(raw[cols.nameIdx]) : "";
+      var skipCols = [
+        cols.classIdx,
+        cols.studentIdIdx,
+        cols.numberIdx,
+        cols.nameIdx,
+        cols.completionIdx,
+      ].filter(function (i) {
+        return i >= 0;
+      });
+      var completionRaw =
+        cols.completionIdx >= 0
+          ? raw[cols.completionIdx]
+          : inferCompletionFromRow(cells, skipCols);
       var row = {
         id: rowIndex + 1,
         반: classVal || "(미입력)",
@@ -2245,18 +2343,33 @@
         이름: nameVal,
         완료: isCompletedValue(completionRaw),
         미리보기: pickContentPreview(headerRow, cells),
-        _raw: Object.fromEntries(headerRow.map(function (h, i) { return [h || "col_" + i, cells[i]]; })),
+        _raw: Object.fromEntries(
+          headerRow.map(function (h, i) {
+            return [h || "col_" + i, cells[i]];
+          })
+        ),
       };
+      enrichRowWithTableCategories(row, headerRow, cells);
       var profileText = longestCellText(cells);
-      return enrichRowWithProfile(row, profileText, extractProfileMeta(profileText));
+      if (hasProfileContent(profileText)) {
+        return enrichRowWithProfile(row, profileText, extractProfileMeta(profileText));
+      }
+      return row;
     });
 
     return buildAnalysisPayload(headerRow, rows, {
-      classColumn: headerRow[classIdx] || "반",
-      numberColumn: headerRow[numberIdx] || "번호",
-      nameColumn: nameIdx >= 0 ? headerRow[nameIdx] : null,
-      completionColumn: completionIdx >= 0 ? headerRow[completionIdx] : "(자동 추론)",
+      classColumn: cols.classIdx >= 0 ? headerRow[cols.classIdx] : "반(학번)",
+      numberColumn:
+        cols.numberIdx >= 0
+          ? headerRow[cols.numberIdx]
+          : headerRow[cols.studentIdIdx] || "학번(B열)",
+      nameColumn: cols.nameIdx >= 0 ? headerRow[cols.nameIdx] : "이름(C열)",
+      studentIdColumn:
+        cols.studentIdIdx >= 0 ? headerRow[cols.studentIdIdx] : "학번(B열)",
+      completionColumn:
+        cols.completionIdx >= 0 ? headerRow[cols.completionIdx] : "(자동 추론)",
       format: "table",
+      layout: "survey-b-col-student-id-c-col-name",
     });
   }
 
@@ -2779,7 +2892,8 @@
     return t;
   }
 
-  function isSkippableCategoryHeader(name) {
+  function isSkippableCategoryHeader(name, colIdx) {
+    if (typeof colIdx === "number" && isFixedSurveyColumnIndex(colIdx)) return true;
     var n = normalizeHeader(name);
     if (!n) return true;
     var skipWords = ["타임스탬프", "timestamp", "이메일", "email", "제출", "응답시간"];
@@ -2787,6 +2901,7 @@
       if (n.indexOf(skipWords[i]) >= 0) return true;
     }
     if (findColumnIndex([name], CLASS_ALIASES) >= 0) return true;
+    if (findColumnIndex([name], STUDENT_ID_ALIASES) >= 0) return true;
     if (findColumnIndex([name], NUMBER_ALIASES) >= 0) return true;
     if (findColumnIndex([name], NAME_ALIASES) >= 0) return true;
     if (findColumnIndex([name], COMPLETION_ALIASES) >= 0) return true;
@@ -2861,13 +2976,13 @@
           registerTitle(sec.title || "");
         });
       });
-      (sheet.headers || []).forEach(function (headerName) {
-        if (isSkippableCategoryHeader(headerName)) return;
+      (sheet.headers || []).forEach(function (headerName, colIdx) {
+        if (isSkippableCategoryHeader(headerName, colIdx)) return;
         registerTitle(headerName);
       });
       (sheet.columnInsights || []).forEach(function (col) {
         if (!col || !col.열 || col.입력건수 <= 0) return;
-        if (isSkippableCategoryHeader(col.열)) return;
+        if (isSkippableCategoryHeader(col.열, col.colIdx)) return;
         registerTitle(col.열);
       });
     });
