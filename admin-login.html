@@ -219,15 +219,18 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: var(--text-lg);
+      font-size: calc(var(--text-lg) + 3pt);
       font-weight: 700;
+      line-height: 1.35;
       color: var(--school-navy);
       margin-bottom: var(--space-4);
     }
     .section-label::before {
       content: "";
+      flex-shrink: 0;
+      align-self: center;
       width: 3px;
-      height: 1.1em;
+      height: 1em;
       border-radius: 3px;
       background: linear-gradient(180deg, var(--school-accent) 0%, var(--school-navy-light) 100%);
     }
