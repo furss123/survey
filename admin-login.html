@@ -95,41 +95,81 @@
       background: linear-gradient(90deg, var(--school-navy-dark) 0%, var(--school-navy-light) 55%, var(--school-accent) 100%);
     }
     .school-logo {
-      width: 64px;
-      height: 64px;
+      position: relative;
+      z-index: 1;
+      width: 78px;
+      height: 78px;
       border-radius: 50%;
-      border: 1px solid var(--theme-border-light);
+      object-fit: contain;
       background: #fff;
       flex-shrink: 0;
+      border: 1px solid var(--theme-border-light);
+      box-shadow: 0 1px 2px rgba(15, 36, 64, 0.04);
     }
-    .site-header-text { flex: 1; min-width: 0; }
+    .site-header-text {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2pt;
+    }
     .header-school {
       margin: 0;
-      font-size: 0.75rem;
+      font-size: calc(clamp(0.7rem, 1.1vw, 0.75rem) + 4pt);
       font-weight: 700;
       color: var(--school-navy);
     }
     .site-header-text h1 {
-      margin: 4px 0 0;
-      font-size: 1.35rem;
+      margin: 0;
+      font-size: calc(clamp(1.28rem, 2.6vw, 1.48rem) + 4pt);
       font-weight: 800;
+      letter-spacing: -0.035em;
       color: var(--school-navy-dark);
+      line-height: 1.18;
     }
-    .back-link {
-      flex-shrink: 0;
-      padding: 8px 14px;
-      border: 1px solid var(--theme-border);
-      border-radius: var(--radius-sm);
-      background: var(--theme-bg-panel);
-      color: var(--school-navy);
-      font-size: var(--text-sm);
+    .site-header-text h1 .header-em { color: var(--school-navy); }
+    .header-subtitle {
+      display: inline-flex;
+      padding: 3px 9px;
+      font-size: clamp(0.68rem, 1vw, 0.72rem);
       font-weight: 600;
-      text-decoration: none;
-    }
-    .back-link:hover {
-      border-color: var(--school-navy-light);
+      color: var(--school-navy-dark);
       background: var(--school-accent-soft);
+      border: 1px solid var(--theme-border-light);
+      border-radius: 999px;
     }
+    .theme-toggle {
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 1px solid rgba(30, 58, 95, 0.22);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--school-navy);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--ease);
+    }
+    .theme-toggle:hover {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: var(--school-navy-light);
+      transform: translateY(-1px);
+    }
+    .theme-toggle svg { width: 20px; height: 20px; display: block; }
+    html[data-theme="dark"] .theme-toggle {
+      border-color: rgba(226, 232, 240, 0.28);
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+    }
+    html[data-theme="dark"] .theme-toggle .theme-icon-moon,
+    html:not([data-theme="dark"]) .theme-toggle .theme-icon-sun { display: none; }
     .app-layout {
       flex: 1;
       width: 100%;
@@ -241,12 +281,20 @@
 <body>
   <header class="site-header">
     <div class="site-header-inner">
-      <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="64" height="64">
+      <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="78" height="78">
       <div class="site-header-text">
         <p class="header-school">남악고등학교 1학년</p>
-        <h1>관리자 로그인</h1>
+        <h1><span class="header-em">설문조사 결과</span> 조회</h1>
+        <p class="header-subline"><span class="header-subtitle">2026학년도</span></p>
       </div>
-      <a href="index.html" class="back-link">← 설문 조회</a>
+      <button type="button" class="theme-toggle" id="themeToggle" aria-label="다크 모드" title="다크 모드">
+        <svg class="theme-toggle-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+        <svg class="theme-toggle-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -290,6 +338,25 @@
     location.replace("admin.html");
     return;
   }
+
+  (function initTheme() {
+    var key = "school-theme-v1";
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
+      localStorage.setItem(key, theme === "dark" ? "dark" : "light");
+      var toggle = document.getElementById("themeToggle");
+      if (toggle) {
+        toggle.setAttribute("aria-label", theme === "dark" ? "라이트 모드" : "다크 모드");
+        toggle.title = theme === "dark" ? "라이트 모드" : "다크 모드";
+      }
+    }
+    var saved = localStorage.getItem(key);
+    if (saved === "dark" || saved === "light") applyTheme(saved);
+    else applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.getElementById("themeToggle").addEventListener("click", function () {
+      applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+    });
+  })();
 
   document.getElementById("loginForm").addEventListener("submit", function (e) {
     e.preventDefault();
