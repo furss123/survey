@@ -1281,6 +1281,9 @@
       align-items: center;
       justify-content: center;
     }
+    body.admin-setup-mode .site-header-text {
+      gap: 4pt;
+    }
     body.admin-setup-mode #homePanel {
       display: none !important;
     }
@@ -3681,6 +3684,15 @@
     location.href = "admin.html";
   }
 
+  function setSiteHeaderAdminMode(active) {
+    var h1 = document.querySelector(".site-header-text h1");
+    if (!h1) return;
+    if (!h1.dataset.defaultHtml) h1.dataset.defaultHtml = h1.innerHTML;
+    h1.innerHTML = active
+      ? '<span class="header-em">설문조사 관리자 모드</span>'
+      : h1.dataset.defaultHtml;
+  }
+
   async function launchAdminSetup(label, url) {
     if (analysisInFlight) return;
     adminSetupMode = true;
@@ -3688,6 +3700,7 @@
     adminSetupUrl = url;
     currentLaunchEntry = null;
     document.body.classList.add("admin-setup-mode");
+    setSiteHeaderAdminMode(true);
     var setupPanel = document.getElementById("adminSetupPanel");
     if (setupPanel) setupPanel.hidden = false;
     var titleEl = document.getElementById("adminSetupTitle");
