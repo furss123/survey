@@ -470,7 +470,7 @@
             <label for="adminSheetUrl">구글 시트 주소</label>
             <div class="admin-url-row">
               <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
-              <button type="button" class="admin-btn admin-btn-primary" id="adminSheetPreviewBtn">조회</button>
+              <button type="button" class="admin-btn admin-btn-primary" id="adminSheetPreviewBtn">카테고리 구성</button>
             </div>
             <label for="adminSurveyName">설문 이름</label>
             <input
@@ -713,6 +713,17 @@
     });
 
     if (urlInput) {
+      urlInput.addEventListener("focus", function () {
+        if (editingSheetId) return;
+        urlInput.value = "";
+        surveyNameSuggested = "";
+        surveyNameUserEdited = false;
+        surveyNameFetchToken++;
+        if (input) {
+          input.value = "";
+          input.classList.remove("is-suggested", "is-loading");
+        }
+      });
       urlInput.addEventListener("input", function () {
         if (!editingSheetId) {
           surveyNameUserEdited = false;
@@ -930,7 +941,7 @@
     var label = getSurveyNameValue();
     var url = coerceText(document.getElementById("adminSheetUrl").value);
     if (!editingSheetId) {
-      alert("새 시트는 주소 옆 「조회」로 미리보기·구성 후 등록해 주세요.");
+      alert("새 시트는 주소 옆 「카테고리 구성」으로 미리보기·구성 후 등록해 주세요.");
       return;
     }
     if (!label || !url) {
