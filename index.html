@@ -602,8 +602,9 @@
     }
     #results .sheet-banner,
     #results .sheet-tabs,
-    #results .subject-tabs,
     #results .participation-banner,
+    #results .survey-by-class,
+    #results .class-section,
     #results .student-cards,
     #results .student-cards-list,
     #results .student-card,
@@ -614,9 +615,129 @@
     #results .sheet-banner {
       text-align: center;
     }
-    #results .sheet-tabs,
-    #results .subject-tabs {
+    #results .sheet-tabs {
       justify-content: flex-start;
+    }
+    .survey-by-class {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .class-jump-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px 16px;
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border-light);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
+      position: sticky;
+      top: 8px;
+      z-index: 2;
+    }
+    .class-jump-nav__label {
+      width: 100%;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .class-jump-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3rem;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--theme-border);
+      background: var(--bg-muted);
+      color: var(--text-subtle);
+      font-size: var(--text-sm);
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+    }
+    .class-jump-link:hover {
+      border-color: var(--school-navy-light);
+      color: var(--school-navy);
+      background: var(--theme-bg-panel);
+    }
+    .class-section {
+      scroll-margin-top: 72px;
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .class-section__head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px 20px;
+      padding: 20px 22px 18px;
+      background: linear-gradient(135deg, var(--school-navy-dark) 0%, var(--school-navy) 52%, var(--school-navy-light) 100%);
+      color: #fff;
+    }
+    .class-section__title {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 1.65rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+    .class-section__sub {
+      margin: 6px 0 0;
+      font-size: var(--text-sm);
+      opacity: 0.88;
+      font-weight: 500;
+    }
+    .class-section__stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .class-stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+    .class-stat-pill strong {
+      font-size: var(--text-sm);
+      font-weight: 800;
+    }
+    .class-section__body {
+      padding: 18px 18px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .class-section__missing {
+      margin: 0 18px 16px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-muted);
+      border: 1px dashed var(--theme-border);
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .class-section__missing strong {
+      color: var(--text-subtle);
+      font-weight: 700;
     }
     .muted { color: var(--text-muted); }
     .preview { color: var(--text); word-break: break-word; line-height: 1.55; }
@@ -637,12 +758,22 @@
       max-width: 100%;
       background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 18px 0;
-      box-shadow: var(--shadow-sm);
+      border-left: 4px solid var(--school-navy-light);
+      border-radius: var(--radius-md);
+      padding: 16px 18px 0;
+      box-shadow: var(--shadow-xs);
       margin-bottom: 0;
       min-width: 0;
       box-sizing: border-box;
+      transition: box-shadow 0.15s var(--ease), border-color 0.15s var(--ease);
+    }
+    .class-section .student-card:hover {
+      box-shadow: var(--shadow-sm);
+      border-left-color: var(--school-accent);
+    }
+    .student-card--absent {
+      border-left-color: var(--school-danger);
+      opacity: 0.92;
     }
     @media (min-width: 640px) {
       .student-card { padding: 14px 16px 0; }
@@ -684,25 +815,37 @@
     .category-block {
       width: 100%;
       max-width: 100%;
-      padding: 12px 16px;
-      border-radius: 8px;
-      background: var(--bg-category);
+      padding: 14px 16px 12px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, var(--bg-category) 0%, var(--bg-surface) 100%);
       border: 1px solid var(--border-strong);
       box-sizing: border-box;
     }
     .category-block .cat-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-size: 0.8125rem;
-      font-weight: 700;
-      color: var(--accent-hover);
-      margin-bottom: 6px;
+      font-weight: 800;
+      color: var(--school-navy);
+      margin-bottom: 8px;
       line-height: 1.35;
+      letter-spacing: -0.02em;
+    }
+    .category-block .cat-title::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--school-accent);
+      flex-shrink: 0;
     }
     .category-block .cat-body {
-      font-size: 0.875rem;
+      font-size: 0.9375rem;
       color: var(--text);
       word-break: break-word;
       white-space: pre-wrap;
-      line-height: 1.6;
+      line-height: 1.65;
     }
     .category-block .cat-field {
       font-size: 0.875rem;
@@ -755,6 +898,29 @@
       font-size: 1.125rem;
       font-weight: 800;
       letter-spacing: -0.01em;
+    }
+    .student-response-header--compact {
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+    }
+    .student-response-header--compact .student-name {
+      font-size: 1.05rem;
+    }
+    .student-response-header .student-id {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      border: 1px solid var(--theme-border-light);
+    }
+    .response-empty,
+    .absent-note {
+      margin: 0;
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      line-height: 1.55;
     }
     .status-badge {
       flex-shrink: 0;
@@ -1323,8 +1489,8 @@
         padding: 0 !important;
         background: #fff !important;
       }
-      body.is-printing-results .subject-tabs,
       body.is-printing-results .sheet-tabs,
+      body.is-printing-results .class-jump-nav,
       body.is-printing-results .participation-banner {
         margin: 0 0 8px;
         padding: 8px 12px;
@@ -1341,6 +1507,11 @@
       }
       body.is-printing-results:not(.print-teacher-mode) .student-cards-list {
         display: block;
+      }
+      body.is-printing-results:not(.print-teacher-mode) .class-section {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 14px;
       }
       body.is-printing-results:not(.print-teacher-mode) .student-card {
         page-break-inside: avoid;
@@ -4173,22 +4344,75 @@
     return d.innerHTML;
   }
 
-  function getActiveAnalysis() {
+  function getActiveSheetAnalysis() {
     if (!lastMultiResult || !activeSheetView) return null;
-    var sheet = lastMultiResult.sheets.find(function (s) {
-      return s.sheetName === activeSheetView;
+    return (
+      lastMultiResult.sheets.find(function (s) {
+        return s.sheetName === activeSheetView;
+      }) || null
+    );
+  }
+
+  function getActiveAnalysis() {
+    return getActiveSheetAnalysis();
+  }
+
+  function parseClassOrder(classLabel) {
+    var m = String(classLabel || "").match(/(\d+)\s*반/);
+    if (m) return parseInt(m[1], 10);
+    if (String(classLabel || "").indexOf("미지정") >= 0) return 999;
+    return 500;
+  }
+
+  function buildClassGroupsFromSheet(sheet) {
+    if (!sheet) return [];
+    var groupsMap = {};
+    (sheet.rows || []).forEach(function (row) {
+      var label = row.반 && row.반 !== "(미입력)" ? String(row.반) : "반 미지정";
+      var key = normalizeSheetClassKey(label) || label;
+      if (!groupsMap[key]) {
+        groupsMap[key] = { classKey: key, label: label, rows: [], missing: [] };
+      }
+      groupsMap[key].rows.push(row);
     });
-    if (!sheet) return null;
-    return filterSheetAnalysisByClass(sheet, activeClassFilter);
+    var groups = Object.keys(groupsMap).map(function (k) {
+      return groupsMap[k];
+    });
+    groups.forEach(function (g) {
+      g.rows.sort(function (a, b) {
+        var na = a.번호 != null ? Number(a.번호) : 9999;
+        var nb = b.번호 != null ? Number(b.번호) : 9999;
+        if (na !== nb) return na - nb;
+        return String(a.이름 || "").localeCompare(String(b.이름 || ""), "ko");
+      });
+      var participated = g.rows.length;
+      var missing = [];
+      if (sheet.participation && sheet.participation.missingStudents) {
+        missing = sheet.participation.missingStudents.filter(function (s) {
+          var sk = normalizeSheetClassKey(s.반 || "");
+          return sk === g.classKey || sk.indexOf(g.classKey) >= 0 || g.classKey.indexOf(sk) >= 0;
+        });
+        missing.sort(function (a, b) {
+          return (a.번호 || 9999) - (b.번호 || 9999);
+        });
+      }
+      g.missing = missing;
+      g.participated = participated;
+      g.total = participated + missing.length;
+    });
+    groups.sort(function (a, b) {
+      return parseClassOrder(a.label) - parseClassOrder(b.label);
+    });
+    return groups;
   }
 
   function applyInitialClassView(entry, classTabs) {
     if (!classTabs || !classTabs.length || !lastMultiResult) return;
     var first = classTabs[0];
     activeSheetView = first.sheetName;
+    activeClassFilter = null;
     var hostKey = normalizeSheetClassKey(first.sheetName);
     var classKey = first.classKey || normalizeSheetClassKey(first.label);
-    activeClassFilter = classKey && classKey !== hostKey ? classKey : null;
     if (entry && entry.tab) {
       var sheetList = lastMultiResult.sheets.map(function (s) {
         return { sheetName: s.sheetName };
@@ -4202,9 +4426,6 @@
       });
       if (match) {
         activeSheetView = match.sheetName;
-        var mk = match.classKey || normalizeSheetClassKey(match.label);
-        activeClassFilter =
-          mk && mk !== normalizeSheetClassKey(match.sheetName) ? mk : null;
       }
     }
   }
@@ -4231,18 +4452,25 @@
     return false;
   }
 
-  function renderSubjectTabsOnly() {
-    var html = '<div class="subject-tabs" role="tablist" aria-label="과목 필터">';
-    getSubjectFilterOptions().forEach(function (opt) {
-      var active = activeSubjectView === opt.id ? " active" : "";
+  function renderWorkbookSheetTabs() {
+    if (!lastMultiResult) return "";
+    var sheets = lastMultiResult.sheets.filter(function (s) {
+      return !isListSheetTab(s.sheetName);
+    });
+    if (sheets.length <= 1) return "";
+    var html = '<div class="sheet-tabs" role="tablist" aria-label="시트 선택">';
+    sheets.forEach(function (sheet) {
+      var active = activeSheetView === sheet.sheetName ? " active" : "";
       html +=
-        '<button type="button" class="subject-tab' +
+        '<button type="button" class="sheet-tab' +
         active +
-        '" data-subject="' +
-        esc(opt.id) +
-        '" role="tab">' +
-        esc(opt.label) +
-        "</button>";
+        '" data-sheet="' +
+        esc(sheet.sheetName) +
+        '" data-class="" role="tab">' +
+        esc(sheet.sheetName) +
+        '<span class="count">' +
+        esc(String(sheet.summary ? sheet.summary.총응답 : sheet.rows.length)) +
+        "건</span></button>";
     });
     html += "</div>";
     return html;
@@ -4265,62 +4493,19 @@
     return findSheetForClassConfig(cls, sheetByName);
   }
 
-  function renderSheetTabs() {
-    var html = "";
-    if (!lastMultiResult) return renderSubjectTabsOnly();
-
-    var sheetByName = {};
-    lastMultiResult.sheets.forEach(function (sheet) {
-      if (!isListSheetTab(sheet.sheetName)) {
-        sheetByName[sheet.sheetName] = sheet;
-      }
+  function renderClassJumpNav(groups) {
+    if (!groups || groups.length < 2) return "";
+    var html = '<nav class="class-jump-nav" aria-label="반 바로가기">';
+    html += '<span class="class-jump-nav__label">반별 바로가기</span>';
+    groups.forEach(function (g) {
+      html +=
+        '<a class="class-jump-link" href="#class-' +
+        esc(g.classKey) +
+        '">' +
+        esc(g.label) +
+        "</a>";
     });
-
-    var classTabs = getClassTabsConfig();
-    var tabsToRender = [];
-
-    if (classTabs.length) {
-      classTabs.forEach(function (cls) {
-        var sheet = resolveHostSheetForClass(cls, sheetByName);
-        if (sheet) tabsToRender.push({ cls: cls, sheet: sheet });
-      });
-    }
-    if (!tabsToRender.length) {
-      lastMultiResult.sheets.forEach(function (sheet) {
-        if (!isListSheetTab(sheet.sheetName)) {
-          tabsToRender.push({ cls: null, sheet: sheet });
-        }
-      });
-    }
-
-    if (tabsToRender.length) {
-      html += '<div class="sheet-tabs" role="tablist" aria-label="반 선택">';
-      tabsToRender.forEach(function (item) {
-        var sheet = item.sheet;
-        var cls = item.cls;
-        var classKey = cls ? cls.classKey || normalizeSheetClassKey(cls.label) : "";
-        var hostKey = normalizeSheetClassKey(sheet.sheetName);
-        var useFilter = classKey && classKey !== hostKey;
-        var active =
-          activeSheetView === sheet.sheetName &&
-          (activeClassFilter || "") === (useFilter ? classKey : "");
-        var tabLabel = cls && cls.label ? cls.label : sheet.sheetName;
-        var count = countRowsForClass(sheet, useFilter ? classKey : null);
-        html +=
-          '<button type="button" class="sheet-tab' +
-          active +
-          '" data-sheet="' +
-          esc(sheet.sheetName) +
-          '" data-class="' +
-          esc(useFilter ? classKey : "") +
-          '" role="tab">';
-        html += esc(tabLabel);
-        html += '<span class="count">' + esc(String(count)) + "건</span></button>";
-      });
-      html += "</div>";
-    }
-
-    html += renderSubjectTabsOnly();
+    html += "</nav>";
     return html;
   }
 
@@ -4344,21 +4529,12 @@
   }
 
   function renderCategoryBlocks(row, subjectFilter) {
-    if (!subjectFilter) {
-      return '<p class="muted subject-empty">과목을 선택해 주세요.</p>';
-    }
     var sections = row.sections || [];
     var filtered = sections.filter(function (sec) {
-      return sectionMatchesSubjectFilter(sec, subjectFilter);
+      return isMeaningfulSection(sec);
     });
     if (!filtered.length) {
-      if (subjectFilter === "teacher") {
-        return '<p class="muted subject-empty">담임 선생님께 보낸 한마디가 없습니다.</p>';
-      }
-      if (subjectFilter && subjectFilter !== "all") {
-        return '<p class="muted subject-empty">해당 과목 응답이 없습니다.</p>';
-      }
-      return "";
+      return '<p class="muted response-empty">작성된 상담 내용이 없습니다.</p>';
     }
     var html = '<div class="category-blocks">';
     filtered.forEach(function (sec) {
@@ -4366,10 +4542,11 @@
       html += '<div class="category-block' + (isTeacher ? " category-block--teacher" : "") + '">';
       if (!isTeacher) {
         html += '<div class="cat-title">' + esc(simplifySectionTitle(sec.title || "응답")) + "</div>";
+      } else {
+        html += '<div class="cat-title">' + esc(TEACHER_MESSAGE_TITLE) + "</div>";
       }
       if (sec.body) {
-        var body = sec.body.length > 400 ? sec.body.slice(0, 400).trim() + "…" : sec.body;
-        html += '<div class="cat-body">' + esc(body) + "</div>";
+        html += '<div class="cat-body">' + esc(sec.body) + "</div>";
       }
       if (sec.fields && sec.fields.length) {
         sec.fields.forEach(function (f) {
@@ -4382,7 +4559,8 @@
     return html;
   }
 
-  function renderStudentCard(row, hasCategories) {
+  function renderStudentCard(row, hasCategories, opts) {
+    opts = opts || {};
     var classVal =
       row.반 && row.반 !== "(미입력)" ? String(row.반) : activeSheetView || "";
     var num = row.번호 != null ? String(row.번호) : "";
@@ -4392,18 +4570,96 @@
     if (num) html += ' data-student-num="' + esc(num) + '"';
     if (name) html += ' data-student-name="' + esc(name) + '"';
     html += ">";
-    html += renderStudentResponseHeader(row);
+    if (opts.compactHeader) {
+      html += '<header class="student-response-header student-response-header--compact">';
+      html += '<div class="header-meta">';
+      if (num) html += '<span class="student-num">' + esc(num) + "번</span>";
+      if (name) html += '<span class="student-name">' + esc(name) + "</span>";
+      if (row.학번) html += '<span class="student-id">' + esc(row.학번) + "</span>";
+      html += "</div>";
+      if (row.완료) {
+        html += '<span class="status-badge done">완료</span>';
+      } else if (row.완료 === false) {
+        html += '<span class="status-badge pending">미완료</span>';
+      }
+      html += "</header>";
+    } else {
+      html += renderStudentResponseHeader(row);
+    }
     html += '<div class="student-response-body">';
     if (hasCategories && rowHasSections(row)) {
-      html += renderCategoryBlocks(row, activeSubjectView);
+      html += renderCategoryBlocks(row, "all");
     } else if (hasCategories) {
-      html += '<p class="muted">분류할 내용 없음</p>';
+      html += '<p class="muted response-empty">작성된 상담 내용이 없습니다.</p>';
     } else {
       html += '<div class="preview">' + esc(row.미리보기 || (row._raw && row._raw.미리보기) || "—") + "</div>";
     }
     html += "</div>";
     html += '<hr class="student-card-divider" aria-hidden="true" />';
     html += "</article>";
+    return html;
+  }
+
+  function renderClassSection(group, sheet) {
+    var isProfile = sheet.meta && sheet.meta.format === "profile";
+    var hasCategories = isProfile || (group.rows && group.rows.some(rowHasSections));
+    var sectionId =
+      "class-" +
+      String(group.classKey || group.label).replace(/[^a-zA-Z0-9가-힣_-]/g, "-");
+    var html = '<section class="class-section" id="' + esc(sectionId) + '">';
+    html += '<header class="class-section__head">';
+    html += "<h2 class=\"class-section__title\">" + esc(group.label) + "</h2>";
+    html +=
+      '<p class="class-section__sub">번호순 상담 결과 · 참여 ' +
+      esc(String(group.participated)) +
+      "명";
+    if (group.missing && group.missing.length) {
+      html += " · 미참여 " + esc(String(group.missing.length)) + "명";
+    }
+    html += "</p>";
+    html += '<div class="class-section__stats">';
+    html +=
+      '<span class="class-stat-pill">응답 <strong>' +
+      esc(String(group.participated)) +
+      "</strong>명</span>";
+    if (group.missing && group.missing.length) {
+      html +=
+        '<span class="class-stat-pill">미참여 <strong>' +
+        esc(String(group.missing.length)) +
+        "</strong>명</span>";
+    }
+    html += "</div></header>";
+    html += '<div class="class-section__body student-cards-list">';
+    group.rows.forEach(function (row) {
+      html += renderStudentCard(row, hasCategories, { compactHeader: true });
+    });
+    (group.missing || []).forEach(function (student) {
+      html += renderAbsentStudentCard(group.label, student, { compactHeader: true });
+    });
+    html += "</div>";
+    if (group.missing && group.missing.length) {
+      var labels = group.missing.map(formatMissingStudentLabel).filter(Boolean);
+      html +=
+        '<div class="class-section__missing"><strong>미참여</strong> · ' +
+        esc(labels.join(", ")) +
+        "</div>";
+    }
+    html += "</section>";
+    return html;
+  }
+
+  function renderSurveyByClass(sheet) {
+    if (!sheet) return "";
+    var groups = buildClassGroupsFromSheet(sheet);
+    if (!groups.length) {
+      return '<p class="student-cards-empty">반별로 표시할 응답이 없습니다.</p>';
+    }
+    var html = '<div class="survey-by-class">';
+    html += renderClassJumpNav(groups);
+    groups.forEach(function (group) {
+      html += renderClassSection(group, sheet);
+    });
+    html += "</div>";
     return html;
   }
 
@@ -4474,7 +4730,8 @@
     return html;
   }
 
-  function renderAbsentStudentCard(sheetName, student) {
+  function renderAbsentStudentCard(sheetName, student, opts) {
+    opts = opts || {};
     var num = typeof student === "object" ? student.번호 : student;
     var name =
       typeof student === "object" && student.이름 ? String(student.이름) : "(미확인)";
@@ -4482,8 +4739,13 @@
     if (sheetName) html += ' data-student-class="' + esc(sheetName) + '"';
     if (num != null) html += ' data-student-num="' + esc(String(num)) + '"';
     if (name) html += ' data-student-name="' + esc(name) + '"';
-    html += '><header class="student-response-header"><div class="header-meta">';
-    if (sheetName) html += '<span class="student-class">' + esc(sheetName) + "</span>";
+    html += ">";
+    html += '<header class="student-response-header';
+    if (opts.compactHeader) html += " student-response-header--compact";
+    html += '"><div class="header-meta">';
+    if (!opts.compactHeader && sheetName) {
+      html += '<span class="student-class">' + esc(sheetName) + "</span>";
+    }
     if (num != null) html += '<span class="student-num">' + esc(num) + "번</span>";
     html += '<span class="student-name">' + esc(name) + "</span>";
     html += "</div>";
@@ -4491,38 +4753,6 @@
     html += '<div class="student-response-body"><p class="absent-note">설문에 참여하지 않았습니다.</p></div>';
     html += '<hr class="student-card-divider" aria-hidden="true" />';
     html += "</article>";
-    return html;
-  }
-
-  function renderStudentCards(data) {
-    var isProfile = data.meta && data.meta.format === "profile";
-    var hasCategories = isProfile || (data.rows && data.rows.some(rowHasSections));
-    var list = (data.rows || []).slice(0, 50);
-    var sheetLabel = (data.meta && data.meta.sheetName) || activeSheetView || "";
-    var html = renderParticipationBanner(data, sheetLabel);
-    html += '<div class="student-cards student-cards-list">';
-    list.forEach(function (row) {
-      html += renderStudentCard(row, hasCategories);
-    });
-    if (
-      data.participation &&
-      data.participation.missingCount > 0 &&
-      (!activeSubjectView || activeSubjectView === "all")
-    ) {
-      var missingList =
-        data.participation.missingStudents && data.participation.missingStudents.length
-          ? data.participation.missingStudents
-          : data.participation.missingNumbers.map(function (num) {
-              return { 번호: num, 이름: "" };
-            });
-      missingList.forEach(function (student) {
-        html += renderAbsentStudentCard(sheetLabel, student);
-      });
-    }
-    html += "</div>";
-    if (!list.length && !(data.participation && data.participation.missingNumbers.length)) {
-      return "";
-    }
     return html;
   }
 
@@ -4677,59 +4907,66 @@
 
   function renderResults(data, spreadsheetId, multi) {
     var el = document.getElementById("results");
-    var analysis = data || getActiveAnalysis();
+    var sheet = getActiveSheetAnalysis() || data;
     showResultsView();
     setFabStackVisible(true);
+    activeSubjectView = "all";
 
     var html = "";
     if (lastMultiResult) {
-      html += renderSheetTabs();
-    } else {
-      html += renderSubjectTabsOnly();
+      html += renderWorkbookSheetTabs();
     }
-    if (!analysis) {
-      html += '<p class="student-cards-empty">선생님! 항목을 선택해 주세요!</p>';
+    if (!sheet) {
+      html += '<p class="student-cards-empty">조회할 설문 시트를 선택해 주세요.</p>';
       el.innerHTML = html;
       el.classList.add("visible");
       syncResultsPrintState(el);
       teardownScrollStudentTracker();
-      bindSheetAndSubjectTabs(el, spreadsheetId);
+      bindResultTabs(el, spreadsheetId);
       return;
     }
 
-    var s = analysis.summary;
-    if (!s.총응답 && !(analysis.participation && analysis.participation.missingCount)) {
-      html += '<p class="student-cards-empty">이 탭에 분석할 데이터가 없습니다.</p>';
+    var s = sheet.summary;
+    if (!s.총응답 && !(sheet.participation && sheet.participation.missingCount)) {
+      html += '<p class="student-cards-empty">이 시트에 분석할 데이터가 없습니다.</p>';
       el.innerHTML = html;
       el.classList.add("visible");
       syncResultsPrintState(el);
       teardownScrollStudentTracker();
-      bindSheetAndSubjectTabs(el, spreadsheetId);
+      bindResultTabs(el, spreadsheetId);
       return;
     }
 
-    html += renderStudentCards(analysis);
+    html += renderSurveyByClass(sheet);
 
     el.innerHTML = html;
     el.classList.add("visible");
     syncResultsPrintState(el);
 
-    bindSheetAndSubjectTabs(el, spreadsheetId);
+    bindResultTabs(el, spreadsheetId);
+    setupScrollStudentTracker();
+    scrollToClassFromUrl();
   }
 
-  function bindSheetAndSubjectTabs(el, spreadsheetId) {
+  function scrollToClassFromUrl() {
+    var params = new URLSearchParams(location.search);
+    var classKey = params.get("class") || params.get("classFilter");
+    if (!classKey) return;
+    var id =
+      "class-" + String(classKey).replace(/[^a-zA-Z0-9가-힣_-]/g, "-");
+    var target = document.getElementById(id);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function bindResultTabs(el, spreadsheetId) {
+    if (!el) return;
     el.querySelectorAll(".sheet-tab").forEach(function (btn) {
       btn.addEventListener("click", function () {
         activeSheetView = btn.getAttribute("data-sheet");
-        activeClassFilter = btn.getAttribute("data-class") || null;
-        renderResults(getActiveAnalysis(), spreadsheetId, lastMultiResult);
-        syncViewUrl();
-      });
-    });
-    el.querySelectorAll(".subject-tab").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        activeSubjectView = btn.getAttribute("data-subject") || "all";
-        renderResults(getActiveAnalysis(), spreadsheetId, lastMultiResult);
+        activeClassFilter = null;
+        renderResults(null, spreadsheetId, lastMultiResult);
         syncViewUrl();
       });
     });
