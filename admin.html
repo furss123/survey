@@ -347,12 +347,6 @@
       align-self: stretch;
       white-space: nowrap;
     }
-    .admin-form-hint {
-      margin: 8px 0 0;
-      font-size: var(--text-sm);
-      color: var(--theme-text-muted);
-      line-height: 1.45;
-    }
     #adminSurveyName.is-suggested {
       color: var(--theme-text-muted);
       font-weight: 500;
@@ -364,11 +358,6 @@
     #adminSurveyName.is-loading {
       color: var(--theme-text-muted);
       font-style: italic;
-    }
-    .admin-survey-name-hint {
-      margin: 6px 0 0;
-      font-size: 0.75rem;
-      color: var(--theme-text-muted);
     }
     .admin-registry-list {
       margin: var(--space-4) 0 0;
@@ -490,8 +479,6 @@
               placeholder="주소 입력 후 시트 이름이 표시됩니다"
               autocomplete="off"
             />
-            <p class="admin-survey-name-hint" id="adminSurveyNameHint">구글 시트 <strong>문서 이름(시트명)</strong>을 그대로 추천합니다. 클릭하면 수정할 수 있습니다.</p>
-            <p class="admin-form-hint">새 시트는 <strong>조회</strong>로 카테고리별 미리보기·구성 후 등록합니다. (바로 추가하지 않음)</p>
             <div class="admin-actions">
               <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn" hidden>시트 추가</button>
               <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>
