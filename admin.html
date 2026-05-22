@@ -465,10 +465,10 @@
               type="text"
               id="adminSurveyName"
               maxlength="20"
-              placeholder="주소 입력 후 시트 분석으로 추천됩니다"
+              placeholder="주소 입력 후 시트 이름이 표시됩니다"
               autocomplete="off"
             />
-            <p class="admin-survey-name-hint" id="adminSurveyNameHint">시트 제목·내용을 분석해 20자 이내 이름을 추천합니다. 클릭하면 수정할 수 있습니다.</p>
+            <p class="admin-survey-name-hint" id="adminSurveyNameHint">구글 시트 <strong>문서 이름(시트명)</strong>을 그대로 추천합니다. 클릭하면 수정할 수 있습니다.</p>
             <p class="admin-form-hint">새 시트는 <strong>조회</strong>로 카테고리별 미리보기·구성 후 등록합니다. (바로 추가하지 않음)</p>
             <div class="admin-actions">
               <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn" hidden>시트 추가</button>
@@ -597,45 +597,10 @@
     if (loading) {
       input.classList.add("is-loading");
       input.classList.remove("is-suggested");
-      input.value = "이름 분석 중…";
+      input.value = "시트 이름 불러오는 중…";
     } else {
       input.classList.remove("is-loading");
     }
-  }
-
-  function parseGvizJson(text) {
-    var start = text.indexOf("{");
-    var end = text.lastIndexOf("}");
-    if (start < 0 || end <= start) throw new Error("gviz 응답 파싱 실패");
-    return JSON.parse(text.slice(start, end + 1));
-  }
-
-  function gvizTableToValues(json) {
-    var table = json && json.table;
-    if (!table || !table.rows || !table.rows.length) return [];
-    var headers = (table.cols || []).map(function (c) {
-      return String((c && c.label) || "").trim();
-    });
-    var rows = table.rows.map(function (row) {
-      return (row.c || []).map(function (cell) {
-        if (cell == null) return "";
-        if (cell.v != null) return String(cell.v);
-        if (cell.f != null) return String(cell.f);
-        return "";
-      });
-    });
-    return [headers].concat(rows);
-  }
-
-  async function fetchSheetValuesGviz(spreadsheetId, tab) {
-    var params = new URLSearchParams({ tqx: "out:json" });
-    if (tab && tab.gid) params.set("gid", tab.gid);
-    else if (tab && tab.title) params.set("sheet", tab.title);
-    var url =
-      "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/gviz/tq?" + params;
-    var res = await fetch(url);
-    if (!res.ok) throw new Error("시트 조회 실패");
-    return gvizTableToValues(parseGvizJson(await res.text()));
   }
 
   function parseTabsFromHtml(html) {
@@ -670,65 +635,17 @@
       }
     } catch (err) { /* ignore */ }
 
-    var values = [];
-    try {
-      var tab = tabTitles.length ? { title: tabTitles[0], gid: null } : null;
-      values = await fetchSheetValuesGviz(spreadsheetId, tab);
-    } catch (err) { /* ignore */ }
-
-    return { docTitle: docTitle, tabTitles: tabTitles, values: values };
+    return { docTitle: docTitle, tabTitles: tabTitles };
   }
 
   function buildSurveyNameSuggestion(meta) {
-    var ranked = [];
-    function add(name, weight) {
-      name = truncateSurveyName(name);
-      if (name.length < 2) return;
-      ranked.push({ name: name, weight: weight });
+    var name = coerceText(meta && meta.docTitle);
+    if (!name && meta && meta.tabTitles && meta.tabTitles.length) {
+      var firstTab = coerceText(meta.tabTitles[0]);
+      if (firstTab && firstTab !== "Sheet1") name = firstTab;
     }
-
-    if (meta.docTitle) {
-      add(meta.docTitle, 12);
-    }
-
-    var headers = meta.values && meta.values[0] ? meta.values[0].map(String) : [];
-    var headerText = headers.join(" ");
-    var sampleRows = (meta.values || []).slice(1, 6);
-    var sampleText = sampleRows
-      .map(function (row) {
-        return (row || []).join(" ");
-      })
-      .join(" ");
-
-    if (/전공.*탐색|학과.*선호|선호도.*조사/.test(headerText + sampleText)) {
-      add("전공 탐색·학과 선호", 11);
-    } else if (/전공|학과|계열/.test(headerText)) {
-      add("전공·학과 설문", 10);
-    } else if (/진로|진학|취업/.test(headerText + sampleText)) {
-      add("진로·진학 설문", 10);
-    } else if (/SMART|학습\s*설문|영역별/.test(headerText + sampleText)) {
-      add("SMART 학습 설문", 9);
-    } else if (/담임\s*선생님|한마디/.test(headerText + sampleText)) {
-      add("담임 선생님 한마디", 8);
-    }
-
-    var titleMatch = (headerText + " " + sampleText).match(
-      /([가-힣0-9A-Za-z·\s]{3,28}?(?:설문|조사|탐색))/
-    );
-    if (titleMatch) add(titleMatch[1], 7);
-
-    var tabs = meta.tabTitles || [];
-    var classTabs = tabs.filter(function (t) {
-      return /^\d+\s*반$/.test(String(t).trim());
-    });
-    if (classTabs.length >= 2) add("1학년 반별 설문", 6);
-    else if (tabs.length === 1 && tabs[0] && tabs[0] !== "Sheet1") add(tabs[0], 5);
-
-    ranked.sort(function (a, b) {
-      return b.weight - a.weight;
-    });
-    if (ranked.length) return ranked[0].name;
-    return truncateSurveyName(meta.docTitle || tabs[0] || "설문 결과");
+    if (!name) name = "설문 결과";
+    return truncateSurveyName(name);
   }
 
   var suggestSurveyNameTimer = null;
@@ -765,7 +682,7 @@
       var input = getSurveyNameInput();
       if (input) {
         input.classList.remove("is-loading", "is-suggested");
-        if (input.value === "이름 분석 중…") input.value = "";
+        if (input.value === "시트 이름 불러오는 중…") input.value = "";
       }
     }
   }
@@ -777,7 +694,7 @@
 
     input.addEventListener("focus", function () {
       input.classList.remove("is-suggested", "is-loading");
-      if (input.value === "이름 분석 중…") input.value = surveyNameSuggested || "";
+      if (input.value === "시트 이름 불러오는 중…") input.value = surveyNameSuggested || "";
     });
 
     input.addEventListener("input", function () {
