@@ -5,3 +5,5 @@ build/
 service-account.json
 *.log
 .DS_Store
+survey_result_*.xlsx
+*_analysis.md

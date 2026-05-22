@@ -1,0 +1,44 @@
+---
+description: Google Forms 진로 설문 CSV/Excel 반별·전공 계열 분석 규격
+globs: "**/*.{csv,xlsx,xls},scripts/**/*.py,docs/survey_analysis*.md"
+alwaysApply: false
+---
+
+# SMART 진로·학습 설문 분석
+
+Google Forms보내기(CSV/Excel)를 분석할 때 이 규격을 따른다. 구현 참고: `scripts/analyze_survey.py`, 전체 명세: `docs/survey_analysis_meta_prompt.md`.
+
+## 컬럼 자동 탐지 (키워드)
+
+| 유형 | 키워드 예 |
+|------|-----------|
+| 타임스탬프 | 타임스탬프, timestamp, 제출 |
+| 학번 | 학번, student_id, 학생번호 |
+| 이름 | 이름, name |
+| 반 | 반 선택, 반을 선택 |
+| 번호·이름 선택 | 번호와 이름을 선택 |
+| 대분류 | 전공 계열, 계열은, 최적화된 대학 |
+| 중분류 전공 | 집중하고 싶은 전공, 중분류 |
+| 단과대 | 단과대학, 학부군, 대분류 내에서 |
+
+## 처리 규칙
+
+1. 분산 컬럼: 행마다 비어있지 않은 셀만 수집·병합(전공·단과대는 쉼표 분리·중복 제거).
+2. 학생 식별: 학번/이름 직접 → 또는 `반 선택` + `번호와 이름` (`29 현지윤` → 번호 29, 이름 파싱).
+3. 학번 4~5자리: `1408` → 1학년 4반 8번 등 `parse_student_id` 규칙 적용.
+4. 무효 행: 학번/이름 `0`,`d`, 공백; 반·번호·이름 모두 없음 → 제외(로그).
+5. 중복 응답: 반+번호+이름 동일 시 **최신 타임스탬프**만 유지, 경고 출력.
+6. 미입력 전공: `미정` 또는 `응답 없음`.
+
+## 출력
+
+- Excel: `전체_요약` + `N반` 시트 — 컬럼 `반|번호|이름|대분류|희망전공(상세)|단과대/학부군`
+- Markdown: 전체 대분류·단과대 순위·전공 Top10 + 반별 분포·학생 목록
+
+## 실행
+
+```bash
+python scripts/analyze_survey.py <입력파일> [-o survey_result_YYYYMMDD.xlsx] [--report report.md]
+```
+
+웹 조회(`index.html`)는 Google Sheets gviz용이며, 이 규칙은 **로컬 CSV/Excel 일괄 분석**에 적용한다.
