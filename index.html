@@ -1564,7 +1564,67 @@
   const DEFAULT_RESPONSE_SHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
   const SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
   const ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
+  const INDEX_PAGE_PATH = (location.pathname.split("/").pop() || "index.html");
   const PROFILE_PATTERN = /\[(\d+)반\]\s*\[(\d+)\]\s*\[([^\]]+)\]/;
+
+  function buildIndexPageUrl(state) {
+    var params = new URLSearchParams();
+    if (state && state.adminSetup === "1") {
+      params.set("adminSetup", "1");
+      if (state.label) params.set("label", state.label);
+      if (state.url) params.set("url", state.url);
+      if (state.sheet) params.set("sheet", state.sheet);
+      if (state.subject && state.subject !== "all") params.set("subject", state.subject);
+    } else if (state && state.open) {
+      params.set("open", state.open);
+      if (state.sheet) params.set("sheet", state.sheet);
+      if (state.subject && state.subject !== "all") params.set("subject", state.subject);
+    }
+    var q = params.toString();
+    return INDEX_PAGE_PATH + (q ? "?" + q : "");
+  }
+
+  function replaceIndexPageUrl(state) {
+    if (!history.replaceState) return;
+    history.replaceState(state || {}, "", buildIndexPageUrl(state || {}));
+  }
+
+  function applyRestoreView(restore) {
+    if (!restore || !lastMultiResult) return;
+    if (restore.sheet) {
+      var sheetList = lastMultiResult.sheets.map(function (s) {
+        return { sheetName: s.sheetName };
+      });
+      activeSheetView =
+        resolvePreferredSheetTab(sheetList, restore.sheet) || activeSheetView;
+    }
+    if (restore.subject) {
+      var subjectOk = getSubjectFilterOptions().some(function (o) {
+        return o.id === restore.subject;
+      });
+      if (subjectOk) activeSubjectView = restore.subject;
+    }
+  }
+
+  function syncViewUrl() {
+    if (adminSetupMode) {
+      replaceIndexPageUrl({
+        adminSetup: "1",
+        label: adminSetupLabel,
+        url: adminSetupUrl,
+        sheet: activeSheetView,
+        subject: activeSubjectView,
+      });
+      return;
+    }
+    if (currentLaunchEntry && currentLaunchEntry.id) {
+      replaceIndexPageUrl({
+        open: currentLaunchEntry.id,
+        sheet: activeSheetView,
+        subject: activeSubjectView,
+      });
+    }
+  }
 
   /** 설문 시트 기본 레이아웃: 1행=카테고리(헤더), B열=학번(4자리: 학년+반+번호), C열=이름 */
   const SURVEY_HEADER_ROW_INDEX = 0;
@@ -2918,7 +2978,7 @@
     });
   }
 
-  async function launchSheetAnalysis(entry, triggerBtn) {
+  async function launchSheetAnalysis(entry, triggerBtn, restoreView) {
     if (analysisInFlight) return;
     adminSetupMode = false;
     adminSetupClasses = [];
@@ -2947,7 +3007,9 @@
       lastMultiResult = analyzeAllSheets(sheetInputs, masterRoster);
       activeSheetView = resolveInitialActiveSheetTab(entry, lastMultiResult.sheets);
       activeSubjectView = "all";
+      applyRestoreView(restoreView);
       renderResults(getActiveAnalysis(), id, lastMultiResult);
+      syncViewUrl();
       document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       showHomeView();
@@ -3734,7 +3796,7 @@
       : h1.dataset.defaultHtml;
   }
 
-  async function launchAdminSetup(label, url) {
+  async function launchAdminSetup(label, url, restoreView) {
     if (analysisInFlight) return;
     adminSetupMode = true;
     adminSetupLabel = label;
@@ -3814,7 +3876,9 @@
             : null;
       }
       activeSubjectView = "all";
+      applyRestoreView(restoreView);
       renderResults(getActiveAnalysis(), id, lastMultiResult);
+      syncViewUrl();
       setFabStackVisible(true);
       document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
@@ -4247,6 +4311,7 @@
     }
     teardownScrollStudentTracker();
     setFabStackVisible(false);
+    replaceIndexPageUrl({});
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -4327,12 +4392,14 @@
       btn.addEventListener("click", function () {
         activeSheetView = btn.getAttribute("data-sheet");
         renderResults(getActiveAnalysis(), spreadsheetId, lastMultiResult);
+        syncViewUrl();
       });
     });
     el.querySelectorAll(".subject-tab").forEach(function (btn) {
       btn.addEventListener("click", function () {
         activeSubjectView = btn.getAttribute("data-subject") || "all";
         renderResults(getActiveAnalysis(), spreadsheetId, lastMultiResult);
+        syncViewUrl();
       });
     });
   }
@@ -4411,10 +4478,17 @@
         classes: draft && draft.classes ? draft.classes : null,
       })
     );
-    if (history.replaceState) {
-      history.replaceState(null, "", "index.html?adminSetup=1");
-    }
-    launchAdminSetup(label, url);
+    replaceIndexPageUrl({
+      adminSetup: "1",
+      label: label,
+      url: url,
+      sheet: params.get("sheet"),
+      subject: params.get("subject"),
+    });
+    launchAdminSetup(label, url, {
+      sheet: params.get("sheet"),
+      subject: params.get("subject"),
+    });
   })();
 
   (function openSheetFromQuery() {
@@ -4427,7 +4501,12 @@
       getDefaultClassSheetButtons().find(function (item) {
         return item.id === openId;
       });
-    if (entry) launchSheetAnalysis(entry, null);
+    if (entry) {
+      launchSheetAnalysis(entry, null, {
+        sheet: params.get("sheet"),
+        subject: params.get("subject"),
+      });
+    }
   })();
 
   var headerLogoHome = document.getElementById("headerLogoHome");
@@ -4437,9 +4516,6 @@
       if (results && results.classList.contains("visible")) {
         e.preventDefault();
         showHomeView();
-        if (history.replaceState) {
-          history.replaceState(null, "", location.pathname || "index.html");
-        }
       }
     });
   }
