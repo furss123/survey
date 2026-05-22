@@ -1127,27 +1127,123 @@
       }
     }
     @media print {
-      @page { size: A4; margin: 12mm; }
-      .page-chrome-actions,
-      .view-tracker,
-      #homePanel,
-      #adminPanel,
-      .site-header,
-      #siteFooterRoot { display: none !important; }
-      body { padding: 0; }
-      .app-layout { max-width: 100%; padding: 0; }
-      #results,
-      #results.visible { display: block !important; max-width: 100%; border: none; box-shadow: none; padding: 0; }
-      .student-cards-list {
+      @page { size: A4; margin: 10mm; }
+      body { padding: 0 !important; background: #fff !important; }
+      body.is-printing-results * { visibility: hidden; }
+      body.is-printing-results #results,
+      body.is-printing-results #results * { visibility: visible; }
+      body.is-printing-results #results {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        display: block !important;
+        max-width: none;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+      body.is-printing-results .subject-tabs,
+      body.is-printing-results .sheet-tabs,
+      body.is-printing-results .participation-banner {
+        display: none !important;
+      }
+      body.is-printing-results .sheet-banner {
+        margin: 0 0 6px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11pt;
+      }
+      body.is-printing-results .sheet-banner::after {
+        content: none;
+      }
+      body.is-printing-results.print-teacher-mode .sheet-banner::after {
+        content: " · 담임 선생님께";
+        font-weight: 600;
+      }
+      body.is-printing-results:not(.print-teacher-mode) .student-cards-list {
         display: block;
       }
-      .student-card {
+      body.is-printing-results:not(.print-teacher-mode) .student-card {
         page-break-inside: avoid;
         break-inside: avoid;
         max-width: 100%;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
       }
-      #results { display: block !important; }
+      /* 담임선생님께!: 반 전원 한 페이지 압축 그리드 */
+      body.is-printing-results.print-teacher-mode .student-cards-list {
+        display: grid !important;
+        grid-template-columns: repeat(var(--teacher-print-cols, 5), minmax(0, 1fr));
+        gap: 3px 4px;
+        margin: 0;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      body.is-printing-results.print-teacher-mode .student-card {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        margin: 0 !important;
+        padding: 3px 4px 2px !important;
+        border: 1px solid #94a3b8 !important;
+        border-radius: 4px !important;
+        box-shadow: none !important;
+        background: #fff !important;
+      }
+      body.is-printing-results.print-teacher-mode .student-card-divider,
+      body.is-printing-results.print-teacher-mode .status-badge,
+      body.is-printing-results.print-teacher-mode .student-class {
+        display: none !important;
+      }
+      body.is-printing-results.print-teacher-mode .student-response-header {
+        margin: 0 0 2px !important;
+        padding: 0 0 2px !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        gap: 4px !important;
+      }
+      body.is-printing-results.print-teacher-mode .student-response-header .header-meta {
+        gap: 3px 5px !important;
+      }
+      body.is-printing-results.print-teacher-mode .student-num {
+        font-size: 6.5pt !important;
+        font-weight: 600 !important;
+      }
+      body.is-printing-results.print-teacher-mode .student-name {
+        font-size: 7pt !important;
+        font-weight: 700 !important;
+      }
+      body.is-printing-results.print-teacher-mode .student-response-body {
+        padding-bottom: 0 !important;
+      }
+      body.is-printing-results.print-teacher-mode .category-blocks {
+        gap: 0 !important;
+      }
+      body.is-printing-results.print-teacher-mode .category-block--teacher {
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        background: transparent !important;
+      }
+      body.is-printing-results.print-teacher-mode .category-block--teacher .cat-body {
+        font-size: 5.5pt !important;
+        line-height: 1.15 !important;
+        color: #1a2332 !important;
+        max-height: 2.6em;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        word-break: break-all;
+      }
+      body.is-printing-results.print-teacher-mode .subject-empty,
+      body.is-printing-results.print-teacher-mode .absent-note {
+        font-size: 5.5pt !important;
+        margin: 0 !important;
+        line-height: 1.2 !important;
+      }
+      body.is-printing-results.print-teacher-mode .muted {
+        font-size: 5.5pt !important;
+      }
     }
   </style>
 </head>
@@ -2848,6 +2944,36 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function syncResultsPrintState(el) {
+    if (!el) return;
+    var isTeacher = activeSubjectView === "teacher";
+    el.classList.toggle("results-print-teacher", isTeacher);
+    el.setAttribute("data-subject-view", activeSubjectView || "all");
+  }
+
+  function applyTeacherPrintGrid() {
+    var list = document.querySelector("#results .student-cards-list");
+    if (!list) return;
+    var count = list.querySelectorAll(".student-card").length;
+    var cols = 4;
+    if (count > 32) cols = 6;
+    else if (count > 24) cols = 5;
+    list.style.setProperty("--teacher-print-cols", String(cols));
+  }
+
+  function setPrintMode(enabled) {
+    var isTeacher = activeSubjectView === "teacher";
+    document.body.classList.toggle("is-printing-results", enabled);
+    document.body.classList.toggle("print-teacher-mode", enabled && isTeacher);
+    var results = document.getElementById("results");
+    if (results) results.classList.toggle("results-print-teacher", enabled && isTeacher);
+    if (enabled && isTeacher) applyTeacherPrintGrid();
+    else {
+      var list = document.querySelector("#results .student-cards-list");
+      if (list) list.style.removeProperty("--teacher-print-cols");
+    }
+  }
+
   function renderResults(data, spreadsheetId, multi) {
     var el = document.getElementById("results");
     var analysis = data || getActiveAnalysis();
@@ -2864,6 +2990,7 @@
       html += '<p class="student-cards-empty">선생님! 항목을 선택해 주세요!</p>';
       el.innerHTML = html;
       el.classList.add("visible");
+      syncResultsPrintState(el);
       teardownScrollStudentTracker();
       bindSheetAndSubjectTabs(el, spreadsheetId);
       return;
@@ -2874,6 +3001,7 @@
       html += '<p class="student-cards-empty">이 탭에 분석할 데이터가 없습니다.</p>';
       el.innerHTML = html;
       el.classList.add("visible");
+      syncResultsPrintState(el);
       teardownScrollStudentTracker();
       bindSheetAndSubjectTabs(el, spreadsheetId);
       return;
@@ -2883,6 +3011,7 @@
 
     el.innerHTML = html;
     el.classList.add("visible");
+    syncResultsPrintState(el);
 
     bindSheetAndSubjectTabs(el, spreadsheetId);
   }
@@ -2963,12 +3092,22 @@
   document.getElementById("fabBottom").addEventListener("click", function () {
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
   });
+  window.addEventListener("beforeprint", function () {
+    var results = document.getElementById("results");
+    if (results && results.classList.contains("visible")) setPrintMode(true);
+  });
+  window.addEventListener("afterprint", function () {
+    setPrintMode(false);
+  });
+
   document.getElementById("fabPrint").addEventListener("click", function () {
     var results = document.getElementById("results");
     if (!results.classList.contains("visible")) {
       alert("먼저 시트를 조회한 뒤 인쇄해 주세요.");
       return;
     }
+    syncResultsPrintState(results);
+    setPrintMode(true);
     window.print();
   });
 
