@@ -1547,9 +1547,6 @@
   const SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
   const ADMIN_SESSION_KEY = "school-admin-session-v1";
   const ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
-  if (new URLSearchParams(location.search).get("adminSetup") !== "1") {
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  }
   const PROFILE_PATTERN = /\[(\d+)반\]\s*\[(\d+)\]\s*\[([^\]]+)\]/;
 
   /** 설문 시트 기본 레이아웃: 1행=카테고리(헤더), B열=학번, C열=이름 */

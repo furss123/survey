@@ -518,13 +518,6 @@
     sessionStorage.removeItem(ADMIN_SESSION_KEY);
   }
 
-  window.addEventListener("pagehide", function () {
-    var navEntries = performance.getEntriesByType && performance.getEntriesByType("navigation");
-    var nav = navEntries && navEntries[0];
-    if (nav && nav.type === "reload") return;
-    clearAdminSession();
-  });
-
   function parseSpreadsheetId(url) {
     var trimmed = String(url || "").trim();
     var match = trimmed.match(SPREADSHEET_ID_PATTERN);
