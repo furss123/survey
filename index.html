@@ -247,10 +247,11 @@
       margin: 0;
       padding: 0;
       width: 100%;
-      font-size: clamp(1.04rem, 1.72vw, 1.2rem);
+      box-sizing: border-box;
+      font-size: clamp(1.38rem, 2.55vw, 1.75rem);
       font-weight: 800;
-      letter-spacing: -0.018em;
-      line-height: 1.2;
+      letter-spacing: 0.05em;
+      line-height: 1.15;
       color: var(--theme-heading-strong);
       white-space: nowrap;
     }
@@ -1507,9 +1508,9 @@
       .site-header-inner { gap: 14px; padding: 14px 18px; }
       .header-school { font-size: clamp(0.95rem, 4vw, 1.08rem); }
       .site-header-text h1 {
-        font-size: clamp(0.98rem, 4.6vw, 1.08rem);
-        letter-spacing: -0.015em;
-        white-space: normal;
+        font-size: clamp(1.12rem, 5vw, 1.42rem);
+        letter-spacing: 0.03em;
+        white-space: nowrap;
       }
       .header-subtitle { font-size: clamp(0.72rem, 2.8vw, 0.82rem); padding: 4px 10px; }
       .panel-section { padding: var(--space-5) var(--space-4); }
@@ -1639,6 +1640,18 @@
     .admin-cat-chip--locked {
       opacity: 0.85;
       cursor: default;
+    }
+    .admin-cat-chip--select-all {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-weight: 700;
+      color: var(--theme-heading);
+    }
+    .admin-cat-sortable.is-select-all-locked .admin-cat-chip--draggable {
+      opacity: 0.55;
+      pointer-events: none;
     }
     .admin-setup-actions {
       display: flex;
@@ -3629,6 +3642,7 @@
   var adminSetupCategories = [];
   var adminSetupClasses = [];
   var adminSetupEditId = null;
+  var adminCategorySelectAll = false;
   var TEACHER_MESSAGE_TITLE = "담임 선생님께 전하는 한마디";
   var DEFAULT_SUBJECT_FILTER_OPTIONS = [
     { id: "all", label: "모든 과목", enabled: true },
@@ -3811,7 +3825,7 @@
       return registry[a].firstOrder - registry[b].firstOrder;
     });
 
-    var categories = [{ id: "all", label: "모든 과목", enabled: true, order: 0 }];
+    var categories = [{ id: "all", label: "전체 선택", enabled: true, order: 0 }];
     orderList.forEach(function (id, idx) {
       var item = registry[id];
       categories.push({
@@ -4059,6 +4073,26 @@
       : null;
   }
 
+  function isAllCategoriesDisplayMode() {
+    if (adminSetupMode && adminCategorySelectAll) return true;
+    return !!(currentLaunchEntry && currentLaunchEntry.categorySelectAll);
+  }
+
+  function compareRowsByStudentId(a, b) {
+    var pa = parseStudentId(a.학번 || "");
+    var pb = parseStudentId(b.학번 || "");
+    if (pa.반 != null && pb.반 != null && pa.반 !== pb.반) return pa.반 - pb.반;
+    if (pa.번호 != null && pb.번호 != null && pa.번호 !== pb.번호) {
+      return pa.번호 - pb.번호;
+    }
+    var na = a.번호 != null ? Number(a.번호) : 9999;
+    var nb = b.번호 != null ? Number(b.번호) : 9999;
+    if (na !== nb) return na - nb;
+    return String(a.학번 || "").localeCompare(String(b.학번 || ""), "ko", {
+      numeric: true,
+    });
+  }
+
   function getSubjectFilterOptions() {
     var list = [];
     if (adminSetupMode && adminSetupCategories.length) {
@@ -4295,21 +4329,19 @@
     var box = document.getElementById("adminCategoryConfig");
     if (!box) return;
     var sorted = adminSetupCategories.slice().sort(sortCategoriesByOrder);
-    var allCat = sorted.find(function (c) {
-      return c.id === "all";
-    });
     var rest = sorted.filter(function (c) {
       return c.id !== "all";
     });
 
     var html = "";
-    if (allCat) {
-      html +=
-        '<label class="admin-cat-chip admin-cat-chip--locked"><input type="checkbox" data-cat-id="all" checked disabled /> ' +
-        esc(allCat.label) +
-        "</label>";
-    }
-    html += '<div class="admin-cat-sortable" id="adminCatSortable">';
+    html +=
+      '<label class="admin-cat-chip admin-cat-chip--select-all"><input type="checkbox" id="adminCatSelectAll" ' +
+      (adminCategorySelectAll ? "checked" : "") +
+      ' /> 전체 선택</label>';
+    html +=
+      '<div class="admin-cat-sortable' +
+      (adminCategorySelectAll ? " is-select-all-locked" : "") +
+      '" id="adminCatSortable">';
     html += rest
       .map(function (cat) {
         var countBadge =
@@ -4337,8 +4369,19 @@
     html += "</div>";
     box.innerHTML = html;
 
+    var selectAllEl = document.getElementById("adminCatSelectAll");
+    if (selectAllEl) {
+      selectAllEl.addEventListener("change", function () {
+        onAdminSelectAllChanged(selectAllEl.checked);
+      });
+    }
+
     box.querySelectorAll('input[type="checkbox"][data-cat-id]').forEach(function (input) {
       if (input.getAttribute("data-cat-id") === "all") return;
+      if (adminCategorySelectAll) {
+        input.disabled = true;
+        return;
+      }
       input.addEventListener("change", function () {
         var id = input.getAttribute("data-cat-id");
         var cat = adminSetupCategories.find(function (c) {
@@ -4434,11 +4477,12 @@
     if (!adminSetupLabel || !adminSetupUrl) return;
     syncAdminCategoriesFromDom();
     if (
+      !adminCategorySelectAll &&
       !adminSetupCategories.some(function (c) {
         return c.enabled && c.id !== "all";
       })
     ) {
-      alert("표시할 카테고리를 하나 이상 선택해 주세요.");
+      alert("표시할 카테고리를 하나 이상 선택하거나 「전체 선택」을 체크해 주세요.");
       return;
     }
     var registry = loadSheetRegistry();
@@ -4454,6 +4498,7 @@
       url: adminSetupUrl,
       tab: preferredTab,
       classes: registryClasses,
+      categorySelectAll: adminCategorySelectAll,
       categories: adminSetupCategories.map(function (c, i) {
         return {
           id: c.id,
@@ -4487,6 +4532,42 @@
     location.href = INDEX_PAGE_PATH;
   }
 
+  function fitHeaderTitleToMetaRow() {
+    var block = document.querySelector(".header-brand-block");
+    if (!block) return;
+    var meta = block.querySelector(".header-meta-row");
+    var h1 = block.querySelector("h1");
+    if (!meta || !h1) return;
+    var target = meta.getBoundingClientRect().width;
+    if (target < 8) return;
+    h1.style.fontSize = "";
+    h1.style.letterSpacing = "";
+    var rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    var px = rootPx * 1.75;
+    h1.style.fontSize = px + "px";
+    var step = 0;
+    while (h1.getBoundingClientRect().width > target + 1 && px > rootPx * 0.9 && step < 80) {
+      px -= 0.5;
+      h1.style.fontSize = px + "px";
+      step++;
+    }
+    var spacing = 0;
+    step = 0;
+    while (h1.getBoundingClientRect().width < target - 1 && spacing < 0.24 && step < 100) {
+      spacing += 0.008;
+      h1.style.letterSpacing = spacing + "em";
+      step++;
+    }
+  }
+
+  var headerTitleFitFrame = null;
+  function scheduleHeaderTitleFit() {
+    if (headerTitleFitFrame) cancelAnimationFrame(headerTitleFitFrame);
+    headerTitleFitFrame = requestAnimationFrame(function () {
+      headerTitleFitFrame = requestAnimationFrame(fitHeaderTitleToMetaRow);
+    });
+  }
+
   function setSiteHeaderAdminMode(active) {
     var h1 = document.querySelector(".site-header-text h1");
     if (!h1) return;
@@ -4494,6 +4575,7 @@
     h1.innerHTML = active
       ? '<span class="header-em">설문조사 관리자 모드</span>'
       : h1.dataset.defaultHtml;
+    scheduleHeaderTitleFit();
   }
 
   async function launchAdminSetup(label, url, restoreView) {
@@ -4548,6 +4630,18 @@
           adminSetupCategories,
           draft.categories
         );
+      }
+      adminCategorySelectAll = false;
+      if (draft && draft.categorySelectAll != null) {
+        adminCategorySelectAll = !!draft.categorySelectAll;
+      } else if (adminSetupEditId) {
+        var editEntry = findRegistryEntry(adminSetupEditId);
+        if (editEntry) adminCategorySelectAll = !!editEntry.categorySelectAll;
+      }
+      if (adminCategorySelectAll) {
+        adminSetupCategories.forEach(function (c) {
+          if (c.id !== "all") c.enabled = true;
+        });
       }
       renderAdminSetupPanels();
       activeSubjectView = "all";
@@ -4701,6 +4795,7 @@
   }
 
   function hasRegistryCategoryFilter() {
+    if (isAllCategoriesDisplayMode()) return false;
     if (adminSetupMode && adminSetupCategories.length) return true;
     return !!(
       currentLaunchEntry &&
@@ -4720,6 +4815,7 @@
   }
 
   function sectionMatchesEnabledCategories(sec) {
+    if (isAllCategoriesDisplayMode()) return isMeaningfulSection(sec);
     if (!hasRegistryCategoryFilter()) return isMeaningfulSection(sec);
     var enabledIds = getEnabledCategoryFilterIds();
     if (!enabledIds.length) return isMeaningfulSection(sec);
@@ -4729,6 +4825,9 @@
   }
 
   function rowHasVisibleSections(row) {
+    if (isAllCategoriesDisplayMode()) {
+      return (row.sections || []).some(isMeaningfulSection);
+    }
     return (row.sections || []).some(function (sec) {
       if (!isMeaningfulSection(sec)) return false;
       var view = activeSubjectView || "all";
@@ -4741,6 +4840,8 @@
     syncCategoryOrdersFromDom();
     var box = document.getElementById("adminCategoryConfig");
     if (!box) return;
+    var selectAllInput = document.getElementById("adminCatSelectAll");
+    if (selectAllInput) adminCategorySelectAll = selectAllInput.checked;
     box.querySelectorAll('input[type="checkbox"][data-cat-id]').forEach(function (input) {
       var id = input.getAttribute("data-cat-id");
       if (id === "all") return;
@@ -4765,6 +4866,7 @@
   }
 
   function getCategoryPickerOptions() {
+    if (isAllCategoriesDisplayMode()) return [];
     var opts = getSubjectFilterOptions().filter(function (o) {
       return o.enabled !== false;
     });
@@ -4773,6 +4875,20 @@
     });
     if (!specific.length) return [];
     return opts.slice().sort(sortCategoriesByOrder);
+  }
+
+  function onAdminSelectAllChanged(checked) {
+    adminCategorySelectAll = !!checked;
+    adminSetupCategories.forEach(function (c) {
+      if (c.id === "all") {
+        c.enabled = true;
+        c.label = "전체 선택";
+        return;
+      }
+      if (adminCategorySelectAll) c.enabled = true;
+    });
+    renderAdminCategoryConfig();
+    onAdminCategoryChanged();
   }
 
   function ensureActiveSubjectViewValid() {
@@ -4926,9 +5042,7 @@
     var isProfile = analysis.meta && analysis.meta.format === "profile";
     var hasCategories =
       isProfile || (analysis.rows && analysis.rows.some(rowHasVisibleSections));
-    var rows = (analysis.rows || []).slice().sort(function (a, b) {
-      return (a.번호 != null ? Number(a.번호) : 9999) - (b.번호 != null ? Number(b.번호) : 9999);
-    });
+    var rows = (analysis.rows || []).slice().sort(compareRowsByStudentId);
     var classLabel = getClassLabelFromFilter();
     var html = '<div class="class-results-panel">';
     html += renderParticipationBanner(analysis, classLabel);
@@ -4985,6 +5099,7 @@
     var sections = row.sections || [];
     var filtered = sections.filter(function (sec) {
       if (!isMeaningfulSection(sec)) return false;
+      if (isAllCategoriesDisplayMode()) return true;
       if (subjectFilter && subjectFilter !== "all") {
         return sectionMatchesSubjectFilter(sec, subjectFilter);
       }
@@ -5472,6 +5587,9 @@
     var isDark = document.documentElement.getAttribute("data-theme") === "dark";
     applyTheme(isDark ? "light" : "dark");
   });
+  scheduleHeaderTitleFit();
+  window.addEventListener("resize", scheduleHeaderTitleFit);
+  window.addEventListener("load", scheduleHeaderTitleFit);
 
   renderSheetButtonGrid();
 
@@ -5517,6 +5635,7 @@
         editId: adminSetupEditId,
         categories: draft && draft.categories ? draft.categories : null,
         classes: draft && draft.classes ? draft.classes : null,
+        categorySelectAll: adminCategorySelectAll,
       })
     );
     replaceIndexPageUrl({
