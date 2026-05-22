@@ -2844,15 +2844,9 @@
     if (entry && entry.tab) {
       return resolvePreferredSheetTab(sheetList, entry.tab);
     }
-    var classes = entry && entry.classes ? entry.classes : [];
-    var enabled = classes
-      .filter(function (cls) {
-        return cls.enabled !== false;
-      })
-      .slice()
-      .sort(sortCategoriesByOrder);
-    if (enabled.length) {
-      return resolvePreferredSheetTab(sheetList, enabled[0].sheetName);
+    var classTabs = getClassTabsConfig();
+    if (classTabs.length) {
+      return resolvePreferredSheetTab(sheetList, classTabs[0].sheetName);
     }
     return sheets[0].sheetName;
   }
@@ -3226,30 +3220,51 @@
     });
   }
 
-  function getAllowedClassSheetNames() {
-    var list = [];
+  function getClassTabsConfig() {
     if (adminSetupMode && adminSetupClasses.length) {
-      list = adminSetupClasses
+      return adminSetupClasses
         .filter(function (cls) {
           return cls.enabled !== false;
         })
-        .map(function (cls) {
-          return cls.sheetName;
-        });
-    } else if (
+        .slice()
+        .sort(sortCategoriesByOrder);
+    }
+    if (
       currentLaunchEntry &&
       currentLaunchEntry.classes &&
       currentLaunchEntry.classes.length
     ) {
-      list = currentLaunchEntry.classes
+      return currentLaunchEntry.classes
         .filter(function (cls) {
           return cls.enabled !== false;
         })
-        .map(function (cls) {
-          return cls.sheetName;
-        });
+        .slice()
+        .sort(sortCategoriesByOrder);
     }
-    return list.length ? list : null;
+    if (lastMultiResult) {
+      return deriveClassesFromAnalysis(lastMultiResult);
+    }
+    return [];
+  }
+
+  function findSheetForClassConfig(cls, sheetByName) {
+    if (!cls || !sheetByName) return null;
+    if (sheetByName[cls.sheetName]) return sheetByName[cls.sheetName];
+    var key = normalizeSheetClassKey(cls.sheetName);
+    var names = Object.keys(sheetByName);
+    for (var i = 0; i < names.length; i++) {
+      if (normalizeSheetClassKey(names[i]) === key) return sheetByName[names[i]];
+    }
+    return null;
+  }
+
+  function getAllowedClassSheetNames() {
+    var cfg = getClassTabsConfig();
+    return cfg.length
+      ? cfg.map(function (cls) {
+          return cls.sheetName;
+        })
+      : null;
   }
 
   function getSubjectFilterOptions() {
@@ -3860,24 +3875,48 @@
   }
 
   function renderSheetTabs() {
-    if (!lastMultiResult) return "";
-    var html = "";
-    html += renderSubjectTabsOnly();
-    html += '<div class="sheet-tabs" role="tablist">';
-    var allowedClasses = getAllowedClassSheetNames();
+    var html = renderSubjectTabsOnly();
+    if (!lastMultiResult) return html;
+
+    var sheetByName = {};
     lastMultiResult.sheets.forEach(function (sheet) {
-      if (isListSheetTab(sheet.sheetName)) return;
-      if (allowedClasses && allowedClasses.indexOf(sheet.sheetName) < 0) return;
-      var active = activeSheetView === sheet.sheetName ? " active" : "";
-      var clsCfg = (adminSetupClasses.length ? adminSetupClasses : (currentLaunchEntry && currentLaunchEntry.classes) || []).find(
-        function (c) {
-          return c.sheetName === sheet.sheetName;
+      if (!isListSheetTab(sheet.sheetName)) {
+        sheetByName[sheet.sheetName] = sheet;
+      }
+    });
+
+    var classTabs = getClassTabsConfig();
+    var tabsToRender = [];
+
+    if (classTabs.length) {
+      classTabs.forEach(function (cls) {
+        var sheet = findSheetForClassConfig(cls, sheetByName);
+        if (sheet) tabsToRender.push({ cls: cls, sheet: sheet });
+      });
+    } else {
+      lastMultiResult.sheets.forEach(function (sheet) {
+        if (!isListSheetTab(sheet.sheetName)) {
+          tabsToRender.push({ cls: null, sheet: sheet });
         }
-      );
-      var tabLabel = clsCfg && clsCfg.label ? clsCfg.label : sheet.sheetName;
-      html += '<button type="button" class="sheet-tab' + active + '" data-sheet="' + esc(sheet.sheetName) + '" role="tab">';
+      });
+    }
+
+    if (!tabsToRender.length) return html;
+
+    html += '<div class="sheet-tabs" role="tablist" aria-label="반 선택">';
+    tabsToRender.forEach(function (item) {
+      var sheet = item.sheet;
+      var cls = item.cls;
+      var active = activeSheetView === sheet.sheetName ? " active" : "";
+      var tabLabel = cls && cls.label ? cls.label : sheet.sheetName;
+      html +=
+        '<button type="button" class="sheet-tab' +
+        active +
+        '" data-sheet="' +
+        esc(sheet.sheetName) +
+        '" role="tab">';
       html += esc(tabLabel);
-      html += '<span class="count">' + esc(sheet.summary.총응답) + "건</span></button>";
+      html += '<span class="count">' + esc(String(sheet.summary.총응답)) + "건</span></button>";
     });
     html += "</div>";
     return html;
@@ -4230,7 +4269,7 @@
     setFabStackVisible(true);
 
     var html = "";
-    if (multi) {
+    if (lastMultiResult) {
       html += renderSheetTabs();
     } else {
       html += renderSubjectTabsOnly();
