@@ -219,9 +219,17 @@
       align-items: flex-start;
       gap: 8px;
     }
+    .header-brand-block {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      width: fit-content;
+      max-width: 100%;
+    }
     .header-meta-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
       gap: 10px 12px;
     }
@@ -238,11 +246,13 @@
     .site-header-text h1 {
       margin: 0;
       padding: 0;
-      font-size: clamp(1.28rem, 2.6vw, 1.62rem);
+      width: 100%;
+      font-size: clamp(1.04rem, 1.72vw, 1.2rem);
       font-weight: 800;
-      letter-spacing: -0.035em;
-      line-height: 1.15;
+      letter-spacing: -0.018em;
+      line-height: 1.2;
       color: var(--theme-heading-strong);
+      white-space: nowrap;
     }
     .site-header-text h1 .header-em { color: var(--theme-heading-accent); }
     .header-subtitle {
@@ -1500,7 +1510,11 @@
       .school-logo { width: 68px; height: 68px; }
       .site-header-inner { gap: 14px; padding: 14px 18px; }
       .header-school { font-size: clamp(0.95rem, 4vw, 1.08rem); }
-      .site-header-text h1 { font-size: clamp(1.15rem, 5.2vw, 1.38rem); }
+      .site-header-text h1 {
+        font-size: clamp(0.98rem, 4.6vw, 1.08rem);
+        letter-spacing: -0.015em;
+        white-space: normal;
+      }
       .header-subtitle { font-size: clamp(0.72rem, 2.8vw, 0.82rem); padding: 4px 10px; }
       .panel-section { padding: var(--space-5) var(--space-4); }
       .page-chrome-actions {
@@ -1826,11 +1840,13 @@
         <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="80" height="80">
       </a>
       <div class="site-header-text">
-        <div class="header-meta-row">
-          <span class="header-subtitle">2026학년도</span>
-          <p class="header-school">남악고등학교 1학년</p>
+        <div class="header-brand-block">
+          <div class="header-meta-row">
+            <span class="header-subtitle">2026학년도</span>
+            <p class="header-school">남악고등학교 1학년</p>
+          </div>
+          <h1><span class="header-em">설문조사 결과</span> 조회</h1>
         </div>
-        <h1><span class="header-em">설문조사 결과</span> 조회</h1>
       </div>
       <button type="button" class="theme-toggle no-print" id="themeToggle" aria-label="다크 모드" title="다크 모드">
         <svg class="theme-toggle-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
