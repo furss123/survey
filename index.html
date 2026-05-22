@@ -1185,8 +1185,25 @@
       font-size: var(--text-sm);
       color: var(--theme-text-muted);
     }
+    .admin-setup-section {
+      margin-bottom: var(--space-5);
+    }
+    .admin-setup-section-label {
+      margin: 0 0 var(--space-3);
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--school-navy);
+    }
     .admin-category-config {
-      margin-bottom: var(--space-4);
+      margin-bottom: 0;
+    }
+    .admin-class-config .admin-cat-chip {
+      border-color: var(--school-navy-light);
+    }
+    .admin-setup-empty {
+      margin: 0;
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
     }
     .admin-cat-sortable {
       display: flex;
@@ -1418,8 +1435,15 @@
         <strong id="adminSetupTitle">시트 구성 미리보기</strong>
         <span class="admin-setup-meta" id="adminSetupMeta"></span>
       </div>
-      <p class="admin-setup-desc">카테고리별 분석 결과를 확인하고, 메인 조회 화면에 표시할 항목을 선택한 뒤 등록하세요.</p>
-      <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
+      <p class="admin-setup-desc">시트에서 감지한 <strong>반</strong>·<strong>카테고리</strong>를 선택·순서 변경·이름 수정한 뒤 등록하세요.</p>
+      <div class="admin-setup-section">
+        <p class="admin-setup-section-label">표시할 반 (시트 탭·데이터 기준)</p>
+        <div id="adminClassConfig" class="admin-category-config admin-class-config" role="group" aria-label="표시할 반"></div>
+      </div>
+      <div class="admin-setup-section">
+        <p class="admin-setup-section-label">표시할 카테고리 (1행 헤더·응답 기준)</p>
+        <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
+      </div>
       <div class="admin-setup-actions">
         <button type="button" class="admin-btn admin-btn-primary" id="adminSetupConfirm">메인에 등록</button>
         <a href="admin.html" class="admin-btn">관리자로 돌아가기</a>
@@ -2693,9 +2717,38 @@
     return m ? m[1] : null;
   }
 
+  function expandRegistryForLaunch(registry) {
+    var expanded = [];
+    (registry || []).forEach(function (entry) {
+      var classes = (entry.classes || []).filter(function (cls) {
+        return cls.enabled !== false;
+      });
+      if (classes.length) {
+        classes
+          .slice()
+          .sort(sortCategoriesByOrder)
+          .forEach(function (cls) {
+            expanded.push({
+              id: entry.id + "::" + cls.id,
+              label: cls.label || cls.sheetName,
+              url: entry.url,
+              tab: cls.sheetName,
+              categories: entry.categories,
+              classes: entry.classes,
+              registryId: entry.id,
+            });
+          });
+      } else {
+        expanded.push(entry);
+      }
+    });
+    return expanded;
+  }
+
   function getSheetLaunchEntries() {
     var registry = loadSheetRegistry();
-    return registry.length ? registry : getDefaultClassSheetButtons();
+    var list = registry.length ? registry : getDefaultClassSheetButtons();
+    return expandRegistryForLaunch(list);
   }
 
   function stripDefaultClassButtons(registry) {
@@ -2728,6 +2781,36 @@
     return loadSheetRegistry().find(function (item) {
       return item.id === id;
     });
+  }
+
+  function resolveLaunchEntry(id) {
+    if (!id) return null;
+    var registry = loadSheetRegistry();
+    if (String(id).indexOf("::") >= 0) {
+      var parts = String(id).split("::");
+      var base = registry.find(function (item) {
+        return item.id === parts[0];
+      });
+      if (!base) return null;
+      var cls = (base.classes || []).find(function (c) {
+        return c.id === parts[1];
+      });
+      if (!cls) return null;
+      return {
+        id: id,
+        label: cls.label || cls.sheetName,
+        url: base.url,
+        tab: cls.sheetName,
+        categories: base.categories,
+        classes: base.classes,
+        registryId: base.id,
+      };
+    }
+    return (
+      registry.find(function (item) {
+        return item.id === id;
+      }) || null
+    );
   }
 
   function resolvePreferredSheetTab(sheets, preferredTab) {
@@ -2777,7 +2860,7 @@
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-sheet-id");
         var entry =
-          findRegistryEntry(id) ||
+          resolveLaunchEntry(id) ||
           getDefaultClassSheetButtons().find(function (item) {
             return item.id === id;
           });
@@ -2796,6 +2879,7 @@
   async function launchSheetAnalysis(entry, triggerBtn) {
     if (analysisInFlight) return;
     adminSetupMode = false;
+    adminSetupClasses = [];
     currentLaunchEntry = entry || null;
     var errorEl = document.getElementById("error");
     if (errorEl) errorEl.hidden = true;
@@ -2852,6 +2936,7 @@
   var adminSetupLabel = "";
   var adminSetupUrl = "";
   var adminSetupCategories = [];
+  var adminSetupClasses = [];
   var adminSetupEditId = null;
   var TEACHER_MESSAGE_TITLE = "담임 선생님께 전하는 한마디";
   var DEFAULT_SUBJECT_FILTER_OPTIONS = [
@@ -2906,6 +2991,39 @@
     if (findColumnIndex([name], NAME_ALIASES) >= 0) return true;
     if (findColumnIndex([name], COMPLETION_ALIASES) >= 0) return true;
     return false;
+  }
+
+  function mergeSavedClassPrefs(derived, saved) {
+    if (!saved || !saved.length) return derived;
+    var map = {};
+    saved.forEach(function (cls) {
+      map[cls.id] = cls;
+    });
+    derived.forEach(function (cls) {
+      var prev = map[cls.id];
+      if (!prev) return;
+      if (prev.label) cls.label = prev.label;
+      if (prev.sheetName) cls.sheetName = prev.sheetName;
+      if (prev.enabled !== undefined) cls.enabled = prev.enabled !== false;
+      if (prev.order != null) cls.order = prev.order;
+    });
+    var derivedIds = {};
+    derived.forEach(function (cls) {
+      derivedIds[cls.id] = true;
+    });
+    saved.forEach(function (cls) {
+      if (!derivedIds[cls.id] && cls.sheetName) {
+        derived.push({
+          id: cls.id,
+          sheetName: cls.sheetName,
+          label: cls.label || cls.sheetName,
+          enabled: cls.enabled !== false,
+          order: cls.order != null ? cls.order : derived.length,
+          count: cls.count || 0,
+        });
+      }
+    });
+    return derived.slice().sort(sortCategoriesByOrder);
   }
 
   function mergeSavedCategoryPrefs(derived, saved) {
@@ -3024,6 +3142,91 @@
     return categories;
   }
 
+  function slugClassId(sheetName) {
+    var norm = normalizeSheetClassKey(sheetName);
+    if (!norm) return "class-unknown";
+    return "class-" + norm.replace(/[^a-z0-9가-힣]/g, "-").slice(0, 32);
+  }
+
+  function deriveClassesFromAnalysis(multi) {
+    var registry = {};
+    var orderList = [];
+
+    function registerClass(sheetName, count) {
+      var name = coerceText(sheetName);
+      if (!name || isListSheetTab(name)) return;
+      var m = name.match(/(\d+)\s*반/);
+      var label = m ? m[1] + "반" : name;
+      var id = slugClassId(label);
+      if (!registry[id]) {
+        registry[id] = {
+          id: id,
+          sheetName: name,
+          label: label,
+          enabled: true,
+          count: 0,
+          firstOrder: orderList.length,
+        };
+        orderList.push(id);
+      }
+      registry[id].count = Math.max(registry[id].count, count || 0);
+    }
+
+    (multi && multi.sheets ? multi.sheets : []).forEach(function (sheet) {
+      if (isListSheetTab(sheet.sheetName)) return;
+      var cnt = sheet.summary ? sheet.summary.총응답 : 0;
+      registerClass(sheet.sheetName, cnt);
+      (sheet.rows || []).forEach(function (row) {
+        if (row.반 && row.반 !== "(미입력)") registerClass(row.반, 0);
+      });
+    });
+
+    orderList.sort(function (a, b) {
+      var ca = registry[a].count;
+      var cb = registry[b].count;
+      if (cb !== ca) return cb - ca;
+      return registry[a].firstOrder - registry[b].firstOrder;
+    });
+
+    return orderList.map(function (id, idx) {
+      var item = registry[id];
+      return {
+        id: item.id,
+        sheetName: item.sheetName,
+        label: item.label,
+        enabled: true,
+        order: idx,
+        count: item.count,
+      };
+    });
+  }
+
+  function getAllowedClassSheetNames() {
+    var list = [];
+    if (adminSetupMode && adminSetupClasses.length) {
+      list = adminSetupClasses
+        .filter(function (cls) {
+          return cls.enabled !== false;
+        })
+        .map(function (cls) {
+          return cls.sheetName;
+        });
+    } else if (
+      currentLaunchEntry &&
+      currentLaunchEntry.classes &&
+      currentLaunchEntry.classes.length
+    ) {
+      list = currentLaunchEntry.classes
+        .filter(function (cls) {
+          return cls.enabled !== false;
+        })
+        .map(function (cls) {
+          return cls.sheetName;
+        });
+    }
+    return list.length ? list : null;
+  }
+
   function getSubjectFilterOptions() {
     var list = [];
     if (adminSetupMode && adminSetupCategories.length) {
@@ -3074,6 +3277,180 @@
       activeSubjectView = "all";
     }
     renderResults(getActiveAnalysis(), parseSpreadsheetId(adminSetupUrl), lastMultiResult);
+  }
+
+  function syncClassOrdersFromDom() {
+    var sortable = document.getElementById("adminClassSortable");
+    if (!sortable) return;
+    var ordered = [];
+    sortable.querySelectorAll(".admin-cat-chip[data-class-id]").forEach(function (chip, idx) {
+      var id = chip.getAttribute("data-class-id");
+      var cls = adminSetupClasses.find(function (c) {
+        return c.id === id;
+      });
+      if (cls) {
+        cls.order = idx;
+        ordered.push(cls);
+      }
+    });
+    adminSetupClasses = ordered;
+  }
+
+  function onAdminClassChanged() {
+    var allowed = getAllowedClassSheetNames();
+    if (
+      allowed &&
+      activeSheetView &&
+      allowed.indexOf(activeSheetView) < 0
+    ) {
+      activeSheetView = allowed[0] || null;
+    }
+    if (!activeSheetView && lastMultiResult && lastMultiResult.sheets.length) {
+      var first = lastMultiResult.sheets.find(function (s) {
+        if (isListSheetTab(s.sheetName)) return false;
+        return !allowed || allowed.indexOf(s.sheetName) >= 0;
+      });
+      activeSheetView = first ? first.sheetName : null;
+    }
+    renderResults(getActiveAnalysis(), parseSpreadsheetId(adminSetupUrl), lastMultiResult);
+  }
+
+  function bindAdminClassChipEvents(box) {
+    if (!box) return;
+    box.querySelectorAll('input[type="checkbox"][data-class-id]').forEach(function (input) {
+      input.addEventListener("change", function () {
+        var id = input.getAttribute("data-class-id");
+        var cls = adminSetupClasses.find(function (c) {
+          return c.id === id;
+        });
+        if (!cls) return;
+        cls.enabled = input.checked;
+        if (
+          !adminSetupClasses.some(function (c) {
+            return c.enabled;
+          })
+        ) {
+          cls.enabled = true;
+          input.checked = true;
+          alert("최소 하나의 반을 선택해 주세요.");
+          return;
+        }
+        onAdminClassChanged();
+      });
+    });
+
+    box.querySelectorAll(".admin-cat-label[data-class-id]").forEach(function (labelEl) {
+      labelEl.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+      labelEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          labelEl.blur();
+        }
+      });
+      labelEl.addEventListener("blur", function () {
+        var id = labelEl.getAttribute("data-class-id");
+        var cls = adminSetupClasses.find(function (c) {
+          return c.id === id;
+        });
+        if (!cls) return;
+        var text = coerceText(labelEl.textContent);
+        if (!text) {
+          labelEl.textContent = cls.label;
+          return;
+        }
+        if (text.length > 20) text = text.slice(0, 20);
+        cls.label = text;
+        labelEl.textContent = cls.label;
+      });
+    });
+
+    var sortable = document.getElementById("adminClassSortable");
+    var dragId = null;
+    if (!sortable) return;
+    sortable.querySelectorAll(".admin-cat-chip--draggable[data-class-id]").forEach(function (chip) {
+      chip.addEventListener("dragstart", function (e) {
+        dragId = chip.getAttribute("data-class-id");
+        chip.classList.add("is-dragging");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", dragId);
+        }
+      });
+      chip.addEventListener("dragend", function () {
+        chip.classList.remove("is-dragging");
+        sortable.querySelectorAll(".is-drag-over").forEach(function (el) {
+          el.classList.remove("is-drag-over");
+        });
+        syncClassOrdersFromDom();
+        onAdminClassChanged();
+      });
+      chip.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        chip.classList.add("is-drag-over");
+      });
+      chip.addEventListener("dragleave", function () {
+        chip.classList.remove("is-drag-over");
+      });
+      chip.addEventListener("drop", function (e) {
+        e.preventDefault();
+        chip.classList.remove("is-drag-over");
+        var targetId = chip.getAttribute("data-class-id");
+        if (!dragId || dragId === targetId) return;
+        var dragChip = sortable.querySelector('[data-class-id="' + dragId + '"]');
+        if (!dragChip || dragChip === chip) return;
+        var rect = chip.getBoundingClientRect();
+        var before = e.clientX < rect.left + rect.width / 2;
+        sortable.insertBefore(dragChip, before ? chip : chip.nextSibling);
+      });
+    });
+  }
+
+  function renderAdminClassConfig() {
+    var box = document.getElementById("adminClassConfig");
+    if (!box) return;
+    var sorted = adminSetupClasses.slice().sort(sortCategoriesByOrder);
+    if (!sorted.length) {
+      box.innerHTML =
+        '<p class="admin-setup-empty">시트에서 반(탭)을 찾지 못했습니다. 시트 탭 이름을 「1반」「2반」 형식으로 맞춰 주세요.</p>';
+      return;
+    }
+    var html = '<div class="admin-cat-sortable" id="adminClassSortable">';
+    html += sorted
+      .map(function (cls) {
+        var countBadge =
+          cls.count > 0
+            ? '<span class="admin-cat-count">' + esc(String(cls.count)) + "건</span>"
+            : "";
+        return (
+          '<div class="admin-cat-chip admin-cat-chip--draggable" draggable="true" data-class-id="' +
+          esc(cls.id) +
+          '" title="시트 탭: ' +
+          esc(cls.sheetName) +
+          '"><span class="admin-cat-drag" aria-hidden="true">⋮⋮</span>' +
+          '<input type="checkbox" data-class-id="' +
+          esc(cls.id) +
+          '" ' +
+          (cls.enabled ? "checked" : "") +
+          ' /><span class="admin-cat-label" contenteditable="true" spellcheck="false" data-class-id="' +
+          esc(cls.id) +
+          '">' +
+          esc(cls.label) +
+          "</span>" +
+          countBadge +
+          "</div>"
+        );
+      })
+      .join("");
+    html += "</div>";
+    box.innerHTML = html;
+    bindAdminClassChipEvents(box);
+  }
+
+  function renderAdminSetupPanels() {
+    renderAdminClassConfig();
+    renderAdminCategoryConfig();
   }
 
   function renderAdminCategoryConfig() {
@@ -3218,6 +3595,15 @@
   function confirmAdminSetup() {
     if (!adminSetupLabel || !adminSetupUrl) return;
     if (
+      adminSetupClasses.length &&
+      !adminSetupClasses.some(function (c) {
+        return c.enabled;
+      })
+    ) {
+      alert("표시할 반을 하나 이상 선택해 주세요.");
+      return;
+    }
+    if (
       !adminSetupCategories.some(function (c) {
         return c.enabled && c.id !== "all";
       })
@@ -3226,16 +3612,32 @@
       return;
     }
     var registry = loadSheetRegistry();
-    var classNum = parseClassNumberFromLabel(adminSetupLabel);
-    var preferredTab = classNum
-      ? classNum + "반"
-      : lastMultiResult && lastMultiResult.sheets[0]
-        ? lastMultiResult.sheets[0].sheetName
-        : null;
+    var preferredTab = null;
+    var firstClass = adminSetupClasses.find(function (c) {
+      return c.enabled;
+    });
+    if (firstClass) preferredTab = firstClass.sheetName;
+    else {
+      var classNum = parseClassNumberFromLabel(adminSetupLabel);
+      preferredTab = classNum
+        ? classNum + "반"
+        : lastMultiResult && lastMultiResult.sheets[0]
+          ? lastMultiResult.sheets[0].sheetName
+          : null;
+    }
     var payload = {
       label: adminSetupLabel,
       url: adminSetupUrl,
       tab: preferredTab,
+      classes: adminSetupClasses.map(function (c, i) {
+        return {
+          id: c.id,
+          sheetName: c.sheetName,
+          label: c.label,
+          enabled: c.enabled !== false,
+          order: c.order != null ? c.order : i,
+        };
+      }),
       categories: adminSetupCategories.map(function (c, i) {
         return {
           id: c.id,
@@ -3321,18 +3723,32 @@
           draft.categories
         );
       }
-      renderAdminCategoryConfig();
-      var classNum = parseClassNumberFromLabel(label);
-      activeSheetView = classNum
-        ? resolvePreferredSheetTab(
-            lastMultiResult.sheets.map(function (s) {
-              return { sheetName: s.sheetName };
-            }),
-            classNum + "반"
-          )
-        : lastMultiResult.sheets[0]
-          ? lastMultiResult.sheets[0].sheetName
-          : null;
+      adminSetupClasses = deriveClassesFromAnalysis(lastMultiResult);
+      if (draft && draft.classes && draft.classes.length) {
+        adminSetupClasses = mergeSavedClassPrefs(adminSetupClasses, draft.classes);
+      }
+      renderAdminSetupPanels();
+      var allowed = getAllowedClassSheetNames();
+      if (allowed && allowed.length) {
+        activeSheetView = resolvePreferredSheetTab(
+          lastMultiResult.sheets.map(function (s) {
+            return { sheetName: s.sheetName };
+          }),
+          allowed[0]
+        );
+      } else {
+        var classNum = parseClassNumberFromLabel(label);
+        activeSheetView = classNum
+          ? resolvePreferredSheetTab(
+              lastMultiResult.sheets.map(function (s) {
+                return { sheetName: s.sheetName };
+              }),
+              classNum + "반"
+            )
+          : lastMultiResult.sheets[0]
+            ? lastMultiResult.sheets[0].sheetName
+            : null;
+      }
       activeSubjectView = "all";
       renderResults(getActiveAnalysis(), id, lastMultiResult);
       setFabStackVisible(true);
@@ -3413,10 +3829,19 @@
     var html = "";
     html += renderSubjectTabsOnly();
     html += '<div class="sheet-tabs" role="tablist">';
+    var allowedClasses = getAllowedClassSheetNames();
     lastMultiResult.sheets.forEach(function (sheet) {
+      if (isListSheetTab(sheet.sheetName)) return;
+      if (allowedClasses && allowedClasses.indexOf(sheet.sheetName) < 0) return;
       var active = activeSheetView === sheet.sheetName ? " active" : "";
+      var clsCfg = (adminSetupClasses.length ? adminSetupClasses : (currentLaunchEntry && currentLaunchEntry.classes) || []).find(
+        function (c) {
+          return c.sheetName === sheet.sheetName;
+        }
+      );
+      var tabLabel = clsCfg && clsCfg.label ? clsCfg.label : sheet.sheetName;
       html += '<button type="button" class="sheet-tab' + active + '" data-sheet="' + esc(sheet.sheetName) + '" role="tab">';
-      html += esc(sheet.sheetName);
+      html += esc(tabLabel);
       html += '<span class="count">' + esc(sheet.summary.총응답) + "건</span></button>";
     });
     html += "</div>";
@@ -3883,6 +4308,7 @@
         ts: Date.now(),
         editId: adminSetupEditId,
         categories: draft && draft.categories ? draft.categories : null,
+        classes: draft && draft.classes ? draft.classes : null,
       })
     );
     if (history.replaceState) {
@@ -3897,7 +4323,7 @@
     var openId = params.get("open");
     if (!openId) return;
     var entry =
-      findRegistryEntry(openId) ||
+      resolveLaunchEntry(openId) ||
       getDefaultClassSheetButtons().find(function (item) {
         return item.id === openId;
       });
