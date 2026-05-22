@@ -173,30 +173,46 @@
       z-index: 1;
       flex: 1;
       min-width: 0;
+      min-height: 78px;
       display: flex;
       flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
       gap: 2pt;
     }
     .header-school {
       margin: 0;
-      font-size: calc(clamp(0.7rem, 1.1vw, 0.75rem) + 4pt);
+      padding: 0;
+      font-size: calc(clamp(0.95rem, 1.55vw, 1.125rem) + 2pt);
       font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
       color: var(--school-navy);
     }
     .site-header-text h1 {
       margin: 0;
-      font-size: calc(clamp(1.28rem, 2.6vw, 1.48rem) + 4pt);
+      padding: 0;
+      font-size: calc(clamp(1.5rem, 3.4vw, 1.85rem) + 2pt);
       font-weight: 800;
       letter-spacing: -0.035em;
+      line-height: 1.2;
       color: var(--school-navy-dark);
-      line-height: 1.18;
     }
     .site-header-text h1 .header-em { color: var(--school-navy); }
+    .header-subline {
+      margin: 0;
+      padding: 0;
+      line-height: 1;
+    }
     .header-subtitle {
       display: inline-flex;
-      padding: 3px 9px;
-      font-size: clamp(0.68rem, 1vw, 0.72rem);
+      align-items: center;
+      margin: 0;
+      padding: 4px 11px;
+      font-size: clamp(0.82rem, 1.25vw, 0.95rem);
       font-weight: 600;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
       color: var(--school-navy-dark);
       background: var(--school-accent-soft);
       border: 1px solid var(--school-border-light);
@@ -1088,6 +1104,10 @@
         padding: var(--space-4) var(--space-5);
       }
       .school-logo { width: 64px; height: 64px; }
+      .site-header-text { min-height: 64px; }
+      .header-school { font-size: calc(clamp(0.9rem, 3.8vw, 1.05rem) + 2pt); }
+      .site-header-text h1 { font-size: calc(clamp(1.32rem, 5.5vw, 1.55rem) + 2pt); }
+      .header-subtitle { font-size: clamp(0.78rem, 2.8vw, 0.88rem); }
       .panel-section { padding: var(--space-5) var(--space-4); }
       .page-chrome-actions {
         right: calc(10px + 11mm);
