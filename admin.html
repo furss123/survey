@@ -464,7 +464,6 @@
             <input
               type="text"
               id="adminSurveyName"
-              maxlength="20"
               placeholder="주소 입력 후 시트 이름이 표시됩니다"
               autocomplete="off"
             />
@@ -560,11 +559,10 @@
   var surveyNameUserEdited = false;
   var surveyNameFetchToken = 0;
 
-  function truncateSurveyName(text) {
+  function normalizeSurveyName(text) {
     return String(text || "")
       .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 20);
+      .trim();
   }
 
   function getSurveyNameInput() {
@@ -574,7 +572,7 @@
   function getSurveyNameValue() {
     var input = getSurveyNameInput();
     if (!input) return "";
-    var value = truncateSurveyName(input.value);
+    var value = normalizeSurveyName(input.value);
     if (!value && surveyNameSuggested && !surveyNameUserEdited) {
       return surveyNameSuggested;
     }
@@ -584,7 +582,7 @@
   function applySuggestedSurveyName(name, asSuggested) {
     var input = getSurveyNameInput();
     if (!input) return;
-    surveyNameSuggested = truncateSurveyName(name);
+    surveyNameSuggested = normalizeSurveyName(name);
     if (surveyNameUserEdited && !asSuggested) return;
     input.value = surveyNameSuggested;
     input.classList.toggle("is-suggested", !!asSuggested && !!surveyNameSuggested);
@@ -645,7 +643,7 @@
       if (firstTab && firstTab !== "Sheet1") name = firstTab;
     }
     if (!name) name = "설문 결과";
-    return truncateSurveyName(name);
+    return normalizeSurveyName(name);
   }
 
   var suggestSurveyNameTimer = null;
@@ -700,7 +698,6 @@
     input.addEventListener("input", function () {
       surveyNameUserEdited = true;
       input.classList.remove("is-suggested", "is-loading");
-      if (input.value.length > 20) input.value = input.value.slice(0, 20);
     });
 
     input.addEventListener("blur", function () {
