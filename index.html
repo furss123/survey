@@ -883,22 +883,31 @@
       color: var(--text-accent);
       letter-spacing: -0.02em;
     }
-    .participation-stats {
+    .participation-body {
       flex: 1 1 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      min-width: 0;
+      gap: 8px;
+    }
+    .participation-stats {
+      flex: 0 0 auto;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       min-width: 0;
     }
     .participation-missing {
-      flex: 0 1 auto;
+      flex: 1 1 auto;
+      margin-left: 2mm;
       max-width: 100%;
       font-size: 0.8125rem;
       font-weight: 600;
       color: var(--text-muted);
-      text-align: right;
+      text-align: left;
       word-break: break-word;
     }
     .participation-missing--ok {
@@ -939,10 +948,15 @@
         align-items: stretch;
         text-align: center;
       }
+      .participation-body {
+        flex-direction: column;
+        align-items: stretch;
+      }
       .participation-stats {
         justify-content: center;
       }
       .participation-missing {
+        margin-left: 0;
         text-align: center;
       }
     }
@@ -4021,6 +4035,7 @@
       '<div class="participation-banner participation-banner--row" role="status" aria-live="polite">';
     html += '<div class="participation-class">' + esc(label || "—") + "</div>";
     if (p && p.maxExpected) {
+      html += '<div class="participation-body">';
       html += '<div class="participation-stats">';
       html +=
         '<span class="participation-chip">총 <strong>' +
@@ -4055,9 +4070,12 @@
         '">' +
         esc(missingText) +
         "</div>";
+      html += "</div>";
     } else {
+      html += '<div class="participation-body">';
       html += '<div class="participation-stats"></div>';
       html += '<div class="participation-missing"></div>';
+      html += "</div>";
     }
     html += "</div>";
     return html;
