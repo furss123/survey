@@ -441,6 +441,11 @@
       color: var(--school-navy);
       background: var(--theme-accent-soft);
     }
+    a.admin-entry-link {
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+    a.admin-entry-link:hover { color: var(--school-navy); }
     #adminPanel { margin-top: var(--space-4); }
     #adminPanel[hidden] { display: none !important; }
     .admin-panel-title {
@@ -1145,43 +1150,13 @@
     <main class="app-main">
       <div id="homePanel" class="search-container">
         <section class="panel-section">
-          <div class="section-label">1학년 설문 결과 목록</div>
-          <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="1학년 설문 결과 목록"></div>
-          <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 시트가 없습니다. 관리자 로그인 후 시트를 추가해 주세요.</p>
-        </section>
-        <section class="panel-section panel-section--admin">
           <div class="section-head-row">
-            <div class="section-label section-label--inline">시트 관리</div>
-            <button type="button" class="admin-entry-btn" id="adminEntryBtn" aria-expanded="false" aria-controls="homeAdminGate adminPanel">관리자</button>
+            <div class="section-label section-label--inline">1학년 설문 결과 목록</div>
+            <a href="admin.html" class="admin-entry-btn admin-entry-link">관리자</a>
           </div>
-          <div id="homeAdminGate" class="home-admin-gate" hidden>
-            <p class="admin-panel-title">관리자 비밀번호</p>
-            <label for="homeAdminPasswordInput">비밀번호를 입력하세요</label>
-            <input type="password" id="homeAdminPasswordInput" autocomplete="current-password" placeholder="관리자 비밀번호" />
-            <div class="admin-actions">
-              <button type="button" class="admin-btn admin-btn-primary" id="homeAdminLoginBtn">확인</button>
-            </div>
-            <p class="home-admin-hint">로그인 후 시트 등록·삭제가 가능합니다.</p>
-          </div>
+          <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="1학년 설문 결과 목록"></div>
+          <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 시트가 없습니다. 관리자 페이지에서 시트를 추가해 주세요.</p>
           <p id="error" class="error" hidden></p>
-          <div id="adminPanel" hidden>
-            <p class="admin-panel-title">시트 등록 (관리자)</p>
-            <form id="adminSheetForm" class="admin-form">
-              <label for="adminSheetLabel">시트 이름 (버튼 표시)</label>
-              <input type="text" id="adminSheetLabel" placeholder="예: 1반, 상담 3월" required />
-              <label for="adminSheetUrl">구글 시트 주소</label>
-              <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
-              <label for="adminSheetTab">기본 탭 (선택)</label>
-              <input type="text" id="adminSheetTab" placeholder="예: 1반 (비우면 첫 탭)" />
-              <label for="adminNewPassword">관리자 비밀번호 변경 (선택)</label>
-              <input type="password" id="adminNewPassword" autocomplete="new-password" />
-              <div class="admin-actions">
-                <button type="submit" class="admin-btn admin-btn-primary">시트 추가</button>
-                <button type="button" class="admin-btn" id="adminLogoutBtn">로그아웃</button>
-              </div>
-            </form>
-            <ul id="adminRegistryList" class="admin-registry-list" aria-label="등록된 시트"></ul>
-          </div>
         </section>
       </div>
       <div id="results" class="results-panel"></div>
@@ -1265,9 +1240,6 @@
   const CLASS_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
   const DEFAULT_RESPONSE_SHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
   const SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
-  const ADMIN_PASSWORD_KEY = "school-admin-password-v1";
-  const ADMIN_SESSION_KEY = "school-admin-session-v1";
-  const DEFAULT_ADMIN_PASSWORD = "school-admin";
   const PROFILE_PATTERN = /\[(\d+)반\]\s*\[(\d+)\]\s*\[([^\]]+)\]/;
 
   const CLASS_ALIASES = ["반", "class", "학급", "클래스", "반명"];
@@ -2359,23 +2331,6 @@
     });
   }
 
-  function getAdminPassword() {
-    return localStorage.getItem(ADMIN_PASSWORD_KEY) || DEFAULT_ADMIN_PASSWORD;
-  }
-
-  function setAdminPassword(password) {
-    localStorage.setItem(ADMIN_PASSWORD_KEY, password);
-  }
-
-  function isAdminSession() {
-    return sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
-  }
-
-  function setAdminSession(active) {
-    if (active) sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
-    else sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  }
-
   function resolvePreferredSheetTab(sheets, preferredTab) {
     if (!sheets || !sheets.length) return null;
     if (!preferredTab) return sheets[0].sheetName;
@@ -2432,83 +2387,6 @@
     });
   }
 
-  function renderAdminRegistryList() {
-    var listEl = document.getElementById("adminRegistryList");
-    if (!listEl) return;
-    var registry = loadSheetRegistry();
-    listEl.innerHTML = registry
-      .map(function (item) {
-        return (
-          "<li><div class=\"registry-meta\"><strong>" +
-          esc(item.label) +
-          "</strong><span>" +
-          esc(item.url) +
-          (item.tab ? " · 탭: " + esc(item.tab) : "") +
-          "</span></div><div class=\"admin-actions\" style=\"margin:0;flex-shrink:0;\"><button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
-          esc(item.id) +
-          "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
-          esc(item.id) +
-          "\">삭제</button></div></li>"
-        );
-      })
-      .join("");
-    listEl.querySelectorAll("[data-open-id]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var entry = findRegistryEntry(btn.getAttribute("data-open-id"));
-        if (entry) launchSheetAnalysis(entry, btn);
-      });
-    });
-    listEl.querySelectorAll("[data-delete-id]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var id = btn.getAttribute("data-delete-id");
-        var next = loadSheetRegistry().filter(function (item) {
-          return item.id !== id;
-        });
-        saveSheetRegistry(next);
-        renderSheetButtonGrid();
-        renderAdminRegistryList();
-      });
-    });
-  }
-
-  var adminGateRequested = false;
-
-  function updateAdminUi() {
-    var loggedIn = isAdminSession();
-    var panel = document.getElementById("adminPanel");
-    var gate = document.getElementById("homeAdminGate");
-    var entryBtn = document.getElementById("adminEntryBtn");
-    if (panel) panel.hidden = !loggedIn;
-    if (gate) gate.hidden = loggedIn || !adminGateRequested;
-    if (entryBtn) {
-      entryBtn.setAttribute("aria-expanded", loggedIn || adminGateRequested ? "true" : "false");
-      entryBtn.classList.toggle("is-active", loggedIn || adminGateRequested);
-    }
-    if (loggedIn) renderAdminRegistryList();
-  }
-
-  function showAdminLogin() {
-    adminGateRequested = true;
-    updateAdminUi();
-    var input = document.getElementById("homeAdminPasswordInput");
-    if (input) {
-      input.value = "";
-      input.focus();
-    }
-    var gate = document.getElementById("homeAdminGate");
-    if (gate) gate.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-
-  function tryAdminLogin(password) {
-    if (password !== getAdminPassword()) {
-      alert("비밀번호가 올바르지 않습니다.");
-      return false;
-    }
-    setAdminSession(true);
-    updateAdminUi();
-    return true;
-  }
-
   function setSheetButtonsDisabled(disabled) {
     document.querySelectorAll(".sheet-launch-btn").forEach(function (btn) {
       btn.disabled = disabled;
@@ -2519,7 +2397,7 @@
   async function launchSheetAnalysis(entry, triggerBtn) {
     if (analysisInFlight) return;
     var errorEl = document.getElementById("error");
-    errorEl.hidden = true;
+    if (errorEl) errorEl.hidden = true;
     document.getElementById("results").classList.remove("visible");
     document.getElementById("results").innerHTML = "";
     teardownScrollStudentTracker();
@@ -2555,8 +2433,10 @@
       document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       showHomeView();
-      errorEl.textContent = err.message || "분석에 실패했습니다.";
-      errorEl.hidden = false;
+      if (errorEl) {
+        errorEl.textContent = err.message || "분석에 실패했습니다.";
+        errorEl.hidden = false;
+      }
       setFabStackVisible(false);
     } finally {
       analysisInFlight = false;
@@ -2925,7 +2805,6 @@
     var homeBtn = document.getElementById("headerHomeBtn");
     activeSheetView = null;
     activeSubjectView = null;
-    adminGateRequested = false;
     if (errorEl) errorEl.hidden = true;
     if (homePanel) homePanel.hidden = false;
     if (homeBtn) homeBtn.hidden = true;
@@ -3021,78 +2900,20 @@
   });
 
   renderSheetButtonGrid();
-  updateAdminUi();
+
+  (function openSheetFromQuery() {
+    var openId = new URLSearchParams(location.search).get("open");
+    if (!openId) return;
+    var entry =
+      findRegistryEntry(openId) ||
+      getDefaultClassSheetButtons().find(function (item) {
+        return item.id === openId;
+      });
+    if (entry) launchSheetAnalysis(entry, null);
+  })();
 
   document.getElementById("headerHomeBtn").addEventListener("click", function () {
     showHomeView();
-  });
-
-  document.getElementById("adminEntryBtn").addEventListener("click", function () {
-    if (isAdminSession()) {
-      adminGateRequested = true;
-      updateAdminUi();
-      document.getElementById("adminPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
-      return;
-    }
-    if (adminGateRequested) {
-      adminGateRequested = false;
-      updateAdminUi();
-      return;
-    }
-    showAdminLogin();
-  });
-
-  document.getElementById("homeAdminLoginBtn").addEventListener("click", function () {
-    var input = document.getElementById("homeAdminPasswordInput");
-    tryAdminLogin(input ? input.value : "");
-  });
-
-  document.getElementById("homeAdminPasswordInput").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      tryAdminLogin(e.target.value);
-    }
-  });
-
-  document.getElementById("adminLogoutBtn").addEventListener("click", function () {
-    setAdminSession(false);
-    adminGateRequested = false;
-    updateAdminUi();
-  });
-
-  document.getElementById("adminSheetForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    if (!isAdminSession()) {
-      alert("관리자 로그인이 필요합니다.");
-      return;
-    }
-    var label = coerceText(document.getElementById("adminSheetLabel").value);
-    var url = coerceText(document.getElementById("adminSheetUrl").value);
-    var tab = coerceText(document.getElementById("adminSheetTab").value);
-    var newPassword = coerceText(document.getElementById("adminNewPassword").value);
-    if (!label || !url) {
-      alert("시트 이름과 주소를 입력해 주세요.");
-      return;
-    }
-    try {
-      parseSpreadsheetId(url);
-    } catch (err) {
-      alert(err.message || "구글 시트 주소 형식을 확인해 주세요.");
-      return;
-    }
-    var registry = loadSheetRegistry();
-    registry.push({
-      id: "sheet-" + Date.now(),
-      label: label,
-      url: url,
-      tab: tab || null,
-    });
-    saveSheetRegistry(registry);
-    document.getElementById("adminSheetForm").reset();
-    if (newPassword) setAdminPassword(newPassword);
-    renderSheetButtonGrid();
-    renderAdminRegistryList();
-    alert("시트가 추가되었습니다.");
   });
 
   document.getElementById("fabTop").addEventListener("click", function () {
