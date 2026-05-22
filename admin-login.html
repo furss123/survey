@@ -334,10 +334,7 @@
     return String(value).trim();
   }
 
-  if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "1") {
-    location.replace("admin.html");
-    return;
-  }
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
 
   (function initTheme() {
     var key = "school-theme-v1";
