@@ -615,9 +615,11 @@
     #results .sheet-banner {
       text-align: center;
     }
-    #results .sheet-tabs,
-    #results .class-tabs {
+    #results .sheet-tabs {
       justify-content: flex-start;
+    }
+    #results .class-select-box {
+      max-width: 100%;
     }
     .survey-view-head {
       display: flex;
@@ -660,6 +662,89 @@
     }
     .class-results-panel {
       width: 100%;
+    }
+    .class-select-box {
+      margin: 0 0 20px;
+      padding: 18px 20px;
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .class-select-box__head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px 12px;
+      margin-bottom: 14px;
+    }
+    .class-select-box__label {
+      margin: 0;
+      font-size: var(--text-sm);
+      font-weight: 800;
+      color: var(--school-navy-dark);
+      letter-spacing: -0.02em;
+    }
+    .class-select-box__hint {
+      margin: 0;
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .class-select-box__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+      gap: 10px;
+    }
+    .class-select-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-height: 4.25rem;
+      padding: 12px 10px;
+      border: 2px solid var(--theme-border-light);
+      border-radius: var(--radius-md);
+      background: var(--bg-muted);
+      color: var(--text-subtle);
+      font-family: inherit;
+      font-size: 1.0625rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      cursor: pointer;
+      transition: border-color 0.15s var(--ease), background 0.15s var(--ease), color 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.15s var(--ease);
+    }
+    .class-select-option:hover {
+      border-color: var(--school-navy-light);
+      color: var(--school-navy);
+      background: var(--theme-bg-panel);
+      transform: translateY(-1px);
+    }
+    .class-select-option.active {
+      border-color: var(--school-navy);
+      background: linear-gradient(180deg, #4a7ab0 0%, var(--school-navy) 100%);
+      color: #fff;
+      box-shadow: var(--shadow-md);
+    }
+    .class-select-option__count {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      opacity: 0.88;
+    }
+    .class-select-option.active .class-select-option__count {
+      opacity: 0.95;
+    }
+    @media (max-width: 480px) {
+      .class-select-box__grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .class-select-option {
+        min-height: 3.75rem;
+        font-size: 1rem;
+        padding: 10px 6px;
+      }
     }
     .survey-by-class {
       display: flex;
@@ -3783,6 +3868,23 @@
     });
   }
 
+  function sortClassTabsByBanOrder(tabs) {
+    return (tabs || []).slice().sort(function (a, b) {
+      var oa = parseClassOrder(a.label || a.classKey);
+      var ob = parseClassOrder(b.label || b.classKey);
+      if (oa !== ob) return oa - ob;
+      return (a.order == null ? 999 : a.order) - (b.order == null ? 999 : b.order);
+    });
+  }
+
+  /** 결과 화면: 시트 데이터·학번·반 열 분석으로 반 목록 생성 */
+  function getSheetDerivedClassTabs(sheet) {
+    if (!sheet) return [];
+    return sortClassTabsByBanOrder(
+      deriveClassesFromAnalysis({ sheets: [sheet] })
+    );
+  }
+
   function getClassTabsConfig() {
     if (adminSetupMode && adminSetupClasses.length) {
       return adminSetupClasses
@@ -3792,20 +3894,13 @@
         .slice()
         .sort(sortCategoriesByOrder);
     }
-    if (
-      currentLaunchEntry &&
-      currentLaunchEntry.classes &&
-      currentLaunchEntry.classes.length
-    ) {
-      return currentLaunchEntry.classes
-        .filter(function (cls) {
-          return cls.enabled !== false;
-        })
-        .slice()
-        .sort(sortCategoriesByOrder);
+    var sheet = getActiveSheetAnalysis();
+    if (sheet) {
+      var fromSheet = getSheetDerivedClassTabs(sheet);
+      if (fromSheet.length) return fromSheet;
     }
     if (lastMultiResult) {
-      return deriveClassesFromAnalysis(lastMultiResult);
+      return sortClassTabsByBanOrder(deriveClassesFromAnalysis(lastMultiResult));
     }
     return [];
   }
@@ -4549,7 +4644,16 @@
     );
   }
 
-  function renderClassTabsForSurvey() {
+  function isClassTabActive(cls, hostSheet) {
+    if (!hostSheet || activeSheetView !== hostSheet.sheetName) return false;
+    var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
+    var hostKey = normalizeSheetClassKey(hostSheet.sheetName);
+    var filterKey = activeClassFilter || "";
+    if (classKey && classKey !== hostKey) return filterKey === classKey;
+    return !filterKey || filterKey === classKey || filterKey === hostKey;
+  }
+
+  function renderClassSelectBox() {
     var classTabs = getClassTabsConfig();
     if (!classTabs.length) return "";
     var sheet = getActiveSheetAnalysis();
@@ -4558,33 +4662,37 @@
     (lastMultiResult.sheets || []).forEach(function (s) {
       if (!isListSheetTab(s.sheetName)) sheetByName[s.sheetName] = s;
     });
-    var html = '<div class="sheet-tabs class-tabs" role="tablist" aria-label="반 선택">';
+    var html =
+      '<section class="class-select-box" aria-label="반 선택">' +
+      '<div class="class-select-box__head">' +
+      '<p class="class-select-box__label">반 선택</p>' +
+      '<p class="class-select-box__hint">시트 응답·학번·반 정보를 분석해 자동 구분했습니다</p>' +
+      "</div>" +
+      '<div class="class-select-box__grid" role="tablist">';
     classTabs.forEach(function (cls) {
       var hostSheet = resolveHostSheetForClass(cls, sheetByName) || sheet;
       var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
+      var tabLabel = cls.label || classKey || hostSheet.sheetName;
       var hostKey = normalizeSheetClassKey(hostSheet.sheetName);
       var useFilter = classKey && classKey !== hostKey;
-      var filterKey = activeClassFilter || "";
-      var isActive = activeSheetView === hostSheet.sheetName;
-      if (isActive) {
-        isActive = useFilter ? filterKey === classKey : !filterKey || filterKey === classKey || filterKey === hostKey;
-      }
-      var tabLabel = cls.label || classKey || hostSheet.sheetName;
       var count = countRowsForClass(hostSheet, useFilter ? classKey : null);
+      var active = isClassTabActive(cls, hostSheet);
       html +=
-        '<button type="button" class="sheet-tab class-tab' +
-        (isActive ? " active" : "") +
+        '<button type="button" class="class-select-option class-tab' +
+        (active ? " active" : "") +
         '" data-sheet="' +
         esc(hostSheet.sheetName) +
         '" data-class="' +
         esc(classKey) +
-        '" role="tab">' +
+        '" role="tab" aria-selected="' +
+        (active ? "true" : "false") +
+        '">' +
         esc(tabLabel) +
-        '<span class="count">' +
+        '<span class="class-select-option__count">' +
         esc(String(count)) +
         "명</span></button>";
     });
-    html += "</div>";
+    html += "</div></section>";
     return html;
   }
 
@@ -5076,7 +5184,7 @@
       return;
     }
 
-    html += renderClassTabsForSurvey();
+    html += renderClassSelectBox();
     html += renderClassStudentList(analysis);
 
     el.innerHTML = html;
@@ -5095,7 +5203,7 @@
         showHomeView();
       });
     }
-    el.querySelectorAll(".sheet-tab").forEach(function (btn) {
+    el.querySelectorAll(".sheet-tab, .class-select-option").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var isClassTab = btn.classList.contains("class-tab");
         activeSheetView = btn.getAttribute("data-sheet");
@@ -5104,7 +5212,7 @@
         } else {
           activeClassFilter = null;
           var tabs = getClassTabsConfig();
-          if (tabs.length) setActiveClassFromTab(tabs.slice().sort(sortCategoriesByOrder)[0]);
+          if (tabs.length) setActiveClassFromTab(tabs[0]);
         }
         renderResults(null, spreadsheetId, lastMultiResult);
         syncViewUrl();
