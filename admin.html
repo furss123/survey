@@ -778,17 +778,6 @@
 
   function buildSheetOpenUrl(entry) {
     if (!entry || !entry.id) return "index.html";
-    var classes = (entry.classes || []).filter(function (cls) {
-      return cls.enabled !== false;
-    });
-    classes.sort(function (a, b) {
-      return (a.order == null ? 999 : a.order) - (b.order == null ? 999 : b.order);
-    });
-    if (classes.length) {
-      return (
-        "index.html?open=" + encodeURIComponent(entry.id + "::" + classes[0].id)
-      );
-    }
     return "index.html?open=" + encodeURIComponent(entry.id);
   }
 

@@ -341,8 +341,8 @@
       line-height: 1.5;
     }
     .sheet-btn-grid {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: var(--space-3);
       width: 100%;
     }
@@ -615,8 +615,51 @@
     #results .sheet-banner {
       text-align: center;
     }
-    #results .sheet-tabs {
+    #results .sheet-tabs,
+    #results .class-tabs {
       justify-content: flex-start;
+    }
+    .survey-view-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 16px;
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--theme-border-light);
+    }
+    .survey-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid var(--theme-border);
+      border-radius: 999px;
+      background: var(--bg-muted);
+      color: var(--text-subtle);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+    }
+    .survey-back-btn:hover {
+      border-color: var(--school-navy-light);
+      color: var(--school-navy);
+      background: var(--theme-bg-panel);
+    }
+    .survey-view-title {
+      margin: 0;
+      flex: 1;
+      min-width: 0;
+      font-size: clamp(1.25rem, 2.8vw, 1.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--school-navy-dark);
+      line-height: 1.25;
+    }
+    .class-results-panel {
+      width: 100%;
     }
     .survey-by-class {
       display: flex;
@@ -1644,7 +1687,7 @@
       <div id="homePanel" class="search-container">
         <section class="panel-section">
           <div class="section-head-row">
-            <div class="section-label section-label--inline">1학년 설문 결과 목록</div>
+            <div class="section-label section-label--inline">설문 목록</div>
             <a href="admin-login.html" class="admin-entry-btn admin-entry-link">관리자</a>
           </div>
           <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="1학년 설문 결과 목록"></div>
@@ -3182,10 +3225,13 @@
     return expanded;
   }
 
+  /** 메인 화면: 설문 이름만 (이과·문과 등), 반별 분리 없음 */
+  function getHomeSurveyEntries() {
+    return loadSheetRegistry();
+  }
+
   function getSheetLaunchEntries() {
-    var registry = loadSheetRegistry();
-    var list = registry.length ? registry : getDefaultClassSheetButtons();
-    return expandRegistryForLaunch(list);
+    return expandRegistryForLaunch(loadSheetRegistry());
   }
 
   function stripDefaultClassButtons(registry) {
@@ -3279,8 +3325,7 @@
     var grid = document.getElementById("sheetButtonGrid");
     var hint = document.getElementById("homeEmptyHint");
     if (!grid) return;
-    var registry = loadSheetRegistry();
-    var entries = getSheetLaunchEntries();
+    var entries = getHomeSurveyEntries();
     if (!entries.length) {
       grid.innerHTML = "";
       grid.hidden = true;
@@ -3293,29 +3338,19 @@
     grid.removeAttribute("aria-hidden");
     grid.innerHTML = entries
       .map(function (entry) {
-        var classNum = parseClassNumberFromLabel(entry.label);
-        var inner = classNum
-          ? '<span class="sheet-launch-btn__num">' +
-            esc(classNum) +
-            '</span><span class="sheet-launch-btn__suffix">반</span>'
-          : '<span class="sheet-launch-btn__label">' + esc(entry.label) + "</span>";
         return (
-          '<button type="button" class="sheet-launch-btn" data-sheet-id="' +
+          '<button type="button" class="sheet-launch-btn sheet-launch-btn--survey" data-sheet-id="' +
           esc(entry.id) +
-          '">' +
-          inner +
-          "</button>"
+          '"><span class="sheet-launch-btn__label">' +
+          esc(entry.label || "설문") +
+          "</span></button>"
         );
       })
       .join("");
     grid.querySelectorAll(".sheet-launch-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-sheet-id");
-        var entry =
-          resolveLaunchEntry(id) ||
-          getDefaultClassSheetButtons().find(function (item) {
-            return item.id === id;
-          });
+        var entry = findRegistryEntry(id);
         if (entry) launchSheetAnalysis(entry, btn);
       });
     });
@@ -3336,7 +3371,8 @@
     setSiteHeaderAdminMode(false);
     var setupPanelLaunch = document.getElementById("adminSetupPanel");
     if (setupPanelLaunch) setupPanelLaunch.hidden = true;
-    currentLaunchEntry = entry || null;
+    var baseId = String((entry && entry.id) || "").split("::")[0];
+    currentLaunchEntry = findRegistryEntry(baseId) || entry || null;
     var errorEl = document.getElementById("error");
     if (errorEl) errorEl.hidden = true;
     document.getElementById("results").classList.remove("visible");
@@ -4354,7 +4390,9 @@
   }
 
   function getActiveAnalysis() {
-    return getActiveSheetAnalysis();
+    var sheet = getActiveSheetAnalysis();
+    if (!sheet) return null;
+    return filterSheetAnalysisByClass(sheet, activeClassFilter);
   }
 
   function parseClassOrder(classLabel) {
@@ -4406,13 +4444,18 @@
     return groups;
   }
 
+  function setActiveClassFromTab(cls) {
+    if (!cls) return;
+    activeSheetView = cls.sheetName;
+    var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
+    var hostKey = normalizeSheetClassKey(cls.sheetName);
+    activeClassFilter = classKey && classKey !== hostKey ? classKey : classKey || null;
+  }
+
   function applyInitialClassView(entry, classTabs) {
     if (!classTabs || !classTabs.length || !lastMultiResult) return;
-    var first = classTabs[0];
-    activeSheetView = first.sheetName;
-    activeClassFilter = null;
-    var hostKey = normalizeSheetClassKey(first.sheetName);
-    var classKey = first.classKey || normalizeSheetClassKey(first.label);
+    var ordered = classTabs.slice().sort(sortCategoriesByOrder);
+    setActiveClassFromTab(ordered[0]);
     if (entry && entry.tab) {
       var sheetList = lastMultiResult.sheets.map(function (s) {
         return { sheetName: s.sheetName };
@@ -4421,12 +4464,11 @@
       var match = classTabs.find(function (cls) {
         return (
           normalizeSheetClassKey(cls.sheetName) === normalizeSheetClassKey(activeSheetView) ||
-          normalizeSheetClassKey(cls.classKey) === normalizeSheetClassKey(entry.tab)
+          normalizeSheetClassKey(cls.classKey) === normalizeSheetClassKey(entry.tab) ||
+          normalizeSheetClassKey(cls.label) === normalizeSheetClassKey(entry.tab)
         );
       });
-      if (match) {
-        activeSheetView = match.sheetName;
-      }
+      if (match) setActiveClassFromTab(match);
     }
   }
 
@@ -4491,6 +4533,102 @@
     var names = Object.keys(sheetByName);
     if (names.length === 1) return sheetByName[names[0]];
     return findSheetForClassConfig(cls, sheetByName);
+  }
+
+  function renderSurveyViewHeader() {
+    var label =
+      (currentLaunchEntry && currentLaunchEntry.label) ||
+      (getActiveSheetAnalysis() && getActiveSheetAnalysis().meta && getActiveSheetAnalysis().meta.sheetName) ||
+      "설문 결과";
+    return (
+      '<div class="survey-view-head">' +
+      '<button type="button" class="survey-back-btn" id="surveyBackBtn">← 설문 목록</button>' +
+      '<h2 class="survey-view-title">' +
+      esc(label) +
+      "</h2></div>"
+    );
+  }
+
+  function renderClassTabsForSurvey() {
+    var classTabs = getClassTabsConfig();
+    if (!classTabs.length) return "";
+    var sheet = getActiveSheetAnalysis();
+    if (!sheet) return "";
+    var sheetByName = {};
+    (lastMultiResult.sheets || []).forEach(function (s) {
+      if (!isListSheetTab(s.sheetName)) sheetByName[s.sheetName] = s;
+    });
+    var html = '<div class="sheet-tabs class-tabs" role="tablist" aria-label="반 선택">';
+    classTabs.forEach(function (cls) {
+      var hostSheet = resolveHostSheetForClass(cls, sheetByName) || sheet;
+      var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
+      var hostKey = normalizeSheetClassKey(hostSheet.sheetName);
+      var useFilter = classKey && classKey !== hostKey;
+      var filterKey = activeClassFilter || "";
+      var isActive = activeSheetView === hostSheet.sheetName;
+      if (isActive) {
+        isActive = useFilter ? filterKey === classKey : !filterKey || filterKey === classKey || filterKey === hostKey;
+      }
+      var tabLabel = cls.label || classKey || hostSheet.sheetName;
+      var count = countRowsForClass(hostSheet, useFilter ? classKey : null);
+      html +=
+        '<button type="button" class="sheet-tab class-tab' +
+        (isActive ? " active" : "") +
+        '" data-sheet="' +
+        esc(hostSheet.sheetName) +
+        '" data-class="' +
+        esc(classKey) +
+        '" role="tab">' +
+        esc(tabLabel) +
+        '<span class="count">' +
+        esc(String(count)) +
+        "명</span></button>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function getClassLabelFromFilter() {
+    if (!activeClassFilter) return activeSheetView || "";
+    var m = String(activeClassFilter).match(/(\d+)/);
+    return m ? m[1] + "반" : activeClassFilter;
+  }
+
+  function getMissingStudentsForActiveClass(sheet) {
+    if (!sheet || !sheet.participation || !sheet.participation.missingStudents) return [];
+    var list = sheet.participation.missingStudents;
+    if (!activeClassFilter) return list.slice();
+    return list.filter(function (s) {
+      var sk = normalizeSheetClassKey(s.반 || "");
+      return sk === activeClassFilter || sk.indexOf(activeClassFilter) >= 0;
+    });
+  }
+
+  function renderClassStudentList(analysis) {
+    if (!analysis) {
+      return '<p class="student-cards-empty">반을 선택해 주세요.</p>';
+    }
+    var sheet = getActiveSheetAnalysis();
+    var isProfile = analysis.meta && analysis.meta.format === "profile";
+    var hasCategories = isProfile || (analysis.rows && analysis.rows.some(rowHasSections));
+    var rows = (analysis.rows || []).slice().sort(function (a, b) {
+      return (a.번호 != null ? Number(a.번호) : 9999) - (b.번호 != null ? Number(b.번호) : 9999);
+    });
+    var classLabel = getClassLabelFromFilter();
+    var html = '<div class="class-results-panel">';
+    html += renderParticipationBanner(analysis, classLabel);
+    html += '<div class="student-cards-list">';
+    rows.forEach(function (row) {
+      html += renderStudentCard(row, hasCategories, { compactHeader: true });
+    });
+    getMissingStudentsForActiveClass(sheet).forEach(function (student) {
+      html += renderAbsentStudentCard(classLabel, student, { compactHeader: true });
+    });
+    html += "</div></div>";
+    if (!rows.length && !getMissingStudentsForActiveClass(sheet).length) {
+      html += '<p class="student-cards-empty">이 반에 표시할 응답이 없습니다.</p>';
+    }
+    return html;
   }
 
   function renderClassJumpNav(groups) {
@@ -4907,17 +5045,18 @@
 
   function renderResults(data, spreadsheetId, multi) {
     var el = document.getElementById("results");
-    var sheet = getActiveSheetAnalysis() || data;
+    var sheet = getActiveSheetAnalysis();
+    var analysis = data || getActiveAnalysis();
     showResultsView();
     setFabStackVisible(true);
     activeSubjectView = "all";
 
-    var html = "";
+    var html = renderSurveyViewHeader();
     if (lastMultiResult) {
       html += renderWorkbookSheetTabs();
     }
     if (!sheet) {
-      html += '<p class="student-cards-empty">조회할 설문 시트를 선택해 주세요.</p>';
+      html += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
       el.innerHTML = html;
       el.classList.add("visible");
       syncResultsPrintState(el);
@@ -4928,7 +5067,7 @@
 
     var s = sheet.summary;
     if (!s.총응답 && !(sheet.participation && sheet.participation.missingCount)) {
-      html += '<p class="student-cards-empty">이 시트에 분석할 데이터가 없습니다.</p>';
+      html += '<p class="student-cards-empty">이 설문에 분석할 데이터가 없습니다.</p>';
       el.innerHTML = html;
       el.classList.add("visible");
       syncResultsPrintState(el);
@@ -4937,7 +5076,8 @@
       return;
     }
 
-    html += renderSurveyByClass(sheet);
+    html += renderClassTabsForSurvey();
+    html += renderClassStudentList(analysis);
 
     el.innerHTML = html;
     el.classList.add("visible");
@@ -4945,27 +5085,27 @@
 
     bindResultTabs(el, spreadsheetId);
     setupScrollStudentTracker();
-    scrollToClassFromUrl();
-  }
-
-  function scrollToClassFromUrl() {
-    var params = new URLSearchParams(location.search);
-    var classKey = params.get("class") || params.get("classFilter");
-    if (!classKey) return;
-    var id =
-      "class-" + String(classKey).replace(/[^a-zA-Z0-9가-힣_-]/g, "-");
-    var target = document.getElementById(id);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   }
 
   function bindResultTabs(el, spreadsheetId) {
     if (!el) return;
+    var backBtn = document.getElementById("surveyBackBtn");
+    if (backBtn) {
+      backBtn.addEventListener("click", function () {
+        showHomeView();
+      });
+    }
     el.querySelectorAll(".sheet-tab").forEach(function (btn) {
       btn.addEventListener("click", function () {
+        var isClassTab = btn.classList.contains("class-tab");
         activeSheetView = btn.getAttribute("data-sheet");
-        activeClassFilter = null;
+        if (isClassTab) {
+          activeClassFilter = btn.getAttribute("data-class") || null;
+        } else {
+          activeClassFilter = null;
+          var tabs = getClassTabsConfig();
+          if (tabs.length) setActiveClassFromTab(tabs.slice().sort(sortCategoriesByOrder)[0]);
+        }
         renderResults(null, spreadsheetId, lastMultiResult);
         syncViewUrl();
       });
@@ -5072,7 +5212,9 @@
         return item.id === openId;
       });
     if (entry) {
-      launchSheetAnalysis(entry, null, {
+      var baseId = String(openId).split("::")[0];
+      var regEntry = findRegistryEntry(baseId) || entry;
+      launchSheetAnalysis(regEntry, null, {
         sheet: params.get("sheet"),
         class: params.get("class"),
         subject: params.get("subject"),
