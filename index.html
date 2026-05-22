@@ -604,7 +604,6 @@
     #results .sheet-tabs,
     #results .subject-tabs,
     #results .participation-banner,
-    #results .responses-heading,
     #results .student-cards,
     #results .student-cards-list,
     #results .student-card,
@@ -618,10 +617,6 @@
     #results .sheet-tabs,
     #results .subject-tabs {
       justify-content: flex-start;
-    }
-    #results .responses-heading {
-      text-align: center;
-      width: 100%;
     }
     .muted { color: var(--text-muted); }
     .preview { color: var(--text); word-break: break-word; line-height: 1.55; }
@@ -677,12 +672,6 @@
       background: var(--bg-surface);
       border: 1px dashed var(--border-strong);
       border-radius: 12px;
-    }
-    .responses-heading {
-      margin: 0 0 4px;
-      font-size: 0.9375rem;
-      font-weight: 700;
-      color: var(--text);
     }
     .category-blocks {
       display: flex;
@@ -786,13 +775,19 @@
       border: 1px solid var(--border-strong);
     }
     .sheet-banner {
-      margin-bottom: 16px;
+      margin: 16px 0 12px;
       padding: 12px 16px;
       border-radius: 10px;
       background: var(--bg-accent-banner);
       border: 1px solid var(--border-accent);
       font-size: 0.875rem;
       color: var(--text-accent);
+      text-align: center;
+    }
+    .sheet-banner strong {
+      font-size: calc(0.875rem + 3pt);
+      font-weight: 700;
+      line-height: 1.35;
     }
     .sheet-tabs,
     .subject-tabs {
@@ -2539,12 +2534,18 @@
     return html;
   }
 
+  function renderActiveSheetBanner() {
+    if (!activeSheetView) return "";
+    return (
+      '<div class="sheet-banner" role="status" aria-live="polite"><strong>' +
+      esc(activeSheetView) +
+      "</strong></div>"
+    );
+  }
+
   function renderSheetTabs() {
     if (!lastMultiResult) return "";
     var html = "";
-    if (activeSheetView) {
-      html += '<div class="sheet-banner"><strong>' + esc(activeSheetView) + "</strong></div>";
-    }
     html += renderSubjectTabsOnly();
     html += '<div class="sheet-tabs" role="tablist">';
     lastMultiResult.sheets.forEach(function (sheet) {
@@ -2709,7 +2710,7 @@
     var hasCategories = isProfile || (data.rows && data.rows.some(rowHasSections));
     var list = (data.rows || []).slice(0, 50);
     var sheetLabel = (data.meta && data.meta.sheetName) || activeSheetView || "";
-    var html = '<h2 class="responses-heading">학생 응답 결과</h2>';
+    var html = renderActiveSheetBanner();
     html += renderParticipationBanner(data);
     html += '<div class="student-cards student-cards-list">';
     list.forEach(function (row) {
