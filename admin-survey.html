@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <script>
+  (function () {
+    var k = "school-theme-v1";
+    var t = localStorage.getItem(k);
+    if (t !== "light" && t !== "dark") {
+      t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>학생 설문 등록 · 남악고</title>
+  <link rel="icon" href="assets/namak-logo.png" type="image/png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --theme-bg-page: #eef2f7;
+      --theme-bg-panel: #fff;
+      --theme-text: #0f172a;
+      --theme-text-muted: #475569;
+      --theme-border: #c5d0de;
+      --theme-heading: #1e3a5f;
+      --theme-btn-top: #4a7ab0;
+      --theme-btn-bottom: #1e3a5f;
+      --content-max: 720px;
+      --radius-md: 12px;
+    }
+    html[data-theme="dark"] {
+      --theme-bg-page: #0c1220;
+      --theme-bg-panel: #1a2435;
+      --theme-text: #f1f5f9;
+      --theme-text-muted: #cbd5e1;
+      --theme-border: #5a6d85;
+      --theme-heading: #e8f0fc;
+      --theme-btn-top: #5b8fc9;
+      --theme-btn-bottom: #2d5580;
+    }
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Malgun Gothic", sans-serif;
+      background: var(--theme-bg-page);
+      color: var(--theme-text);
+      line-height: 1.55;
+    }
+    .wrap { max-width: var(--content-max); margin: 0 auto; padding: 20px 16px 48px; }
+    .panel {
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    h1 { margin: 0 0 8px; font-size: 1.35rem; color: var(--theme-heading); }
+    .lead { margin: 0 0 16px; color: var(--theme-text-muted); font-size: 0.9rem; }
+    label { display: block; margin: 12px 0 6px; font-size: 0.85rem; font-weight: 600; }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--theme-border);
+      border-radius: 8px;
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      font: inherit;
+    }
+    .q-row {
+      border: 1px solid var(--theme-border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .q-row-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .btn {
+      display: inline-block;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--theme-border);
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-primary {
+      border: none;
+      background: linear-gradient(180deg, var(--theme-btn-top), var(--theme-btn-bottom));
+      color: #fff;
+    }
+    .btn-danger { color: #b91c1c; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .link-box {
+      margin-top: 12px;
+      padding: 10px;
+      background: rgba(74, 122, 176, 0.08);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+    .nav-top { margin-bottom: 12px; }
+    .hint { font-size: 0.8rem; color: var(--theme-text-muted); margin-top: 4px; }
+    .msg { margin-top: 10px; font-size: 0.875rem; }
+    .msg.ok { color: #047857; }
+    .msg.err { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="nav-top"><a class="btn" href="admin.html">← 시트 관리</a></p>
+    <div class="panel">
+      <h1>학생 설문 등록</h1>
+      <p class="lead">명렬표에서 반·번호를 고른 뒤 설문에 응답합니다. 구글 폼 대신 사이트에서 직접 작성·저장합니다.</p>
+
+      <label for="surveyLabel">설문 이름</label>
+      <input type="text" id="surveyLabel" placeholder="예: 1학기 상담 설문" />
+
+      <label for="webAppUrl">Apps Script 웹 앱 URL (제출·등록용)</label>
+      <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+      <p class="hint"><a href="docs/SURVEY_FORM_SETUP.md" target="_blank" rel="noopener">설치 안내</a>에 따라 스크립트를 배포한 뒤 URL을 붙여 넣으세요.</p>
+
+      <label for="responseSheetId">응답 저장 스프레드시트 ID (선택)</label>
+      <input type="text" id="responseSheetId" placeholder="비우면 기본 응답 시트 사용" />
+
+      <label><input type="checkbox" id="categorySelectAll" checked /> 결과 화면에서 문항 탭 숨기기(전체 문항 한 번에 표시)</label>
+
+      <h2 style="font-size:1.05rem;margin:20px 0 8px;color:var(--theme-heading)">문항</h2>
+      <div id="questionList"></div>
+      <button type="button" class="btn" id="btnAddQuestion">+ 문항 추가</button>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="btnSave">메인에 등록</button>
+        <button type="button" class="btn" id="btnSyncServer">서버에 설문 동기화</button>
+      </div>
+      <p class="msg" id="statusMsg" hidden></p>
+      <div class="link-box" id="studentLinkBox" hidden>
+        <strong>학생 참여 링크</strong>
+        <div id="studentLink"></div>
+        <button type="button" class="btn" id="btnCopyLink" style="margin-top:8px">링크 복사</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="scripts/admin-session.js"></script>
+  <script src="scripts/survey-form-shared.js"></script>
+  <script>
+(function () {
+  "use strict";
+  if (!AdminSession.require()) return;
+
+  var editId = new URLSearchParams(location.search).get("edit");
+  var questionList = document.getElementById("questionList");
+  var statusMsg = document.getElementById("statusMsg");
+
+  function showStatus(text, ok) {
+    statusMsg.textContent = text;
+    statusMsg.hidden = !text;
+    statusMsg.className = "msg " + (ok ? "ok" : "err");
+  }
+
+  function makeQuestionRow(q) {
+    q = q || { id: "q" + Date.now(), label: "", type: "textarea", required: true };
+    var row = document.createElement("div");
+    row.className = "q-row";
+    row.dataset.qid = q.id;
+    row.innerHTML =
+      '<div class="q-row-head"><strong>문항</strong><button type="button" class="btn btn-danger btn-remove">삭제</button></div>' +
+      '<label>질문</label><input type="text" class="q-label" placeholder="예: 상담 받고 싶은 주제" />' +
+      '<label>입력 형식</label><select class="q-type"><option value="text">한 줄</option><option value="textarea">여러 줄</option></select>' +
+      '<label><input type="checkbox" class="q-required" /> 필수</label>';
+    row.querySelector(".q-label").value = q.label || "";
+    row.querySelector(".q-type").value = q.type === "text" ? "text" : "textarea";
+    row.querySelector(".q-required").checked = q.required !== false;
+    row.querySelector(".btn-remove").addEventListener("click", function () {
+      row.remove();
+    });
+    questionList.appendChild(row);
+  }
+
+  function collectQuestions() {
+    return Array.prototype.map.call(questionList.querySelectorAll(".q-row"), function (row) {
+      return {
+        id: row.dataset.qid,
+        label: row.querySelector(".q-label").value.trim() || "문항",
+        type: row.querySelector(".q-type").value,
+        required: row.querySelector(".q-required").checked,
+      };
+    });
+  }
+
+  function buildEntry() {
+    var label = document.getElementById("surveyLabel").value.trim();
+    if (!label) throw new Error("설문 이름을 입력해 주세요.");
+    var qs = collectQuestions();
+    if (!qs.length) throw new Error("문항을 1개 이상 추가해 주세요.");
+    var id = editId || SurveyForm.generateSurveyId();
+    var sheetId = document.getElementById("responseSheetId").value.trim();
+    return {
+      id: id,
+      type: "form",
+      label: label,
+      grade: SurveyForm.GRADE,
+      questions: qs,
+      categories: SurveyForm.questionCategories({ questions: qs }),
+      categorySelectAll: document.getElementById("categorySelectAll").checked,
+      webAppUrl: document.getElementById("webAppUrl").value.trim(),
+      responseSpreadsheetId: sheetId || undefined,
+      responseTab: "Responses",
+    };
+  }
+
+  function updateStudentLink(id) {
+    var url =
+      location.href.replace(/admin-survey\.html.*$/, "respond.html?s=" + encodeURIComponent(id));
+    document.getElementById("studentLink").textContent = url;
+    document.getElementById("studentLinkBox").hidden = false;
+    document.getElementById("btnCopyLink").onclick = function () {
+      navigator.clipboard.writeText(url).then(function () {
+        showStatus("참여 링크를 복사했습니다.", true);
+      });
+    };
+  }
+
+  document.getElementById("btnAddQuestion").addEventListener("click", function () {
+    makeQuestionRow();
+  });
+
+  document.getElementById("btnSave").addEventListener("click", function () {
+    try {
+      var entry = buildEntry();
+      var list = SurveyForm.loadRegistry();
+      var idx = list.findIndex(function (x) { return x.id === entry.id; });
+      if (idx >= 0) list[idx] = Object.assign({}, list[idx], entry);
+      else list.push(entry);
+      SurveyForm.saveRegistry(list);
+      editId = entry.id;
+      history.replaceState({}, "", "admin-survey.html?edit=" + encodeURIComponent(entry.id));
+      updateStudentLink(entry.id);
+      showStatus("메인 목록에 등록했습니다.", true);
+    } catch (err) {
+      showStatus(err.message, false);
+    }
+  });
+
+  document.getElementById("btnSyncServer").addEventListener("click", async function () {
+    try {
+      var entry = buildEntry();
+      if (!entry.webAppUrl) throw new Error("웹 앱 URL을 입력해 주세요.");
+      var res = await SurveyForm.registerSurveyOnServer(entry);
+      if (res && res.ok === false) throw new Error(res.error || "동기화 실패");
+      showStatus("서버(스프레드시트)에 설문 정보를 저장했습니다.", true);
+    } catch (err) {
+      showStatus(err.message || "동기화 실패", false);
+    }
+  });
+
+  if (editId) {
+    var existing = SurveyForm.findSurvey(editId);
+    if (existing && existing.type === "form") {
+      document.getElementById("surveyLabel").value = existing.label || "";
+      document.getElementById("webAppUrl").value = existing.webAppUrl || "";
+      document.getElementById("responseSheetId").value = existing.responseSpreadsheetId || "";
+      document.getElementById("categorySelectAll").checked = !!existing.categorySelectAll;
+      (existing.questions || []).forEach(makeQuestionRow);
+      updateStudentLink(existing.id);
+    }
+  }
+  if (!questionList.children.length) {
+    makeQuestionRow({ id: "q1", label: "상담 받고 싶은 주제", type: "textarea" });
+    makeQuestionRow({ id: "q2", label: "전하고 싶은 말", type: "textarea" });
+  }
+})();
+  </script>
+</body>
+</html>

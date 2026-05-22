@@ -554,6 +554,9 @@
           <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
         </div>
         <div id="adminPanel">
+          <p style="margin:0 0 14px;">
+            <a href="admin-survey.html" class="admin-btn admin-btn-primary" style="display:inline-block;text-decoration:none;">학생 설문 만들기 (구글 폼 대체)</a>
+          </p>
           <form id="adminSheetForm" class="admin-form">
             <label for="adminSheetUrl">구글 시트 주소</label>
             <div class="admin-url-row">
@@ -885,21 +888,41 @@
     }
     listEl.innerHTML = registry
       .map(function (item) {
-        return (
+        var isForm = item.type === "form";
+        var meta = isForm
+          ? "학생 설문 · " + (item.webAppUrl ? "제출 연동됨" : "웹 앱 URL 미설정")
+          : item.url;
+        var html =
           "<li><div class=\"registry-meta\"><strong>" +
           esc(item.label) +
+          (isForm ? " <span style=\"font-size:0.75em;opacity:0.85\">(설문)</span>" : "") +
           "</strong><span>" +
-          esc(item.url) +
-          "</span></div><div class=\"admin-actions registry-actions\"><button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
+          esc(meta) +
+          "</span></div><div class=\"admin-actions registry-actions\">";
+        if (isForm) {
+          html +=
+            "<button type=\"button\" class=\"admin-btn admin-btn-primary\" data-respond-id=\"" +
+            esc(item.id) +
+            "\">참여 링크</button><button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
+            esc(item.id) +
+            "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-form-edit-id=\"" +
+            esc(item.id) +
+            "\">수정</button>";
+        } else {
+          html +=
+            "<button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
+            esc(item.id) +
+            "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-config-id=\"" +
+            esc(item.id) +
+            "\">구성</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-edit-id=\"" +
+            esc(item.id) +
+            "\">수정</button>";
+        }
+        html +=
+          "<button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
           esc(item.id) +
-          "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-config-id=\"" +
-          esc(item.id) +
-          "\">구성</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-edit-id=\"" +
-          esc(item.id) +
-          "\">수정</button><button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
-          esc(item.id) +
-          "\">삭제</button></div></li>"
-        );
+          "\">삭제</button></div></li>";
+        return html;
       })
       .join("");
     listEl.querySelectorAll("[data-open-id]").forEach(function (btn) {
@@ -907,6 +930,28 @@
         var id = btn.getAttribute("data-open-id");
         var entry = id ? findRegistryEntry(id) : null;
         if (entry) location.href = buildSheetOpenUrl(entry);
+      });
+    });
+    listEl.querySelectorAll("[data-respond-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-respond-id");
+        var url =
+          "respond.html?s=" + encodeURIComponent(id);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(new URL(url, location.href).href).then(function () {
+            alert("학생 참여 링크를 복사했습니다.\n\n" + url);
+          }).catch(function () {
+            prompt("학생 참여 링크", url);
+          });
+        } else {
+          prompt("학생 참여 링크", url);
+        }
+      });
+    });
+    listEl.querySelectorAll("[data-form-edit-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-form-edit-id");
+        if (id) location.href = "admin-survey.html?edit=" + encodeURIComponent(id);
       });
     });
     listEl.querySelectorAll("[data-config-id]").forEach(function (btn) {

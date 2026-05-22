@@ -434,6 +434,16 @@
       font-size: var(--text-md);
       font-weight: 700;
       color: var(--theme-heading-strong);
+      flex: 1;
+      text-align: left;
+    }
+    .sheet-launch-btn__tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--theme-accent-soft);
+      color: var(--theme-heading-accent);
     }
     .sheet-launch-btn__num {
       font-size: 1.25rem;
@@ -1971,6 +1981,7 @@
     <div class="site-footer-inner">남악고등학교 1학년 설문 결과 · <span>survey</span></div>
   </footer>
 
+  <script src="scripts/survey-form-shared.js"></script>
   <script src="scripts/admin-session.js"></script>
   <script>
 (function () {
@@ -3541,12 +3552,18 @@
     grid.removeAttribute("aria-hidden");
     grid.innerHTML = entries
       .map(function (entry) {
+        var tag =
+          entry.type === "form"
+            ? '<span class="sheet-launch-btn__tag">설문</span>'
+            : "";
         return (
           '<button type="button" class="sheet-launch-btn sheet-launch-btn--survey" data-sheet-id="' +
           esc(entry.id) +
           '"><span class="sheet-launch-btn__label">' +
           esc(entry.label || "설문") +
-          "</span></button>"
+          "</span>" +
+          tag +
+          "</button>"
         );
       })
       .join("");
@@ -3566,8 +3583,83 @@
     });
   }
 
+  async function launchFormSurveyAnalysis(entry, triggerBtn, restoreView) {
+    if (analysisInFlight) return;
+    if (!entry || entry.type !== "form") return launchSheetAnalysis(entry, triggerBtn, restoreView);
+    adminSetupMode = false;
+    adminSetupClasses = [];
+    document.body.classList.remove("admin-setup-mode");
+    setSiteHeaderAdminMode(false);
+    var setupPanelLaunch = document.getElementById("adminSetupPanel");
+    if (setupPanelLaunch) setupPanelLaunch.hidden = true;
+    currentLaunchEntry = entry;
+    var errorEl = document.getElementById("error");
+    if (errorEl) errorEl.hidden = true;
+    document.getElementById("results").classList.remove("visible");
+    document.getElementById("results").innerHTML = "";
+    teardownScrollStudentTracker();
+    setFabStackVisible(false);
+    analysisInFlight = true;
+    setSheetButtonsDisabled(true);
+    var prevLabel = triggerBtn ? triggerBtn.textContent : "";
+    if (triggerBtn) triggerBtn.textContent = "불러오는 중…";
+    try {
+      var masterRoster = await fetchClassRosterFromMaster();
+      var roster = (masterRoster || []).map(function (s) {
+        var banMatch = String(s.반 || "").match(/(\d+)/);
+        return {
+          반: banMatch ? parseInt(banMatch[1], 10) : null,
+          번호: s.번호,
+          이름: s.이름,
+          학번: s.학번 || "",
+        };
+      });
+      lastMultiResult = await SurveyForm.fetchFormResponsesAnalysis(entry, roster);
+      if (!entry.categories || !entry.categories.length) {
+        entry.categories = SurveyForm.questionCategories(entry);
+      }
+      activeSubjectView = "all";
+      activeClassFilter = null;
+      var launchSheets = lastMultiResult.sheets.filter(function (s) {
+        return !isListSheetTab(s.sheetName);
+      });
+      activeSheetView = launchSheets.length ? launchSheets[0].sheetName : "전체";
+      applyInitialClassView(entry, getClassTabsConfig());
+      ensureClassSelectionForResults();
+      applyRestoreView(
+        Object.assign({}, restoreView || {}, {
+          classFilter:
+            restoreView && restoreView.classFilter
+              ? restoreView.classFilter
+              : restoreView && restoreView.class
+                ? restoreView.class
+                : activeClassFilter,
+        })
+      );
+      var sheetId =
+        entry.responseSpreadsheetId || DEFAULT_RESPONSE_SHEET_ID;
+      renderResults(getActiveAnalysis(), sheetId, lastMultiResult);
+      syncViewUrl();
+      document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      showHomeView();
+      if (errorEl) {
+        errorEl.textContent = err.message || "응답을 불러오지 못했습니다.";
+        errorEl.hidden = false;
+      }
+      setFabStackVisible(false);
+    } finally {
+      analysisInFlight = false;
+      setSheetButtonsDisabled(false);
+      if (triggerBtn) triggerBtn.textContent = prevLabel || entry.label;
+    }
+  }
+
   async function launchSheetAnalysis(entry, triggerBtn, restoreView) {
     if (analysisInFlight) return;
+    if (entry && entry.type === "form") {
+      return launchFormSurveyAnalysis(entry, triggerBtn, restoreView);
+    }
     adminSetupMode = false;
     adminSetupClasses = [];
     document.body.classList.remove("admin-setup-mode");

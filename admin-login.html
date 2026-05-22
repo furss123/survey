@@ -160,10 +160,11 @@
       margin: 0;
       padding: 0;
       width: 100%;
-      font-size: clamp(1.04rem, 1.72vw, 1.2rem);
+      box-sizing: border-box;
+      font-size: clamp(1.38rem, 2.55vw, 1.75rem);
       font-weight: 800;
-      letter-spacing: -0.018em;
-      line-height: 1.2;
+      letter-spacing: 0.05em;
+      line-height: 1.15;
       color: var(--school-navy-dark);
       white-space: nowrap;
     }
@@ -414,6 +415,42 @@
       applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
     });
   })();
+
+  function fitHeaderTitleToMetaRow() {
+    var block = document.querySelector(".header-brand-block");
+    if (!block) return;
+    var meta = block.querySelector(".header-meta-row");
+    var h1 = block.querySelector("h1");
+    if (!meta || !h1) return;
+    var target = meta.getBoundingClientRect().width;
+    if (target < 8) return;
+    h1.style.fontSize = "";
+    h1.style.letterSpacing = "";
+    var rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    var px = rootPx * 1.75;
+    h1.style.fontSize = px + "px";
+    var step = 0;
+    while (h1.getBoundingClientRect().width > target + 1 && px > rootPx * 0.9 && step < 80) {
+      px -= 0.5;
+      h1.style.fontSize = px + "px";
+      step++;
+    }
+    var spacing = 0;
+    step = 0;
+    while (h1.getBoundingClientRect().width < target - 1 && spacing < 0.24 && step < 100) {
+      spacing += 0.008;
+      h1.style.letterSpacing = spacing + "em";
+      step++;
+    }
+  }
+  function scheduleHeaderTitleFit() {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(fitHeaderTitleToMetaRow);
+    });
+  }
+  scheduleHeaderTitleFit();
+  window.addEventListener("resize", scheduleHeaderTitleFit);
+  window.addEventListener("load", scheduleHeaderTitleFit);
 
   document.getElementById("loginForm").addEventListener("submit", function (e) {
     e.preventDefault();
