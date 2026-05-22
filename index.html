@@ -2989,6 +2989,10 @@
     if (analysisInFlight) return;
     adminSetupMode = false;
     adminSetupClasses = [];
+    document.body.classList.remove("admin-setup-mode");
+    setSiteHeaderAdminMode(false);
+    var setupPanelLaunch = document.getElementById("adminSetupPanel");
+    if (setupPanelLaunch) setupPanelLaunch.hidden = true;
     currentLaunchEntry = entry || null;
     var errorEl = document.getElementById("error");
     if (errorEl) errorEl.hidden = true;
@@ -3511,23 +3515,30 @@
     adminSetupClasses = ordered;
   }
 
+  function ensureActiveClassTabValid() {
+    var tabs = getClassTabsConfig();
+    if (!tabs.length) return;
+    var activeOk = tabs.some(function (cls) {
+      var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
+      var hostKey = normalizeSheetClassKey(cls.sheetName);
+      var useFilter = classKey && classKey !== hostKey;
+      return (
+        activeSheetView === cls.sheetName &&
+        (activeClassFilter || "") === (useFilter ? classKey : "")
+      );
+    });
+    if (activeOk) return;
+    var first = tabs[0];
+    activeSheetView = first.sheetName;
+    var classKey = first.classKey || normalizeSheetClassKey(first.label);
+    var hostKey = normalizeSheetClassKey(first.sheetName);
+    activeClassFilter = classKey && classKey !== hostKey ? classKey : null;
+  }
+
   function onAdminClassChanged() {
-    var allowed = getAllowedClassSheetNames();
-    if (
-      allowed &&
-      activeSheetView &&
-      allowed.indexOf(activeSheetView) < 0
-    ) {
-      activeSheetView = allowed[0] || null;
-    }
-    if (!activeSheetView && lastMultiResult && lastMultiResult.sheets.length) {
-      var first = lastMultiResult.sheets.find(function (s) {
-        if (isListSheetTab(s.sheetName)) return false;
-        return !allowed || allowed.indexOf(s.sheetName) >= 0;
-      });
-      activeSheetView = first ? first.sheetName : null;
-    }
+    ensureActiveClassTabValid();
     renderResults(getActiveAnalysis(), parseSpreadsheetId(adminSetupUrl), lastMultiResult);
+    syncViewUrl();
   }
 
   function bindAdminClassChipEvents(box) {
