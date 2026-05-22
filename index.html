@@ -4372,6 +4372,7 @@
 
   function confirmAdminSetup() {
     if (!adminSetupLabel || !adminSetupUrl) return;
+    syncAdminCategoriesFromDom();
     if (
       !adminSetupCategories.some(function (c) {
         return c.enabled && c.id !== "all";
@@ -4634,6 +4635,65 @@
     return false;
   }
 
+  function hasRegistryCategoryFilter() {
+    if (adminSetupMode && adminSetupCategories.length) return true;
+    return !!(
+      currentLaunchEntry &&
+      currentLaunchEntry.categories &&
+      currentLaunchEntry.categories.length > 1
+    );
+  }
+
+  function getEnabledCategoryFilterIds() {
+    return getSubjectFilterOptions()
+      .filter(function (o) {
+        return o.id !== "all";
+      })
+      .map(function (o) {
+        return o.id;
+      });
+  }
+
+  function sectionMatchesEnabledCategories(sec) {
+    if (!hasRegistryCategoryFilter()) return isMeaningfulSection(sec);
+    var enabledIds = getEnabledCategoryFilterIds();
+    if (!enabledIds.length) return isMeaningfulSection(sec);
+    return enabledIds.some(function (id) {
+      return sectionMatchesSubjectFilter(sec, id);
+    });
+  }
+
+  function rowHasVisibleSections(row) {
+    return (row.sections || []).some(sectionMatchesEnabledCategories);
+  }
+
+  function syncAdminCategoriesFromDom() {
+    syncCategoryOrdersFromDom();
+    var box = document.getElementById("adminCategoryConfig");
+    if (!box) return;
+    box.querySelectorAll('input[type="checkbox"][data-cat-id]').forEach(function (input) {
+      var id = input.getAttribute("data-cat-id");
+      if (id === "all") return;
+      var cat = adminSetupCategories.find(function (c) {
+        return c.id === id;
+      });
+      if (cat) cat.enabled = input.checked;
+    });
+    box.querySelectorAll(".admin-cat-label[data-cat-id]").forEach(function (labelEl) {
+      var id = labelEl.getAttribute("data-cat-id");
+      var cat = adminSetupCategories.find(function (c) {
+        return c.id === id;
+      });
+      if (!cat) return;
+      var text = coerceText(labelEl.textContent);
+      if (text) {
+        if (text.length > 28) text = text.slice(0, 28);
+        cat.label = text;
+        labelEl.textContent = cat.label;
+      }
+    });
+  }
+
   function renderWorkbookSheetTabs() {
     if (!lastMultiResult) return "";
     var sheets = lastMultiResult.sheets.filter(function (s) {
@@ -4761,7 +4821,8 @@
     }
     var sheet = getActiveSheetAnalysis();
     var isProfile = analysis.meta && analysis.meta.format === "profile";
-    var hasCategories = isProfile || (analysis.rows && analysis.rows.some(rowHasSections));
+    var hasCategories =
+      isProfile || (analysis.rows && analysis.rows.some(rowHasVisibleSections));
     var rows = (analysis.rows || []).slice().sort(function (a, b) {
       return (a.번호 != null ? Number(a.번호) : 9999) - (b.번호 != null ? Number(b.번호) : 9999);
     });
@@ -4820,7 +4881,11 @@
   function renderCategoryBlocks(row, subjectFilter) {
     var sections = row.sections || [];
     var filtered = sections.filter(function (sec) {
-      return isMeaningfulSection(sec);
+      if (!isMeaningfulSection(sec)) return false;
+      if (subjectFilter && subjectFilter !== "all") {
+        return sectionMatchesSubjectFilter(sec, subjectFilter);
+      }
+      return sectionMatchesEnabledCategories(sec);
     });
     if (!filtered.length) {
       return '<p class="muted response-empty">작성된 상담 내용이 없습니다.</p>';
@@ -4876,8 +4941,8 @@
       html += renderStudentResponseHeader(row);
     }
     html += '<div class="student-response-body">';
-    if (hasCategories && rowHasSections(row)) {
-      html += renderCategoryBlocks(row, "all");
+    if (hasCategories && rowHasVisibleSections(row)) {
+      html += renderCategoryBlocks(row, activeSubjectView || "all");
     } else if (hasCategories) {
       html += '<p class="muted response-empty">작성된 상담 내용이 없습니다.</p>';
     } else {
@@ -4891,7 +4956,7 @@
 
   function renderClassSection(group, sheet) {
     var isProfile = sheet.meta && sheet.meta.format === "profile";
-    var hasCategories = isProfile || (group.rows && group.rows.some(rowHasSections));
+    var hasCategories = isProfile || (group.rows && group.rows.some(rowHasVisibleSections));
     var sectionId =
       "class-" +
       String(group.classKey || group.label).replace(/[^a-zA-Z0-9가-힣_-]/g, "-");
