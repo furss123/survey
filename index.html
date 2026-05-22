@@ -1126,7 +1126,91 @@
         --page-chrome-btn-h: calc(68px - 2mm);
       }
     }
+    .admin-setup-panel {
+      width: 100%;
+      max-width: var(--content-max);
+      margin: 0 auto var(--space-4);
+      padding: 0 var(--content-pad);
+    }
+    .admin-setup-inner {
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: var(--space-5) var(--space-4);
+    }
+    .admin-setup-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .admin-setup-head strong {
+      font-size: var(--text-lg);
+      color: var(--school-navy);
+    }
+    .admin-setup-meta {
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+      word-break: break-all;
+    }
+    .admin-setup-desc {
+      margin: 0 0 var(--space-4);
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+    }
+    .admin-category-config {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: var(--space-4);
+    }
+    .admin-cat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--theme-border);
+      background: var(--theme-bg-muted);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+    .admin-cat-chip:has(input:checked) {
+      border-color: var(--school-navy-light);
+      background: var(--school-accent-soft);
+      color: var(--school-navy-dark);
+    }
+    .admin-cat-chip input {
+      accent-color: var(--school-navy);
+    }
+    .admin-cat-chip--locked {
+      opacity: 0.85;
+      cursor: default;
+    }
+    .admin-setup-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-setup-actions .admin-btn {
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body.admin-setup-mode #homePanel {
+      display: none !important;
+    }
+    body.admin-setup-mode .section-head-row .admin-entry-link {
+      display: none;
+    }
     @media print {
+      .admin-setup-panel { display: none !important; }
       @page { size: A4; margin: 10mm; }
       body { padding: 0 !important; background: #fff !important; }
       body.is-printing-results * { visibility: hidden; }
@@ -1269,6 +1353,21 @@
     </div>
   </header>
 
+  <div id="adminSetupPanel" class="admin-setup-panel no-print" hidden>
+    <div class="admin-setup-inner">
+      <div class="admin-setup-head">
+        <strong id="adminSetupTitle">시트 구성 미리보기</strong>
+        <span class="admin-setup-meta" id="adminSetupMeta"></span>
+      </div>
+      <p class="admin-setup-desc">카테고리별 분석 결과를 확인하고, 메인 조회 화면에 표시할 항목을 선택한 뒤 등록하세요.</p>
+      <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
+      <div class="admin-setup-actions">
+        <button type="button" class="admin-btn admin-btn-primary" id="adminSetupConfirm">메인에 등록</button>
+        <a href="admin.html" class="admin-btn">관리자로 돌아가기</a>
+      </div>
+    </div>
+  </div>
+
   <div class="app-layout no-print" id="appLayout">
     <main class="app-main">
       <div id="homePanel" class="search-container">
@@ -1364,7 +1463,10 @@
   const DEFAULT_RESPONSE_SHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
   const SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
   const ADMIN_SESSION_KEY = "school-admin-session-v1";
-  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  const ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
+  if (new URLSearchParams(location.search).get("adminSetup") !== "1") {
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  }
   const PROFILE_PATTERN = /\[(\d+)반\]\s*\[(\d+)\]\s*\[([^\]]+)\]/;
 
   const CLASS_ALIASES = ["반", "class", "학급", "클래스", "반명"];
@@ -2521,6 +2623,8 @@
 
   async function launchSheetAnalysis(entry, triggerBtn) {
     if (analysisInFlight) return;
+    adminSetupMode = false;
+    currentLaunchEntry = entry || null;
     var errorEl = document.getElementById("error");
     if (errorEl) errorEl.hidden = true;
     document.getElementById("results").classList.remove("visible");
@@ -2571,17 +2675,287 @@
   }
   var activeSheetView = null;
   var activeSubjectView = null;
+  var currentLaunchEntry = null;
+  var adminSetupMode = false;
+  var adminSetupLabel = "";
+  var adminSetupUrl = "";
+  var adminSetupCategories = [];
+  var adminSetupEditId = null;
   var TEACHER_MESSAGE_TITLE = "담임 선생님께 전하는 한마디";
-  var SUBJECT_FILTER_OPTIONS = [
-    { id: "all", label: "모든 과목" },
-    { id: "국어", label: "국어" },
-    { id: "수학", label: "수학" },
-    { id: "영어", label: "영어" },
-    { id: "한국사", label: "한국사" },
-    { id: "통합사회", label: "통합사회" },
-    { id: "통합과학", label: "통합과학" },
-    { id: "teacher", label: "담임선생님께!" },
+  var DEFAULT_SUBJECT_FILTER_OPTIONS = [
+    { id: "all", label: "모든 과목", enabled: true },
+    { id: "국어", label: "국어", enabled: true },
+    { id: "수학", label: "수학", enabled: true },
+    { id: "영어", label: "영어", enabled: true },
+    { id: "한국사", label: "한국사", enabled: true },
+    { id: "통합사회", label: "통합사회", enabled: true },
+    { id: "통합과학", label: "통합과학", enabled: true },
+    { id: "teacher", label: "담임선생님께!", enabled: true },
   ];
+
+  function cloneCategoryOptions(list) {
+    return (list || []).map(function (opt) {
+      return { id: opt.id, label: opt.label, enabled: opt.enabled !== false };
+    });
+  }
+
+  function slugCategoryId(title) {
+    return (
+      "cat-" +
+      String(title || "응답")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9가-힣\-]/g, "")
+        .slice(0, 40)
+    );
+  }
+
+  function matchCategoryIdForTitle(title) {
+    var t = simplifySectionTitle(title || "");
+    if (!t) return null;
+    if (t === TEACHER_MESSAGE_TITLE) return "teacher";
+    var known = ["국어", "수학", "영어", "한국사", "통합사회", "통합과학"];
+    for (var i = 0; i < known.length; i++) {
+      if (t === known[i] || t.indexOf(known[i]) >= 0) return known[i];
+    }
+    return slugCategoryId(t);
+  }
+
+  function deriveCategoriesFromAnalysis(multi) {
+    var categories = cloneCategoryOptions(DEFAULT_SUBJECT_FILTER_OPTIONS);
+    var found = {};
+    (multi && multi.sheets ? multi.sheets : []).forEach(function (sheet) {
+      (sheet.rows || []).forEach(function (row) {
+        (row.sections || []).forEach(function (sec) {
+          if (!isMeaningfulSection(sec)) return;
+          var title = simplifySectionTitle(sec.title || "");
+          if (!title) return;
+          found[title] = (found[title] || 0) + 1;
+        });
+      });
+    });
+    categories.forEach(function (cat) {
+      if (cat.id === "all") {
+        cat.enabled = true;
+        return;
+      }
+      cat.enabled = false;
+      for (var title in found) {
+        if (!found.hasOwnProperty(title)) continue;
+        var matchedId = matchCategoryIdForTitle(title);
+        if (matchedId === cat.id) cat.enabled = true;
+      }
+    });
+    for (var titleKey in found) {
+      if (!found.hasOwnProperty(titleKey)) continue;
+      var id = matchCategoryIdForTitle(titleKey);
+      if (categories.some(function (c) { return c.id === id; })) continue;
+      categories.push({
+        id: id,
+        label: titleKey,
+        enabled: true,
+      });
+    }
+    var enabledCount = categories.filter(function (c) {
+      return c.enabled && c.id !== "all";
+    }).length;
+    if (!enabledCount) {
+      categories.forEach(function (c) {
+        if (c.id !== "all") c.enabled = true;
+      });
+    }
+    return categories;
+  }
+
+  function getSubjectFilterOptions() {
+    if (adminSetupMode && adminSetupCategories.length) {
+      return adminSetupCategories.filter(function (opt) {
+        return opt.enabled !== false;
+      });
+    }
+    if (currentLaunchEntry && currentLaunchEntry.categories && currentLaunchEntry.categories.length) {
+      var enabled = currentLaunchEntry.categories.filter(function (opt) {
+        return opt.enabled !== false;
+      });
+      if (enabled.length) return enabled;
+    }
+    return DEFAULT_SUBJECT_FILTER_OPTIONS;
+  }
+
+  function renderAdminCategoryConfig() {
+    var box = document.getElementById("adminCategoryConfig");
+    if (!box) return;
+    box.innerHTML = adminSetupCategories
+      .map(function (cat) {
+        var locked = cat.id === "all";
+        return (
+          '<label class="admin-cat-chip' +
+          (locked ? " admin-cat-chip--locked" : "") +
+          '"><input type="checkbox" data-cat-id="' +
+          esc(cat.id) +
+          '" ' +
+          (cat.enabled ? "checked" : "") +
+          (locked ? " disabled" : "") +
+          " /> " +
+          esc(cat.label) +
+          "</label>"
+        );
+      })
+      .join("");
+    box.querySelectorAll("input[data-cat-id]").forEach(function (input) {
+      input.addEventListener("change", function () {
+        var id = input.getAttribute("data-cat-id");
+        var cat = adminSetupCategories.find(function (c) {
+          return c.id === id;
+        });
+        if (!cat || cat.id === "all") return;
+        cat.enabled = input.checked;
+        if (
+          !adminSetupCategories.some(function (c) {
+            return c.enabled && c.id !== "all";
+          })
+        ) {
+          cat.enabled = true;
+          input.checked = true;
+          alert("최소 하나의 카테고리를 선택해 주세요.");
+          return;
+        }
+        var opts = getSubjectFilterOptions();
+        if (
+          !opts.some(function (o) {
+            return o.id === activeSubjectView;
+          })
+        ) {
+          activeSubjectView = "all";
+        }
+        renderResults(getActiveAnalysis(), parseSpreadsheetId(adminSetupUrl), lastMultiResult);
+      });
+    });
+  }
+
+  function confirmAdminSetup() {
+    if (!adminSetupLabel || !adminSetupUrl) return;
+    if (
+      !adminSetupCategories.some(function (c) {
+        return c.enabled && c.id !== "all";
+      })
+    ) {
+      alert("표시할 카테고리를 하나 이상 선택해 주세요.");
+      return;
+    }
+    var registry = loadSheetRegistry();
+    var classNum = parseClassNumberFromLabel(adminSetupLabel);
+    var preferredTab = classNum
+      ? classNum + "반"
+      : lastMultiResult && lastMultiResult.sheets[0]
+        ? lastMultiResult.sheets[0].sheetName
+        : null;
+    var payload = {
+      label: adminSetupLabel,
+      url: adminSetupUrl,
+      tab: preferredTab,
+      categories: adminSetupCategories.map(function (c) {
+        return { id: c.id, label: c.label, enabled: c.enabled !== false };
+      }),
+    };
+    if (adminSetupEditId) {
+      var idx = registry.findIndex(function (item) {
+        return item.id === adminSetupEditId;
+      });
+      if (idx < 0) {
+        alert("수정할 시트를 찾을 수 없습니다.");
+        return;
+      }
+      registry[idx] = Object.assign({}, registry[idx], payload);
+    } else {
+      registry.push(
+        Object.assign(
+          {
+            id: "sheet-" + Date.now(),
+          },
+          payload
+        )
+      );
+    }
+    saveSheetRegistry(registry);
+    sessionStorage.removeItem(ADMIN_SETUP_DRAFT_KEY);
+    location.href = "admin.html";
+  }
+
+  async function launchAdminSetup(label, url) {
+    if (analysisInFlight) return;
+    adminSetupMode = true;
+    adminSetupLabel = label;
+    adminSetupUrl = url;
+    currentLaunchEntry = null;
+    document.body.classList.add("admin-setup-mode");
+    var setupPanel = document.getElementById("adminSetupPanel");
+    if (setupPanel) setupPanel.hidden = false;
+    var titleEl = document.getElementById("adminSetupTitle");
+    var metaEl = document.getElementById("adminSetupMeta");
+    if (titleEl) {
+      titleEl.textContent =
+        (adminSetupEditId ? "[수정] " : "") + label + " · 시트 구성 미리보기";
+    }
+    if (metaEl) metaEl.textContent = url;
+    var confirmBtn = document.getElementById("adminSetupConfirm");
+    if (confirmBtn) {
+      confirmBtn.textContent = adminSetupEditId ? "구성 저장" : "메인에 등록";
+    }
+    showResultsView();
+
+    var errorEl = document.getElementById("error");
+    if (errorEl) errorEl.hidden = true;
+    document.getElementById("results").classList.remove("visible");
+    document.getElementById("results").innerHTML = "";
+    teardownScrollStudentTracker();
+    setFabStackVisible(false);
+    analysisInFlight = true;
+
+    try {
+      var id = parseSpreadsheetId(url);
+      var sheetInputs = await fetchAllSheetsGviz(id);
+      var masterRoster = await fetchClassRosterFromMaster();
+      var hasData = sheetInputs.some(function (s) {
+        return s.values && s.values.length;
+      });
+      if (!hasData) throw new Error("시트에 데이터가 없습니다. 공개 공유 설정을 확인하세요.");
+      sheetsData[id] = sheetInputs;
+      lastMultiResult = analyzeAllSheets(sheetInputs, masterRoster);
+      var draftRaw = sessionStorage.getItem(ADMIN_SETUP_DRAFT_KEY);
+      var draft = null;
+      try {
+        if (draftRaw) draft = JSON.parse(draftRaw);
+      } catch (e) { /* ignore */ }
+      if (draft && draft.categories && draft.categories.length) {
+        adminSetupCategories = cloneCategoryOptions(draft.categories);
+      } else {
+        adminSetupCategories = deriveCategoriesFromAnalysis(lastMultiResult);
+      }
+      renderAdminCategoryConfig();
+      var classNum = parseClassNumberFromLabel(label);
+      activeSheetView = classNum
+        ? resolvePreferredSheetTab(
+            lastMultiResult.sheets.map(function (s) {
+              return { sheetName: s.sheetName };
+            }),
+            classNum + "반"
+          )
+        : lastMultiResult.sheets[0]
+          ? lastMultiResult.sheets[0].sheetName
+          : null;
+      activeSubjectView = "all";
+      renderResults(getActiveAnalysis(), id, lastMultiResult);
+      setFabStackVisible(true);
+      document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      alert(err.message || "시트 분석에 실패했습니다.");
+      location.href = "admin.html";
+    } finally {
+      analysisInFlight = false;
+    }
+  }
 
   function esc(s) {
     var d = document.createElement("div");
@@ -2608,14 +2982,21 @@
     if (!subjectId || subjectId === "all") return !isTeacherMessageSection(sec);
     if (isTeacherMessageSection(sec)) return false;
     var title = simplifySectionTitle(sec.title || "");
+    if (matchCategoryIdForTitle(sec.title || "") === subjectId) return true;
     if (title === subjectId) return true;
     if (title.indexOf(subjectId) >= 0) return true;
+    var catOpt = getSubjectFilterOptions().find(function (o) {
+      return o.id === subjectId;
+    });
+    if (catOpt && catOpt.label && (title === catOpt.label || title.indexOf(catOpt.label) >= 0)) {
+      return true;
+    }
     return false;
   }
 
   function renderSubjectTabsOnly() {
     var html = '<div class="subject-tabs" role="tablist" aria-label="과목 필터">';
-    SUBJECT_FILTER_OPTIONS.forEach(function (opt) {
+    getSubjectFilterOptions().forEach(function (opt) {
       var active = activeSubjectView === opt.id ? " active" : "";
       html +=
         '<button type="button" class="subject-tab' +
@@ -2931,8 +3312,14 @@
     var homePanel = document.getElementById("homePanel");
     var results = document.getElementById("results");
     var errorEl = document.getElementById("error");
+    if (!adminSetupMode) {
+      document.body.classList.remove("admin-setup-mode");
+      var setupPanel = document.getElementById("adminSetupPanel");
+      if (setupPanel) setupPanel.hidden = true;
+    }
     activeSheetView = null;
     activeSubjectView = null;
+    if (!adminSetupMode) currentLaunchEntry = null;
     if (errorEl) errorEl.hidden = true;
     if (homePanel) homePanel.hidden = false;
     if (results) {
@@ -3061,8 +3448,52 @@
 
   renderSheetButtonGrid();
 
+  document.getElementById("adminSetupConfirm").addEventListener("click", function () {
+    confirmAdminSetup();
+  });
+
+  (function initAdminSetupFromQuery() {
+    var params = new URLSearchParams(location.search);
+    if (params.get("adminSetup") !== "1") return;
+    var draft = null;
+    try {
+      var raw = sessionStorage.getItem(ADMIN_SETUP_DRAFT_KEY);
+      if (raw) draft = JSON.parse(raw);
+    } catch (err) { /* ignore */ }
+    var label = params.get("label") || (draft && draft.label) || "새 시트";
+    var url = params.get("url") || (draft && draft.url) || "";
+    if (!url) {
+      alert("시트 주소가 없습니다. 관리자에서 다시 조회해 주세요.");
+      location.href = "admin.html";
+      return;
+    }
+    if (draft && draft.ts && Date.now() - draft.ts > 2 * 60 * 60 * 1000) {
+      alert("미리보기 세션이 만료되었습니다. 관리자에서 다시 조회해 주세요.");
+      sessionStorage.removeItem(ADMIN_SETUP_DRAFT_KEY);
+      location.href = "admin.html";
+      return;
+    }
+    adminSetupEditId = draft && draft.editId ? draft.editId : null;
+    sessionStorage.setItem(
+      ADMIN_SETUP_DRAFT_KEY,
+      JSON.stringify({
+        label: label,
+        url: url,
+        ts: Date.now(),
+        editId: adminSetupEditId,
+        categories: draft && draft.categories ? draft.categories : null,
+      })
+    );
+    if (history.replaceState) {
+      history.replaceState(null, "", "index.html?adminSetup=1");
+    }
+    launchAdminSetup(label, url);
+  })();
+
   (function openSheetFromQuery() {
-    var openId = new URLSearchParams(location.search).get("open");
+    var params = new URLSearchParams(location.search);
+    if (params.get("adminSetup") === "1") return;
+    var openId = params.get("open");
     if (!openId) return;
     var entry =
       findRegistryEntry(openId) ||
