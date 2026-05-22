@@ -2,219 +2,320 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <script>
+  (function () {
+    var k = "school-theme-v1";
+    var t = localStorage.getItem(k);
+    if (t !== "light" && t !== "dark") {
+      t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>2026 남악고등학교 1학년 설문 결과</title>
-  <!-- ui-version: 20260522-survey-home-v2 -->
+  <!-- ui-version: 20260522-survey-grade-theme -->
   <link rel="canonical" href="https://furss123.github.io/survey/" />
+  <link rel="icon" href="assets/namak-logo.png" type="image/png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
     * { box-sizing: border-box; }
     :root {
-      --bg-page: #eef2f6;
-      --bg-surface: #ffffff;
-      --bg-muted: #f8fafc;
+      --school-navy: #1e3a5f;
+      --school-navy-dark: #0f2440;
+      --school-navy-light: #3d6b9e;
+      --school-accent: #c4a035;
+      --school-accent-soft: #faf6eb;
+      --school-bg: #eef2f7;
+      --school-card: #ffffff;
+      --school-border: #d4dce8;
+      --school-border-light: #e8edf4;
+      --school-text: #1a2332;
+      --school-muted: #64748b;
+      --school-success: #0f766e;
+      --school-danger: #b91c1c;
+      --shadow-xs: 0 1px 2px rgba(15, 36, 64, 0.04);
+      --shadow-sm: 0 2px 8px rgba(15, 36, 64, 0.06);
+      --shadow-md: 0 8px 24px rgba(15, 36, 64, 0.08);
+      --shadow-lg: 0 16px 40px rgba(15, 36, 64, 0.1);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --content-max: 980px;
+      --content-pad: 20px;
+      --text-xs: 0.75rem;
+      --text-sm: 0.8125rem;
+      --text-base: 0.875rem;
+      --text-md: 1rem;
+      --text-lg: 1.125rem;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --focus-ring: 0 0 0 3px rgba(61, 107, 158, 0.14);
+      --site-footer-h: 32px;
+      --theme-bg-page: var(--school-bg);
+      --theme-bg-panel: var(--school-card);
+      --theme-bg-muted: #f8fafc;
+      --theme-text: var(--school-text);
+      --theme-text-muted: var(--school-muted);
+      --theme-border: var(--school-border);
+      --theme-border-light: var(--school-border-light);
+      --theme-query-card-bg: #fafbfc;
+      --theme-query-card-hover: #fff;
+      --theme-accent-soft: var(--school-accent-soft);
+      --theme-chrome-btn-bg: rgba(255, 255, 255, 0.98);
+      --theme-chrome-btn-hover: #f0f6fc;
+      --bg-page: var(--theme-bg-page);
+      --bg-surface: var(--theme-bg-panel);
+      --bg-muted: var(--theme-bg-muted);
       --bg-category: #f1f5f9;
-      --bg-accent-soft: #f0fdfa;
-      --bg-accent-banner: #ecfdf5;
-      --border: #e2e8f0;
-      --border-strong: #cbd5e1;
-      --border-accent: #99f6e4;
-      --text: #0f172a;
-      --text-muted: #64748b;
-      --text-subtle: #475569;
-      --text-accent: #115e59;
-      --accent: #0d9488;
-      --accent-hover: #0f766e;
-      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
-      --shadow-md: 0 2px 8px rgba(15, 23, 42, 0.08);
-      --chip-bg: #ffffff;
-      --chip-active-text: #ffffff;
+      --bg-accent-soft: var(--theme-accent-soft);
+      --bg-accent-banner: var(--school-accent-soft);
+      --border: var(--theme-border);
+      --border-strong: var(--theme-border);
+      --border-accent: var(--school-navy-light);
+      --text: var(--theme-text);
+      --text-muted: var(--theme-text-muted);
+      --text-subtle: var(--school-navy-dark);
+      --text-accent: var(--school-navy);
+      --accent: var(--school-navy-light);
+      --accent-hover: var(--school-navy);
+      --chip-bg: var(--theme-bg-panel);
+      --chip-active-text: #fff;
       --badge-done-bg: #ecfdf5;
-      --badge-done-text: #0f766e;
-      --badge-pending-bg: #f8fafc;
-      --badge-pending-text: #64748b;
+      --badge-done-text: var(--school-success);
+      --badge-pending-bg: var(--theme-bg-muted);
+      --badge-pending-text: var(--theme-text-muted);
       --error-bg: #fef2f2;
-      --error-text: #b91c1c;
+      --error-text: var(--school-danger);
       --danger-bg: #fef2f2;
-      --danger-text: #b91c1c;
-      --fab-bg: #ffffff;
-      --fab-print-start: #3b82f6;
-      --fab-print-end: #2563eb;
-      --scrollbar: #cbd5e1;
+      --danger-text: var(--school-danger);
+      --scrollbar: var(--school-border);
     }
     html[data-theme="dark"] {
-      --bg-page: #0b1220;
-      --bg-surface: #1e293b;
-      --bg-muted: #334155;
+      color-scheme: dark;
+      --theme-bg-page: #0f172a;
+      --theme-bg-panel: #1e293b;
+      --theme-bg-muted: #334155;
+      --theme-text: #e2e8f0;
+      --theme-text-muted: #94a3b8;
+      --theme-border: #475569;
+      --theme-border-light: #334155;
+      --theme-query-card-bg: #334155;
+      --theme-query-card-hover: #3d4f66;
+      --theme-accent-soft: rgba(196, 160, 53, 0.12);
+      --theme-chrome-btn-bg: rgba(30, 41, 59, 0.96);
+      --theme-chrome-btn-hover: #334155;
       --bg-category: #2d3f56;
-      --bg-accent-soft: #134e4a;
-      --bg-accent-banner: #115e59;
-      --border: #334155;
-      --border-strong: #475569;
-      --border-accent: #0f766e;
-      --text: #f8fafc;
-      --text-muted: #cbd5e1;
-      --text-subtle: #e2e8f0;
-      --text-accent: #ccfbf1;
-      --accent: #2dd4bf;
-      --accent-hover: #5eead4;
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
-      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
-      --chip-bg: #1e293b;
-      --chip-active-text: #ffffff;
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
+      --focus-ring: 0 0 0 3px rgba(61, 107, 158, 0.35);
       --badge-done-bg: #134e4a;
       --badge-done-text: #99f6e4;
-      --badge-pending-bg: #334155;
-      --badge-pending-text: #e2e8f0;
-      --error-bg: #450a0a;
-      --error-text: #fca5a5;
-      --danger-bg: #450a0a;
-      --danger-text: #fca5a5;
-      --fab-bg: #1e293b;
-      --fab-print-start: #2563eb;
-      --fab-print-end: #1d4ed8;
-      --scrollbar: #475569;
     }
-    html {
-      font-size: calc(14px + 1pt);
-    }
+    html { font-size: calc(14px + 1pt); }
     body {
       margin: 0;
-      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-      font-size: 1rem;
-      line-height: 1.5;
-      color: var(--text);
-      background: var(--bg-page);
-      transition: background 0.2s, color 0.2s;
+      padding: 0 0 var(--site-footer-h);
+      font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      font-size: var(--text-md);
+      line-height: 1.55;
+      color: var(--theme-text);
+      background: var(--theme-bg-page);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.2s ease, color 0.2s ease;
+      -webkit-font-smoothing: antialiased;
     }
-    header {
-      border-bottom: 1px solid var(--border);
-      background: var(--bg-surface);
-      box-shadow: var(--shadow-sm);
+    .site-header {
+      width: 100%;
+      max-width: var(--content-max);
+      margin: var(--space-5) auto 0;
+      padding: 0 var(--content-pad);
     }
-    .header-inner {
+    .site-header-inner {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: var(--space-5);
+      padding: var(--space-5) 28px;
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
     }
-    .header-brand {
+    .site-header-inner::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--school-navy-dark) 0%, var(--school-navy-light) 55%, var(--school-accent) 100%);
+    }
+    .school-logo {
+      position: relative;
+      z-index: 1;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      object-fit: contain;
+      background: #fff;
+      flex-shrink: 0;
+      border: 1px solid var(--school-border-light);
+      box-shadow: var(--shadow-xs);
+    }
+    .site-header-text {
+      position: relative;
+      z-index: 1;
       flex: 1;
       min-width: 0;
       display: flex;
-      align-items: center;
-      gap: 12px;
+      flex-direction: column;
+      gap: clamp(3px, 0.5vw, 5px);
     }
-    .header-logo {
-      flex-shrink: 0;
-      width: 2.75rem;
-      height: 2.75rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .header-logo img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: contain;
-    }
-    .header-title {
-      min-width: 0;
+    .header-school {
       margin: 0;
-      font-size: clamp(0.9rem, 3vw, 1.25rem);
+      font-size: calc(clamp(0.7rem, 1.1vw, 0.75rem) + 4pt);
       font-weight: 700;
-      line-height: 1.35;
-      letter-spacing: -0.02em;
+      color: var(--school-navy);
+    }
+    .site-header-text h1 {
+      margin: 0;
+      font-size: calc(clamp(1.28rem, 2.6vw, 1.48rem) + 4pt);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: var(--school-navy-dark);
+      line-height: 1.18;
+    }
+    .site-header-text h1 .header-em { color: var(--school-navy); }
+    .header-subtitle {
+      display: inline-flex;
+      padding: 3px 9px;
+      font-size: clamp(0.68rem, 1vw, 0.72rem);
+      font-weight: 600;
+      color: var(--school-navy-dark);
+      background: var(--school-accent-soft);
+      border: 1px solid var(--school-border-light);
+      border-radius: 999px;
     }
     .header-home-btn,
     .theme-toggle {
+      position: relative;
+      z-index: 2;
       flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 1px solid rgba(30, 58, 95, 0.22);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--school-navy);
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 2.25rem;
-      height: 2.25rem;
-      padding: 0;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--bg-surface);
-      color: var(--text-subtle);
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      transition: background 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--ease);
     }
-    .header-home-btn {
-      border: none;
-      background: transparent;
-      width: 1.75rem;
-      height: 1.75rem;
-    }
+    .header-home-btn[hidden] { display: none !important; }
     .header-home-btn:hover,
     .theme-toggle:hover {
-      color: var(--accent);
-      border-color: var(--border-accent);
-      background: var(--bg-accent-soft);
+      background: rgba(255, 255, 255, 0.95);
+      border-color: var(--school-navy-light);
+      transform: translateY(-1px);
     }
     .header-home-btn svg,
     .theme-toggle svg {
-      width: 1.25rem;
-      height: 1.25rem;
+      width: 20px;
+      height: 20px;
       display: block;
     }
-    .header-home-btn svg {
-      width: 1.5rem;
-      height: 1.5rem;
+    html[data-theme="dark"] .header-home-btn,
+    html[data-theme="dark"] .theme-toggle {
+      border-color: rgba(226, 232, 240, 0.28);
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
     }
-    .theme-toggle .icon-sun { display: none; }
-    html[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
-    html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
-    .wrap {
-      max-width: 210mm;
+    html[data-theme="dark"] .theme-toggle .theme-icon-moon,
+    html:not([data-theme="dark"]) .theme-toggle .theme-icon-sun { display: none; }
+    .app-layout {
+      flex: 1 0 auto;
       width: 100%;
+      max-width: var(--content-max);
       margin: 0 auto;
-      padding: 20px 16px;
-    }
-    #homePanel[hidden] { display: none !important; }
-    .home-panel { padding: 0; overflow: hidden; }
-    .home-toolbar {
+      padding: var(--space-5) var(--content-pad) var(--space-6);
       display: flex;
-      justify-content: flex-end;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+    .app-main { width: 100%; margin: 0; padding: 0; }
+    #homePanel[hidden] { display: none !important; }
+    .search-container {
+      background: var(--theme-bg-panel);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--theme-border);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .panel-section {
+      padding: var(--space-6) 28px;
+      border-bottom: 1px solid var(--theme-border-light);
+    }
+    .panel-section:last-child { border-bottom: none; }
+    .section-label {
+      display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px 16px 0;
-    }
-    .home-hero {
-      padding: 8px 20px 20px;
-      text-align: center;
-      background: linear-gradient(180deg, var(--bg-accent-soft) 0%, transparent 100%);
-      border-bottom: 1px solid var(--border);
-    }
-    .home-hero-kicker {
-      margin: 0;
-      font-size: 0.75rem;
+      gap: 10px;
+      font-size: var(--text-lg);
       font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--accent-hover);
+      color: var(--school-navy);
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-4);
     }
-    .home-hero-title {
-      margin: 6px 0 0;
-      font-size: clamp(1.25rem, 4vw, 1.5rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      color: var(--text);
+    .section-label::before {
+      content: "";
+      width: 3px;
+      height: 1.1em;
+      border-radius: 3px;
+      background: linear-gradient(180deg, var(--school-accent) 0%, var(--school-navy-light) 100%);
     }
-    .home-hero-desc {
-      margin: 8px 0 0;
-      font-size: 0.875rem;
-      color: var(--text-muted);
+    .section-head-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+    .section-head-row .section-label { margin-bottom: 0; }
+    .query-card {
+      background: var(--theme-query-card-bg);
+      border: 1px solid var(--theme-border-light);
+      border-radius: var(--radius-md);
+      padding: var(--space-4) var(--space-5);
+      box-shadow: var(--shadow-xs);
+    }
+    .query-card-title {
+      font-size: var(--text-base);
+      font-weight: 700;
+      color: var(--school-navy);
+      margin-bottom: var(--space-3);
+    }
+    .query-card-desc {
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+      margin: -4px 0 var(--space-4);
+      line-height: 1.5;
     }
     .sheet-btn-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      padding: 20px;
+      gap: var(--space-3);
     }
     @media (min-width: 520px) {
-      .sheet-btn-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+      .sheet-btn-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
     .sheet-launch-btn {
       display: flex;
@@ -223,22 +324,23 @@
       justify-content: center;
       min-height: 4.5rem;
       padding: 14px 10px;
-      border: 1px solid var(--border-strong);
-      border-radius: 12px;
-      background: var(--bg-surface);
-      color: var(--text);
+      border: 1px solid var(--theme-border-light);
+      border-left: 3px solid var(--school-navy-light);
+      border-radius: var(--radius-md);
+      background: var(--theme-bg-panel);
+      color: var(--school-navy-dark);
+      font-family: inherit;
       font-size: 1.0625rem;
       font-weight: 800;
       letter-spacing: -0.02em;
       cursor: pointer;
-      box-shadow: var(--shadow-sm);
-      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      box-shadow: var(--shadow-xs);
+      transition: transform 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
     }
     .sheet-launch-btn:hover:not(:disabled) {
-      border-color: var(--accent);
-      background: var(--bg-accent-soft);
-      color: var(--accent-hover);
-      box-shadow: var(--shadow-md);
+      border-color: var(--school-navy-light);
+      background: var(--theme-query-card-hover);
+      box-shadow: var(--shadow-sm), 0 0 0 3px rgba(61, 107, 158, 0.08);
       transform: translateY(-1px);
     }
     .sheet-launch-btn:active:not(:disabled) { transform: translateY(0); }
@@ -256,7 +358,7 @@
     .sheet-launch-btn__num {
       font-size: 1.5rem;
       line-height: 1;
-      color: var(--accent);
+      color: var(--school-navy);
     }
     .sheet-launch-btn__suffix {
       margin-top: 2px;
@@ -265,31 +367,16 @@
       color: var(--text-muted);
     }
     .home-empty-hint {
-      margin: 0 20px 20px;
-      padding: 14px 16px;
-      border-radius: 10px;
-      background: var(--bg-muted);
-      border: 1px dashed var(--border-strong);
-      font-size: 0.8125rem;
-      color: var(--text-muted);
+      margin: var(--space-3) 0 0;
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-sm);
+      background: var(--theme-bg-muted);
+      border: 1px dashed var(--theme-border);
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
       text-align: center;
     }
     .home-empty-hint[hidden] { display: none !important; }
-    .home-admin-section {
-      padding: 0 20px 20px;
-    }
-    main { padding: 20px 16px 48px; }
-    .card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-    #homePanel.card {
-      width: 100%;
-      max-width: 100%;
-    }
     .home-admin-gate {
       width: 100%;
       padding: 20px 16px;
@@ -321,8 +408,8 @@
     }
     .home-admin-gate input:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+      border-color: var(--school-navy-light);
+      box-shadow: var(--focus-ring);
     }
     .home-admin-gate .admin-actions {
       margin-top: 14px;
@@ -335,26 +422,27 @@
       text-align: center;
     }
     .admin-entry-btn {
-      padding: 6px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--bg-surface);
-      color: var(--text-muted);
-      font-size: 0.8125rem;
+      padding: 8px 14px;
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-sm);
+      background: var(--theme-bg-panel);
+      color: var(--theme-text-muted);
+      font-family: inherit;
+      font-size: var(--text-sm);
       font-weight: 600;
       cursor: pointer;
+      transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
     }
-    .admin-entry-btn:hover { border-color: var(--border-strong); color: var(--text); }
+    .admin-entry-btn:hover {
+      border-color: var(--school-navy-light);
+      color: var(--school-navy);
+    }
     .admin-entry-btn.is-active {
-      border-color: var(--accent);
-      color: var(--accent-hover);
-      background: var(--bg-accent-soft);
+      border-color: var(--school-navy-light);
+      color: var(--school-navy);
+      background: var(--theme-accent-soft);
     }
-    #adminPanel {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px dashed var(--border);
-    }
+    #adminPanel { margin-top: var(--space-4); }
     #adminPanel[hidden] { display: none !important; }
     .admin-panel-title {
       margin: 0 0 12px;
@@ -384,8 +472,8 @@
     }
     .admin-form input:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+      border-color: var(--school-navy-light);
+      box-shadow: var(--focus-ring);
     }
     .admin-actions {
       margin-top: 12px;
@@ -405,10 +493,14 @@
     }
     .admin-btn-primary {
       border: none;
-      background: var(--accent);
+      background: linear-gradient(180deg, #4a7ab0 0%, var(--school-navy) 100%);
       color: #fff;
+      box-shadow: var(--shadow-xs);
     }
-    .admin-btn-primary:hover { background: var(--accent-hover); }
+    .admin-btn-primary:hover {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
     .admin-btn-danger {
       border-color: var(--danger-text);
       color: var(--danger-text);
@@ -461,12 +553,18 @@
       font-size: 0.875rem;
     }
     #results {
-      margin: 24px auto 0;
       display: none;
       width: 100%;
-      max-width: 210mm;
+      max-width: var(--content-max);
     }
-    #results.visible { display: block; }
+    #results.visible {
+      display: block;
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: var(--space-5) var(--space-4);
+    }
     #results .sheet-banner,
     #results .sheet-tabs,
     #results .subject-tabs,
@@ -698,8 +796,8 @@
     }
     .sheet-tab:hover { border-color: var(--accent); color: var(--accent-hover); }
     .sheet-tab.active {
-      background: var(--accent);
-      border-color: var(--accent);
+      background: linear-gradient(180deg, #4a7ab0 0%, var(--school-navy) 100%);
+      border-color: var(--school-navy);
       color: var(--chip-active-text);
     }
     .sheet-tab .count {
@@ -723,8 +821,8 @@
     }
     .subject-tab:hover { border-color: var(--accent); color: var(--accent-hover); }
     .subject-tab.active {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
+      background: var(--school-navy);
+      border-color: var(--school-navy);
       color: var(--chip-active-text);
     }
     .subject-empty {
@@ -829,17 +927,17 @@
       gap: 7px;
       margin-bottom: 14px;
       padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--theme-border-light);
       font-size: 0.79rem;
       font-weight: 700;
-      color: var(--accent-hover);
+      color: var(--school-navy);
       letter-spacing: -0.01em;
     }
     .view-tracker-head svg {
       width: 18px;
       height: 18px;
       flex-shrink: 0;
-      stroke: var(--accent);
+      stroke: var(--school-navy-light);
     }
     .view-tracker-fields { margin: 0; }
     .view-tracker-row {
@@ -883,99 +981,129 @@
       text-align: center;
     }
     .view-tracker-status[hidden] { display: none !important; }
-    .fab-stack {
+    .page-chrome-actions {
+      --page-chrome-btn-w: 54px;
+      --page-chrome-btn-h: calc(72px - 2mm);
       position: fixed;
-      z-index: 1000;
+      right: max(12px, calc((100vw - var(--content-max)) / 2 - var(--page-chrome-btn-w) - 34px + 11mm));
+      top: 50%;
+      transform: translateY(-50%) translateX(2mm);
+      z-index: 900;
       display: flex;
       flex-direction: column;
-      align-items: flex-end;
-      gap: 7px;
+      gap: 8px;
     }
-    .fab-stack[hidden] { display: none !important; }
-    .fab {
+    .page-chrome-actions[hidden] { display: none !important; }
+    .page-chrome-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .page-scroll-btn,
+    .page-action-btn {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      width: 63px;
-      height: 63px;
-      padding: 4px 5px;
-      border-radius: 8px;
-      border: 1px solid var(--border-strong);
-      background: var(--fab-bg);
-      color: #2563eb;
-      font-size: 0.703125rem;
+      gap: 4px;
+      width: var(--page-chrome-btn-w);
+      height: var(--page-chrome-btn-h);
+      padding: 10px 6px;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: var(--text-xs);
       font-weight: 700;
-      line-height: 1.2;
+      line-height: 1.15;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
-      transition: transform 0.15s, box-shadow 0.15s;
+      box-sizing: border-box;
     }
-    .fab:hover {
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
-      filter: brightness(1.03);
+    .page-scroll-btn svg,
+    .page-action-btn svg {
+      width: 18px;
+      height: 18px;
     }
-    .fab svg {
-      width: 22px;
-      height: 22px;
-      margin-bottom: 4px;
-      flex-shrink: 0;
+    .page-scroll-btn {
+      border: 1px solid var(--theme-border);
+      background: var(--theme-chrome-btn-bg);
+      color: var(--school-navy-light);
+      box-shadow: var(--shadow-sm);
     }
-    .fab-top,
-    .fab-bottom {
-      background: var(--fab-bg);
-      border-color: var(--border-strong);
-      color: #2563eb;
+    .page-scroll-btn:hover {
+      background: var(--theme-chrome-btn-hover);
+      border-color: var(--school-navy-light);
+      transform: translateY(-1px);
     }
-    .fab-print {
+    .page-action-btn {
       border: none;
-      background: linear-gradient(180deg, var(--fab-print-start) 0%, var(--fab-print-end) 100%);
       color: #fff;
+      background: linear-gradient(180deg, #4a7ab0 0%, var(--school-navy) 100%);
+      box-shadow: 0 4px 14px rgba(30, 58, 95, 0.18);
     }
-    .fab-print svg { stroke: #fff; }
-    @media (min-width: 1240px) {
+    .page-action-btn:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+    .site-footer {
+      width: 100%;
+      margin-top: auto;
+      flex-shrink: 0;
+      background: var(--theme-bg-panel);
+      border-top: 1px solid var(--theme-border);
+      box-shadow: 0 -2px 10px rgba(15, 36, 64, 0.05);
+    }
+    #siteFooterRoot {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 850;
+    }
+    .site-footer-inner {
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: 3px var(--content-pad);
+      font-size: 0.78rem;
+      color: var(--theme-text-muted);
+      text-align: center;
+    }
+    @media (min-width: 1100px) {
       .view-tracker:not([hidden]) {
-        left: max(12px, calc(50vw - 105mm - 5mm - 170px));
+        left: max(12px, calc((100vw - var(--content-max)) / 2 - 190px));
         top: 50%;
         right: auto;
-        transform: translateY(-50%);
-      }
-      .fab-stack {
-        left: calc(50vw + 105mm + 5mm);
-        right: auto;
-        top: 50%;
-        bottom: auto;
         transform: translateY(-50%);
       }
     }
-    @media (max-width: 1239px) {
+    @media (max-width: 1099px) {
       .view-tracker { display: none !important; }
-      .fab-stack {
-        left: auto !important;
-        right: 12px !important;
-        bottom: 12px !important;
-        top: auto !important;
-        transform: none !important;
-      }
     }
-    @media (max-width: 640px) {
-      .fab-stack {
-        gap: 7px;
+    @media (max-width: 720px) {
+      .site-header { margin-top: var(--space-4); }
+      .site-header-inner {
+        flex-wrap: wrap;
+        padding: var(--space-4) var(--space-5);
       }
-      .fab {
-        width: 56px;
-        height: 56px;
+      .school-logo { width: 64px; height: 64px; }
+      .panel-section { padding: var(--space-5) var(--space-4); }
+      .page-chrome-actions {
+        right: calc(10px + 11mm);
+        transform: translateX(2mm);
+        --page-chrome-btn-w: 52px;
+        --page-chrome-btn-h: calc(68px - 2mm);
       }
     }
     @media print {
       @page { size: A4; margin: 12mm; }
-      .fab-stack,
+      .page-chrome-actions,
       .view-tracker,
       #homePanel,
       #adminPanel,
-      .home-toolbar { display: none !important; }
-      .wrap,
-      #results { max-width: 100%; }
+      .site-header,
+      #siteFooterRoot { display: none !important; }
+      body { padding: 0; }
+      .app-layout { max-width: 100%; padding: 0; }
+      #results,
+      #results.visible { display: block !important; max-width: 100%; border: none; box-shadow: none; padding: 0; }
       .student-cards-list {
         display: block;
       }
@@ -990,80 +1118,80 @@
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap header-inner">
-      <button type="button" class="header-home-btn" id="headerHomeBtn" aria-label="홈" title="처음 화면">
+  <header class="site-header no-print">
+    <div class="site-header-inner">
+      <button type="button" class="header-home-btn no-print" id="headerHomeBtn" hidden aria-label="홈" title="처음 화면">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M3 10.5L12 4l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 4l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z"/>
         </svg>
       </button>
-      <div class="header-brand">
-        <span class="header-logo">
-          <img src="assets/namak-logo.png" width="44" height="44" alt="남악고등학교" />
-        </span>
-        <h1 class="header-title">2026 남악고등학교 1학년 설문 결과</h1>
+      <img src="assets/namak-logo.png" alt="남악고등학교" class="school-logo" width="78" height="78">
+      <div class="site-header-text">
+        <p class="header-school">남악고등학교</p>
+        <h1>1학년 <span class="header-em">설문 결과</span> 조회</h1>
+        <p class="header-subline"><span class="header-subtitle">2026학년도 · 구글 시트 연동</span></p>
       </div>
-      <button type="button" class="theme-toggle" id="themeToggle" aria-label="다크 모드" title="다크 모드">
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M21 14.5A8.5 8.5 0 1112.5 4 7 7 0 0021 14.5z"/>
+      <button type="button" class="theme-toggle no-print" id="themeToggle" aria-label="다크 모드" title="다크 모드">
+        <svg class="theme-toggle-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
         </svg>
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <circle cx="12" cy="12" r="4"/>
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        <svg class="theme-toggle-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
         </svg>
       </button>
     </div>
   </header>
 
-  <main class="wrap">
-    <section id="homePanel" class="card home-panel">
-      <div class="home-toolbar">
-        <button type="button" class="admin-entry-btn" id="adminEntryBtn" aria-expanded="false" aria-controls="homeAdminGate adminPanel">관리자</button>
-      </div>
-      <div class="home-hero">
-        <p class="home-hero-kicker">2026학년도 · 1학년</p>
-        <h2 class="home-hero-title">설문 결과 조회</h2>
-        <p class="home-hero-desc">확인할 학급을 선택하세요. 선택 후 과목·인쇄는 결과 화면에서 이용할 수 있습니다.</p>
-      </div>
-      <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="학급별 설문 결과"></div>
-      <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 시트가 없습니다. 관리자 로그인 후 시트를 추가해 주세요.</p>
-
-      <div class="home-admin-section">
-        <div id="homeAdminGate" class="home-admin-gate" hidden>
-          <p class="admin-panel-title">관리자 비밀번호</p>
-          <label for="homeAdminPasswordInput">비밀번호를 입력하세요</label>
-          <input type="password" id="homeAdminPasswordInput" autocomplete="current-password" placeholder="관리자 비밀번호" />
-          <div class="admin-actions">
-            <button type="button" class="admin-btn admin-btn-primary" id="homeAdminLoginBtn">확인</button>
+  <div class="app-layout no-print" id="appLayout">
+    <main class="app-main">
+      <div id="homePanel" class="search-container">
+        <section class="panel-section">
+          <div class="section-label">설문 결과 조회</div>
+          <div class="query-card">
+            <div class="query-card-title">학급별 조회</div>
+            <p class="query-card-desc">확인할 학급을 선택하세요. 선택 후 과목 필터·인쇄는 결과 화면에서 이용할 수 있습니다.</p>
+            <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="학급별 설문 결과"></div>
+            <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 시트가 없습니다. 관리자 로그인 후 시트를 추가해 주세요.</p>
           </div>
-          <p class="home-admin-hint">로그인 후 시트 등록·삭제가 가능합니다.</p>
-        </div>
-
-        <p id="error" class="error" hidden></p>
-
-        <div id="adminPanel" hidden>
-        <p class="admin-panel-title">시트 등록 (관리자)</p>
-        <form id="adminSheetForm" class="admin-form">
-          <label for="adminSheetLabel">시트 이름 (버튼 표시)</label>
-          <input type="text" id="adminSheetLabel" placeholder="예: 1반, 상담 3월" required />
-          <label for="adminSheetUrl">구글 시트 주소</label>
-          <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
-          <label for="adminSheetTab">기본 탭 (선택)</label>
-          <input type="text" id="adminSheetTab" placeholder="예: 1반 (비우면 첫 탭)" />
-          <label for="adminNewPassword">관리자 비밀번호 변경 (선택)</label>
-          <input type="password" id="adminNewPassword" autocomplete="new-password" />
-          <div class="admin-actions">
-            <button type="submit" class="admin-btn admin-btn-primary">시트 추가</button>
-            <button type="button" class="admin-btn" id="adminLogoutBtn">로그아웃</button>
+        </section>
+        <section class="panel-section panel-section--admin">
+          <div class="section-head-row">
+            <div class="section-label section-label--inline">시트 관리</div>
+            <button type="button" class="admin-entry-btn" id="adminEntryBtn" aria-expanded="false" aria-controls="homeAdminGate adminPanel">관리자</button>
           </div>
-        </form>
-        <ul id="adminRegistryList" class="admin-registry-list" aria-label="등록된 시트"></ul>
-        </div>
+          <div id="homeAdminGate" class="home-admin-gate" hidden>
+            <p class="admin-panel-title">관리자 비밀번호</p>
+            <label for="homeAdminPasswordInput">비밀번호를 입력하세요</label>
+            <input type="password" id="homeAdminPasswordInput" autocomplete="current-password" placeholder="관리자 비밀번호" />
+            <div class="admin-actions">
+              <button type="button" class="admin-btn admin-btn-primary" id="homeAdminLoginBtn">확인</button>
+            </div>
+            <p class="home-admin-hint">로그인 후 시트 등록·삭제가 가능합니다.</p>
+          </div>
+          <p id="error" class="error" hidden></p>
+          <div id="adminPanel" hidden>
+            <p class="admin-panel-title">시트 등록 (관리자)</p>
+            <form id="adminSheetForm" class="admin-form">
+              <label for="adminSheetLabel">시트 이름 (버튼 표시)</label>
+              <input type="text" id="adminSheetLabel" placeholder="예: 1반, 상담 3월" required />
+              <label for="adminSheetUrl">구글 시트 주소</label>
+              <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
+              <label for="adminSheetTab">기본 탭 (선택)</label>
+              <input type="text" id="adminSheetTab" placeholder="예: 1반 (비우면 첫 탭)" />
+              <label for="adminNewPassword">관리자 비밀번호 변경 (선택)</label>
+              <input type="password" id="adminNewPassword" autocomplete="new-password" />
+              <div class="admin-actions">
+                <button type="submit" class="admin-btn admin-btn-primary">시트 추가</button>
+                <button type="button" class="admin-btn" id="adminLogoutBtn">로그아웃</button>
+              </div>
+            </form>
+            <ul id="adminRegistryList" class="admin-registry-list" aria-label="등록된 시트"></ul>
+          </div>
+        </section>
       </div>
-    </section>
-
-    <div id="results"></div>
-  </main>
+      <div id="results" class="results-panel"></div>
+    </main>
+  </div>
 
   <aside class="view-tracker" id="viewTracker" hidden aria-live="polite" aria-label="현재 보고 있는 학생">
     <div class="view-tracker-head">
@@ -1107,26 +1235,32 @@
     <p class="view-tracker-status" id="viewTrackerStatus" hidden>미참여</p>
   </aside>
 
-  <nav class="fab-stack" id="fabStack" aria-label="페이지 도구" hidden>
-    <button type="button" class="fab fab-top" id="fabTop" title="맨 위로">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-        <path d="M6 15l6-6 6 6"/>
-      </svg>
-      맨 위
-    </button>
-    <button type="button" class="fab fab-bottom" id="fabBottom" title="맨 아래로">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-        <path d="M6 9l6 6 6-6"/>
-      </svg>
-      맨 아래
-    </button>
-    <button type="button" class="fab fab-print" id="fabPrint" title="인쇄">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M6 14h12v7H6z"/>
-      </svg>
-      인쇄
-    </button>
-  </nav>
+  <aside class="page-chrome-actions no-print" id="pageChromeActions" aria-label="페이지 도구" hidden>
+    <nav class="page-chrome-nav" aria-label="페이지 도구">
+      <button type="button" class="page-scroll-btn" id="fabTop" title="맨 위로">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 15l6-6 6 6"/>
+        </svg>
+        <span>맨 위</span>
+      </button>
+      <button type="button" class="page-scroll-btn" id="fabBottom" title="맨 아래로">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/>
+        </svg>
+        <span>맨 아래</span>
+      </button>
+      <button type="button" class="page-action-btn" id="fabPrint" title="인쇄">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V3h12v6M6 18H4v-6h16v6h-2M6 14h12v7H6z"/>
+        </svg>
+        <span>인쇄</span>
+      </button>
+    </nav>
+  </aside>
+
+  <footer class="site-footer no-print" id="siteFooterRoot">
+    <div class="site-footer-inner">남악고등학교 1학년 설문 결과 · <span>survey</span></div>
+  </footer>
 
   <script>
 (function () {
@@ -2784,13 +2918,15 @@
   }
 
   function setFabStackVisible(show) {
-    var fab = document.getElementById("fabStack");
-    if (fab) fab.hidden = !show;
+    var chrome = document.getElementById("pageChromeActions");
+    if (chrome) chrome.hidden = !show;
   }
 
   function showResultsView() {
     var homePanel = document.getElementById("homePanel");
+    var homeBtn = document.getElementById("headerHomeBtn");
     if (homePanel) homePanel.hidden = true;
+    if (homeBtn) homeBtn.hidden = false;
     updateViewTracker(null);
   }
 
@@ -2798,11 +2934,13 @@
     var homePanel = document.getElementById("homePanel");
     var results = document.getElementById("results");
     var errorEl = document.getElementById("error");
+    var homeBtn = document.getElementById("headerHomeBtn");
     activeSheetView = null;
     activeSubjectView = null;
     adminGateRequested = false;
     if (errorEl) errorEl.hidden = true;
     if (homePanel) homePanel.hidden = false;
+    if (homeBtn) homeBtn.hidden = true;
     if (results) {
       results.classList.remove("visible");
       results.innerHTML = "";
