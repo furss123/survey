@@ -19,6 +19,8 @@ import pandas as pd
 INVALID_STUDENT_VALUES = {"0", "d", "D", "", "nan", "none", "null", "테스트"}
 CLASS_NAME_RE = re.compile(r"(\d+)\s*반")
 NUM_NAME_RE = re.compile(r"^(\d+)\s+(.+)$")
+SELECTOR_PROFILE_RE = re.compile(r"\[(\d+)반\]\s*\[(\d+)\]\s*\[([^\]]+)\]")
+SELECTOR_CLASS_NUM_NAME_RE = re.compile(r"^(\d+)\s*반\s+(\d+)\s+(.+)$")
 
 # Google Forms 보내기 기본: 1행=카테고리(헤더), B열=학번, C열=이름
 SURVEY_HEADER_ROW_INDEX = 0
@@ -82,18 +84,33 @@ def parse_class_value(value: Any) -> int | None:
     return None
 
 
-def parse_num_name(value: Any) -> tuple[int | None, str | None]:
-    if value is None or (isinstance(value, float) and pd.isna(value)):
-        return None, None
+def parse_student_selector_value(value: Any) -> tuple[int | None, int | None, str | None]:
+    """Google Forms 「번호와 이름을 선택하세요」 셀 파싱."""
+    if is_empty(value):
+        return None, None, None
     text = str(value).strip()
-    if not text:
-        return None, None
+    m = SELECTOR_PROFILE_RE.search(text)
+    if m:
+        return int(m.group(1)), int(m.group(2)), m.group(3).strip()
+    grade, ban, num = parse_student_id(text)
+    if ban is not None and num is not None:
+        return ban, num, None
+    class_m = CLASS_NAME_RE.search(text)
+    ban_hint = int(class_m.group(1)) if class_m else None
+    m = SELECTOR_CLASS_NUM_NAME_RE.match(text)
+    if m:
+        return int(m.group(1)), int(m.group(2)), m.group(3).strip()
     m = NUM_NAME_RE.match(text)
     if m:
-        return int(m.group(1)), m.group(2).strip()
-    if text.isdigit():
-        return int(text), None
-    return None, text
+        return ban_hint, int(m.group(1)), m.group(2).strip()
+    if ban_hint is not None:
+        return ban_hint, None, None
+    return None, None, text
+
+
+def parse_num_name(value: Any) -> tuple[int | None, str | None]:
+    _ban, num, name = parse_student_selector_value(value)
+    return num, name
 
 
 def is_empty(value: Any) -> bool:
@@ -192,11 +209,13 @@ def extract_student_info(row: pd.Series, cols: dict[str, list[str]]) -> dict[str
         ban = ban or parse_class_value(row.get(cols["class"][0]))
 
     for sel_col in cols["student_selector"]:
-        n, nm = parse_num_name(row.get(sel_col))
-        if n is not None:
-            num = num or n
-        if nm and not name:
-            name = nm
+        sel_ban, sel_num, sel_name = parse_student_selector_value(row.get(sel_col))
+        if sel_ban is not None:
+            ban = ban or sel_ban
+        if sel_num is not None:
+            num = num or sel_num
+        if sel_name and not name:
+            name = sel_name
 
     if ban is None and cols["student_id"]:
         sid = row.get(cols["student_id"][0])

@@ -1642,6 +1642,7 @@
   const STUDENT_ID_ALIASES = ["학번", "student_id", "학생번호", "studentid"];
   const NUMBER_ALIASES = ["번호", "number", "no", "no."];
   const NAME_ALIASES = ["이름", "name", "성명", "학생"];
+  const STUDENT_SELECTOR_HEADER_HINTS = ["번호와 이름을 선택", "번호와 이름"];
   const ROSTER_NAME_ALIASES = ["이름", "name", "성명", "성함", "studentname", "학생이름"];
   const COMPLETION_ALIASES = ["완료", "제출", "응답", "status", "상태", "completed", "done", "체크"];
   const CONTENT_ALIASES = ["상담", "내용", "응답", "메모", "비고", "고민", "주제", "프로필", "기록", "comment", "note"];
@@ -2177,11 +2178,88 @@
     return { grade: null, 반: null, 번호: num, 학번: "" };
   }
 
+  function isStudentSelectorHeader(name) {
+    var n = normalizeHeader(name);
+    if (!n) return false;
+    for (var i = 0; i < STUDENT_SELECTOR_HEADER_HINTS.length; i++) {
+      if (n.indexOf(normalizeHeader(STUDENT_SELECTOR_HEADER_HINTS[i])) >= 0) return true;
+    }
+    return false;
+  }
+
+  function findStudentSelectorColumnIndices(headerRow) {
+    var indices = [];
+    (headerRow || []).forEach(function (h, idx) {
+      if (isStudentSelectorHeader(h)) indices.push(idx);
+    });
+    return indices;
+  }
+
+  /** Google Forms 「번호와 이름을 선택하세요」 응답 파싱 */
+  function parseStudentSelectorValue(value) {
+    var text = coerceText(value);
+    if (!text) return { 반: null, 번호: null, 이름: null };
+
+    var profile = text.match(PROFILE_PATTERN);
+    if (profile) {
+      return {
+        반: parseInt(profile[1], 10),
+        번호: parseInt(profile[2], 10),
+        이름: profile[3].trim(),
+      };
+    }
+
+    var sidParsed = parseStudentId(text);
+    if (sidParsed.반 != null && sidParsed.번호 != null) {
+      return {
+        반: sidParsed.반,
+        번호: sidParsed.번호,
+        이름: null,
+      };
+    }
+
+    var classMatch = text.match(/(\d+)\s*반/);
+    var ban = classMatch ? parseInt(classMatch[1], 10) : null;
+
+    var triple = text.match(/^(\d+)\s*반\s+(\d+)\s+(.+)$/);
+    if (triple) {
+      return {
+        반: parseInt(triple[1], 10),
+        번호: parseInt(triple[2], 10),
+        이름: triple[3].trim(),
+      };
+    }
+
+    var numName = text.match(/^(\d+)\s+(.+)$/);
+    if (numName) {
+      return {
+        반: ban,
+        번호: parseInt(numName[1], 10),
+        이름: numName[2].trim(),
+      };
+    }
+
+    if (ban != null) return { 반: ban, 번호: null, 이름: null };
+    return { 반: null, 번호: null, 이름: text };
+  }
+
+  function extractStudentFromSelectorCells(raw, selectorIndices) {
+    var merged = { 반: null, 번호: null, 이름: null };
+    (selectorIndices || []).forEach(function (idx) {
+      var parsed = parseStudentSelectorValue(raw[idx]);
+      if (parsed.반 != null && merged.반 == null) merged.반 = parsed.반;
+      if (parsed.번호 != null && merged.번호 == null) merged.번호 = parsed.번호;
+      if (parsed.이름 && !merged.이름) merged.이름 = parsed.이름;
+    });
+    return merged;
+  }
+
   function findSurveyHeaderRowIndex(rawValues) {
     if (!rawValues || !rawValues.length) return SURVEY_HEADER_ROW_INDEX;
     var max = Math.min(10, rawValues.length);
     for (var i = 0; i < max; i++) {
       var headerRow = rawValues[i].map(coerceText);
+      if (findStudentSelectorColumnIndices(headerRow).length) return i;
       if (findColumnIndex(headerRow, STUDENT_ID_ALIASES) >= 0) return i;
       if (findColumnIndex(headerRow, NAME_ALIASES) >= 0) return i;
       if (
@@ -2195,18 +2273,39 @@
     return SURVEY_HEADER_ROW_INDEX;
   }
 
+  function findIdentityColumnIndex(headerRow, aliases, excludeIndices) {
+    var exclude = {};
+    (excludeIndices || []).forEach(function (i) {
+      exclude[i] = true;
+    });
+    var normalized = headerRow.map(normalizeHeader);
+    for (var a = 0; a < aliases.length; a++) {
+      var key = normalizeHeader(aliases[a]);
+      for (var i = 0; i < normalized.length; i++) {
+        if (exclude[i] || isStudentSelectorHeader(headerRow[i])) continue;
+        if (normalized[i] === key || normalized[i].indexOf(key) >= 0) return i;
+      }
+    }
+    return -1;
+  }
+
   function resolveSurveyColumnIndices(headerRow) {
-    var studentIdIdx = findColumnIndex(headerRow, STUDENT_ID_ALIASES);
-    var nameIdx = findColumnIndex(headerRow, NAME_ALIASES);
-    var classIdx = findColumnIndex(headerRow, CLASS_ALIASES);
-    var numberIdx = findColumnIndex(headerRow, NUMBER_ALIASES);
-    var completionIdx = findColumnIndex(headerRow, COMPLETION_ALIASES);
+    var studentSelectorIndices = findStudentSelectorColumnIndices(headerRow);
+    var studentIdIdx = findIdentityColumnIndex(headerRow, STUDENT_ID_ALIASES, studentSelectorIndices);
+    var nameIdx = findIdentityColumnIndex(headerRow, NAME_ALIASES, studentSelectorIndices);
+    var classIdx = findIdentityColumnIndex(headerRow, CLASS_ALIASES, studentSelectorIndices);
+    var numberIdx = findIdentityColumnIndex(headerRow, NUMBER_ALIASES, studentSelectorIndices);
+    var completionIdx = findIdentityColumnIndex(headerRow, COMPLETION_ALIASES, studentSelectorIndices);
 
     if (studentIdIdx < 0 && headerRow.length > SURVEY_COL_STUDENT_ID) {
-      studentIdIdx = SURVEY_COL_STUDENT_ID;
+      if (studentSelectorIndices.indexOf(SURVEY_COL_STUDENT_ID) < 0) {
+        studentIdIdx = SURVEY_COL_STUDENT_ID;
+      }
     }
     if (nameIdx < 0 && headerRow.length > SURVEY_COL_NAME) {
-      nameIdx = SURVEY_COL_NAME;
+      if (studentSelectorIndices.indexOf(SURVEY_COL_NAME) < 0) {
+        nameIdx = SURVEY_COL_NAME;
+      }
     }
     if (numberIdx === studentIdIdx) numberIdx = -1;
     if (classIdx === studentIdIdx || classIdx === nameIdx) classIdx = -1;
@@ -2217,6 +2316,7 @@
       classIdx: classIdx,
       numberIdx: numberIdx,
       completionIdx: completionIdx,
+      studentSelectorIndices: studentSelectorIndices,
     };
   }
 
@@ -2476,15 +2576,40 @@
           ? coerceNumber(raw[cols.numberIdx])
           : sidParsed.번호;
       var nameVal = cols.nameIdx >= 0 ? coerceText(raw[cols.nameIdx]) : "";
+      var fromSelectors = extractStudentFromSelectorCells(
+        raw,
+        cols.studentSelectorIndices
+      );
+      if (!classVal && fromSelectors.반 != null) classVal = fromSelectors.반 + "반";
+      if (numberVal == null && fromSelectors.번호 != null) numberVal = fromSelectors.번호;
+      if (!nameVal && fromSelectors.이름) nameVal = fromSelectors.이름;
+      if (!studentId && fromSelectors.반 != null && fromSelectors.번호 != null) {
+        var gradeHint = sidParsed.grade != null ? sidParsed.grade : 1;
+        studentId = formatStudentIdFromParsed({
+          grade: gradeHint,
+          반: fromSelectors.반,
+          번호: fromSelectors.번호,
+        });
+        if (sidParsed.grade == null) sidParsed.grade = gradeHint;
+        if (sidParsed.반 == null) sidParsed.반 = fromSelectors.반;
+        if (sidParsed.번호 == null) sidParsed.번호 = fromSelectors.번호;
+      }
       var skipCols = [
         cols.classIdx,
         cols.studentIdIdx,
         cols.numberIdx,
         cols.nameIdx,
         cols.completionIdx,
-      ].filter(function (i) {
-        return i >= 0;
+      ]
+        .concat(cols.studentSelectorIndices || [])
+        .filter(function (i) {
+          return i >= 0;
+        });
+      var skipUnique = [];
+      skipCols.forEach(function (i) {
+        if (skipUnique.indexOf(i) < 0) skipUnique.push(i);
       });
+      skipCols = skipUnique;
       var completionRaw =
         cols.completionIdx >= 0
           ? raw[cols.completionIdx]
@@ -3154,6 +3279,7 @@
     if (findColumnIndex([name], NUMBER_ALIASES) >= 0) return true;
     if (findColumnIndex([name], NAME_ALIASES) >= 0) return true;
     if (findColumnIndex([name], COMPLETION_ALIASES) >= 0) return true;
+    if (isStudentSelectorHeader(name)) return true;
     return false;
   }
 
