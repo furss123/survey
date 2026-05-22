@@ -310,20 +310,20 @@
       line-height: 1.5;
     }
     .sheet-btn-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      display: flex;
+      flex-direction: column;
       gap: var(--space-3);
-    }
-    @media (min-width: 520px) {
-      .sheet-btn-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      width: 100%;
     }
     .sheet-launch-btn {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       align-items: center;
-      justify-content: center;
-      min-height: 4.5rem;
-      padding: 14px 10px;
+      justify-content: flex-start;
+      gap: 10px;
+      width: 100%;
+      min-height: 3.25rem;
+      padding: 14px 18px;
       border: 1px solid var(--theme-border-light);
       border-left: 3px solid var(--school-navy-light);
       border-radius: var(--radius-md);
@@ -349,22 +349,21 @@
       cursor: wait;
     }
     .sheet-launch-btn.is-loading .sheet-launch-btn__label { opacity: 0.7; }
-    .sheet-launch-btn--wide {
-      grid-column: 1 / -1;
-      min-height: 3.25rem;
-      font-size: 0.9375rem;
+    .sheet-launch-btn__label {
+      font-size: var(--text-md);
       font-weight: 700;
+      color: var(--school-navy-dark);
     }
     .sheet-launch-btn__num {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       line-height: 1;
       color: var(--school-navy);
+      flex-shrink: 0;
     }
     .sheet-launch-btn__suffix {
-      margin-top: 2px;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--text-muted);
+      font-size: var(--text-md);
+      font-weight: 700;
+      color: var(--school-navy-dark);
     }
     .home-empty-hint {
       margin: var(--space-3) 0 0;
@@ -1146,13 +1145,9 @@
     <main class="app-main">
       <div id="homePanel" class="search-container">
         <section class="panel-section">
-          <div class="section-label">설문 결과 조회</div>
-          <div class="query-card">
-            <div class="query-card-title">학급별 조회</div>
-            <p class="query-card-desc">확인할 학급을 선택하세요. 선택 후 과목 필터·인쇄는 결과 화면에서 이용할 수 있습니다.</p>
-            <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="학급별 설문 결과"></div>
-            <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 시트가 없습니다. 관리자 로그인 후 시트를 추가해 주세요.</p>
-          </div>
+          <div class="section-label">1학년 설문 결과 목록</div>
+          <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="1학년 설문 결과 목록"></div>
+          <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 시트가 없습니다. 관리자 로그인 후 시트를 추가해 주세요.</p>
         </section>
         <section class="panel-section panel-section--admin">
           <div class="section-head-row">
@@ -2381,10 +2376,6 @@
     else sessionStorage.removeItem(ADMIN_SESSION_KEY);
   }
 
-  function isFullWidthSheetLabel(label) {
-    return String(label || "").trim().length > 6;
-  }
-
   function resolvePreferredSheetTab(sheets, preferredTab) {
     if (!sheets || !sheets.length) return null;
     if (!preferredTab) return sheets[0].sheetName;
@@ -2413,7 +2404,6 @@
     grid.removeAttribute("aria-hidden");
     grid.innerHTML = entries
       .map(function (entry) {
-        var wide = isFullWidthSheetLabel(entry.label);
         var classNum = parseClassNumberFromLabel(entry.label);
         var inner = classNum
           ? '<span class="sheet-launch-btn__num">' +
@@ -2421,9 +2411,7 @@
             '</span><span class="sheet-launch-btn__suffix">반</span>'
           : '<span class="sheet-launch-btn__label">' + esc(entry.label) + "</span>";
         return (
-          '<button type="button" class="sheet-launch-btn' +
-          (wide ? " sheet-launch-btn--wide" : "") +
-          '" data-sheet-id="' +
+          '<button type="button" class="sheet-launch-btn" data-sheet-id="' +
           esc(entry.id) +
           '">' +
           inner +
