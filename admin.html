@@ -42,24 +42,58 @@
       --space-6: 24px;
       --focus-ring: 0 0 0 3px rgba(61, 107, 158, 0.14);
       --theme-bg-page: #eef2f7;
-      --theme-bg-panel: #fff;
+      --theme-bg-panel: #ffffff;
       --theme-bg-muted: #f8fafc;
-      --theme-text: #1a2332;
-      --theme-text-muted: #64748b;
-      --theme-border: #d4dce8;
-      --theme-border-light: #e8edf4;
+      --theme-text: #0f172a;
+      --theme-text-muted: #475569;
+      --theme-border: #c5d0de;
+      --theme-border-light: #dce4ee;
+      --theme-heading-strong: var(--school-navy-dark);
+      --theme-heading: var(--school-navy);
+      --theme-heading-accent: var(--school-navy-light);
+      --theme-btn-top: #4a7ab0;
+      --theme-btn-bottom: var(--school-navy);
+      --theme-accent-soft: var(--school-accent-soft);
+      --theme-toggle-bg: rgba(255, 255, 255, 0.92);
+      --theme-toggle-border: rgba(30, 58, 95, 0.28);
+      --theme-toggle-icon: var(--school-navy);
+      --border-strong: #b8c5d6;
+      --border-accent: var(--school-navy-light);
+      --accent: var(--school-navy-light);
+      --accent-hover: var(--school-navy);
+      --chip-active-text: #ffffff;
+      --danger-bg: #fef2f2;
+      --danger-text: var(--school-danger);
       --site-footer-h: 32px;
     }
     html[data-theme="dark"] {
       color-scheme: dark;
-      --theme-bg-page: #0f172a;
-      --theme-bg-panel: #1e293b;
-      --theme-bg-muted: #334155;
-      --theme-text: #e2e8f0;
-      --theme-text-muted: #94a3b8;
-      --theme-border: #475569;
-      --theme-border-light: #334155;
-      --focus-ring: 0 0 0 3px rgba(61, 107, 158, 0.35);
+      --theme-bg-page: #0c1220;
+      --theme-bg-panel: #1a2435;
+      --theme-bg-muted: #2a3649;
+      --theme-text: #f1f5f9;
+      --theme-text-muted: #cbd5e1;
+      --theme-border: #5a6d85;
+      --theme-border-light: #3d4f66;
+      --theme-heading-strong: #f8fafc;
+      --theme-heading: #e8f0fc;
+      --theme-heading-accent: #a8c9f0;
+      --theme-btn-top: #5b8fc9;
+      --theme-btn-bottom: #2d5580;
+      --theme-accent-soft: rgba(212, 176, 72, 0.22);
+      --theme-toggle-bg: #2a3649;
+      --theme-toggle-border: #7b8da8;
+      --theme-toggle-icon: #f8fafc;
+      --border-strong: #6b7f99;
+      --border-accent: #7eb3e8;
+      --accent: #7eb3e8;
+      --accent-hover: #bfdbfe;
+      --chip-active-text: #ffffff;
+      --danger-bg: rgba(185, 28, 28, 0.22);
+      --danger-text: #fca5a5;
+      --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+      --focus-ring: 0 0 0 3px rgba(126, 179, 232, 0.45);
     }
     body {
       margin: 0;
@@ -143,7 +177,7 @@
       font-weight: 700;
       letter-spacing: -0.02em;
       line-height: 1.25;
-      color: var(--school-navy);
+      color: var(--theme-heading);
     }
     .site-header-text h1 {
       margin: 0;
@@ -152,9 +186,9 @@
       font-weight: 800;
       letter-spacing: -0.035em;
       line-height: 1.2;
-      color: var(--school-navy-dark);
+      color: var(--theme-heading-strong);
     }
-    .site-header-text h1 .header-em { color: var(--school-navy); }
+    .site-header-text h1 .header-em { color: var(--theme-heading-accent); }
     .header-subline {
       margin: 0;
       padding: 0;
@@ -169,9 +203,9 @@
       font-weight: 600;
       line-height: 1.25;
       letter-spacing: -0.01em;
-      color: var(--school-navy-dark);
-      background: var(--school-accent-soft);
-      border: 1px solid var(--theme-border-light);
+      color: var(--theme-heading);
+      background: var(--theme-accent-soft);
+      border: 1px solid var(--theme-border);
       border-radius: 999px;
     }
     .theme-toggle {
@@ -181,27 +215,23 @@
       width: 40px;
       height: 40px;
       padding: 0;
-      border: 1px solid rgba(30, 58, 95, 0.22);
+      border: 1px solid var(--theme-toggle-border);
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.75);
-      color: var(--school-navy);
+      background: var(--theme-toggle-bg);
+      color: var(--theme-toggle-icon);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--ease);
+      transition: background 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease), transform 0.2s var(--ease);
     }
     .theme-toggle:hover {
-      background: rgba(255, 255, 255, 0.95);
-      border-color: var(--school-navy-light);
+      background: var(--theme-bg-muted);
+      border-color: var(--border-accent);
+      color: var(--theme-heading-strong);
       transform: translateY(-1px);
     }
-    .theme-toggle svg { width: 20px; height: 20px; display: block; }
-    html[data-theme="dark"] .theme-toggle {
-      border-color: rgba(226, 232, 240, 0.28);
-      background: rgba(255, 255, 255, 0.1);
-      color: #e2e8f0;
-    }
+    .theme-toggle svg { width: 20px; height: 20px; display: block; stroke: currentColor; }
     html[data-theme="dark"] .theme-toggle .theme-icon-moon,
     html:not([data-theme="dark"]) .theme-toggle .theme-icon-sun { display: none; }
     .app-layout {
@@ -218,6 +248,14 @@
       box-shadow: var(--shadow-md);
       overflow: hidden;
     }
+    html[data-theme="dark"] .school-logo {
+      background: #ffffff;
+      border-color: var(--border-strong);
+    }
+    html[data-theme="dark"] .search-container,
+    html[data-theme="dark"] .site-header-inner {
+      border-color: var(--border-strong);
+    }
     .panel-section { padding: var(--space-6) 28px; }
     .section-label {
       display: flex;
@@ -226,7 +264,7 @@
       font-size: calc(var(--text-lg) + 3pt);
       font-weight: 700;
       line-height: 1.35;
-      color: var(--school-navy);
+      color: var(--theme-heading);
       margin-bottom: var(--space-4);
     }
     .section-label::before {
@@ -249,14 +287,14 @@
       margin-top: 12px;
       font-size: var(--text-sm);
       font-weight: 600;
-      color: var(--theme-text);
+      color: var(--theme-text-muted);
     }
     .login-gate label:first-of-type { margin-top: 0; }
     .login-gate input {
       width: 100%;
       margin-top: 6px;
       padding: 11px 12px;
-      border: 1px solid var(--theme-border);
+      border: 1px solid var(--border-strong);
       border-radius: var(--radius-sm);
       background: var(--theme-bg-panel);
       color: var(--theme-text);
@@ -265,7 +303,7 @@
     }
     .login-gate input:focus {
       outline: none;
-      border-color: var(--school-navy-light);
+      border-color: var(--border-accent);
       box-shadow: var(--focus-ring);
     }
     .admin-actions {
@@ -277,32 +315,43 @@
     .admin-btn {
       padding: 9px 16px;
       border-radius: var(--radius-sm);
-      border: 1px solid var(--theme-border);
+      border: 1px solid var(--border-strong);
       background: var(--theme-bg-panel);
       color: var(--theme-text);
       font-family: inherit;
       font-size: var(--text-sm);
       font-weight: 600;
       cursor: pointer;
+      transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
+    }
+    .admin-btn:hover {
+      border-color: var(--border-accent);
+      color: var(--theme-heading);
+      background: var(--theme-bg-muted);
     }
     .admin-btn-primary {
       border: none;
-      background: linear-gradient(180deg, #4a7ab0 0%, var(--school-navy) 100%);
-      color: #fff;
+      background: linear-gradient(180deg, var(--theme-btn-top) 0%, var(--theme-btn-bottom) 100%);
+      color: var(--chip-active-text);
+    }
+    .admin-btn-primary:hover {
+      filter: brightness(1.05);
+      color: var(--chip-active-text);
     }
     .admin-btn-edit {
       border-color: var(--school-accent);
-      color: var(--school-navy-dark);
-      background: var(--school-accent-soft);
+      color: var(--theme-heading-strong);
+      background: var(--theme-accent-soft);
     }
     .admin-btn-edit:hover {
-      border-color: var(--school-navy-light);
-      background: #fff8e6;
+      border-color: var(--border-accent);
+      background: var(--theme-bg-muted);
+      color: var(--theme-heading);
     }
     .admin-btn-danger {
-      border-color: var(--school-danger);
-      color: var(--school-danger);
-      background: #fef2f2;
+      border-color: var(--danger-text);
+      color: var(--danger-text);
+      background: var(--danger-bg);
     }
     .registry-actions {
       margin: 0;
@@ -313,13 +362,14 @@
       margin-top: 12px;
       font-size: var(--text-sm);
       font-weight: 600;
+      color: var(--theme-text-muted);
     }
     .admin-form label:first-child { margin-top: 0; }
     .admin-form input {
       width: 100%;
       margin-top: 6px;
       padding: 9px 11px;
-      border: 1px solid var(--theme-border);
+      border: 1px solid var(--border-strong);
       border-radius: var(--radius-sm);
       background: var(--theme-bg-panel);
       color: var(--theme-text);
@@ -328,7 +378,7 @@
     }
     .admin-form input:focus {
       outline: none;
-      border-color: var(--school-navy-light);
+      border-color: var(--border-accent);
       box-shadow: var(--focus-ring);
     }
     .admin-url-row {
@@ -370,14 +420,15 @@
       justify-content: space-between;
       gap: 10px;
       padding: 12px;
-      border: 1px solid var(--theme-border-light);
+      border: 1px solid var(--border-strong);
       border-radius: var(--radius-md);
       background: var(--theme-bg-muted);
       margin-bottom: 8px;
       font-size: var(--text-sm);
+      color: var(--theme-text);
     }
     .registry-meta { min-width: 0; flex: 1; }
-    .registry-meta strong { display: block; color: var(--theme-text); }
+    .registry-meta strong { display: block; color: var(--theme-heading-strong); }
     .registry-meta span {
       display: block;
       margin-top: 4px;
@@ -424,8 +475,9 @@
       box-shadow: var(--shadow-sm);
     }
     .admin-btn-logout:hover {
-      border-color: var(--school-navy-light);
+      border-color: var(--border-accent);
       background: var(--theme-bg-muted);
+      color: var(--theme-heading);
     }
     @media (min-width: 1020px) {
       .admin-logout-dock {
