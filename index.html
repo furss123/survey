@@ -667,8 +667,12 @@
     #results .sheet-tabs {
       justify-content: flex-start;
     }
-    #results .class-picker-bar {
+    #results .class-picker-bar,
+    #results .category-picker-bar {
       max-width: 100%;
+    }
+    .category-picker-bar {
+      margin: 0 0 16px;
     }
     .survey-view-head {
       display: flex;
@@ -1720,6 +1724,7 @@
       }
       body.is-printing-results .results-sticky-chrome,
       body.is-printing-results .class-picker-bar,
+      body.is-printing-results .category-picker-bar,
       body.is-printing-results .survey-view-head,
       body.is-printing-results .sheet-tabs,
       body.is-printing-results .class-jump-nav,
@@ -4724,7 +4729,12 @@
   }
 
   function rowHasVisibleSections(row) {
-    return (row.sections || []).some(sectionMatchesEnabledCategories);
+    return (row.sections || []).some(function (sec) {
+      if (!isMeaningfulSection(sec)) return false;
+      var view = activeSubjectView || "all";
+      if (view !== "all") return sectionMatchesSubjectFilter(sec, view);
+      return sectionMatchesEnabledCategories(sec);
+    });
   }
 
   function syncAdminCategoriesFromDom() {
@@ -4754,27 +4764,63 @@
     });
   }
 
-  function renderWorkbookSheetTabs() {
-    if (!lastMultiResult) return "";
-    var sheets = lastMultiResult.sheets.filter(function (s) {
-      return !isListSheetTab(s.sheetName);
+  function getCategoryPickerOptions() {
+    var opts = getSubjectFilterOptions().filter(function (o) {
+      return o.enabled !== false;
     });
-    if (sheets.length <= 1) return "";
-    var html = '<div class="sheet-tabs" role="tablist" aria-label="시트 선택">';
-    sheets.forEach(function (sheet) {
-      var active = activeSheetView === sheet.sheetName ? " active" : "";
+    var specific = opts.filter(function (o) {
+      return o.id !== "all";
+    });
+    if (!specific.length) return [];
+    return opts.slice().sort(sortCategoriesByOrder);
+  }
+
+  function ensureActiveSubjectViewValid() {
+    var opts = getCategoryPickerOptions();
+    if (!opts.length) {
+      activeSubjectView = "all";
+      return;
+    }
+    var current = activeSubjectView || "all";
+    if (
+      !opts.some(function (o) {
+        return o.id === current;
+      })
+    ) {
+      activeSubjectView = "all";
+    }
+  }
+
+  function renderCategoryPickerBar() {
+    var options = getCategoryPickerOptions();
+    if (!options.length) return "";
+    ensureActiveSubjectViewValid();
+    var view = activeSubjectView || "all";
+    var items = options.filter(function (o) {
+      return o.id === "all";
+    });
+    options.forEach(function (o) {
+      if (o.id !== "all") items.push(o);
+    });
+    var html =
+      '<nav class="category-picker-bar class-picker-bar" aria-label="카테고리 선택">' +
+      '<div class="class-picker-bar__grid" role="tablist" style="--class-tab-count:' +
+      esc(String(items.length)) +
+      '">';
+    items.forEach(function (opt) {
+      var active = view === opt.id ? " active" : "";
       html +=
-        '<button type="button" class="sheet-tab' +
+        '<button type="button" class="class-select-option category-tab' +
         active +
-        '" data-sheet="' +
-        esc(sheet.sheetName) +
-        '" data-class="" role="tab">' +
-        esc(sheet.sheetName) +
-        '<span class="count">' +
-        esc(String(sheet.summary ? sheet.summary.총응답 : sheet.rows.length)) +
-        "건</span></button>";
+        '" data-category="' +
+        esc(opt.id) +
+        '" role="tab" aria-selected="' +
+        (active ? "true" : "false") +
+        '">' +
+        esc(opt.label) +
+        "</button>";
     });
-    html += "</div>";
+    html += "</div></nav>";
     return html;
   }
 
@@ -5338,13 +5384,11 @@
     var analysis = data || getActiveAnalysis();
     showResultsView();
     setFabStackVisible(true);
-    activeSubjectView = "all";
+    ensureActiveSubjectViewValid();
 
     var pickerHtml = renderClassPickerBar();
     var bodyHtml = renderSurveyViewHeader();
-    if (lastMultiResult) {
-      bodyHtml += renderWorkbookSheetTabs();
-    }
+    bodyHtml += renderCategoryPickerBar();
     if (!sheet) {
       bodyHtml += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
       el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
@@ -5384,17 +5428,17 @@
         showHomeView();
       });
     }
-    el.querySelectorAll(".sheet-tab, .class-select-option").forEach(function (btn) {
+    el.querySelectorAll(".class-select-option").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        var isClassTab = btn.classList.contains("class-tab");
-        activeSheetView = btn.getAttribute("data-sheet");
-        if (isClassTab) {
-          activeClassFilter = btn.getAttribute("data-class") || null;
-        } else {
-          activeClassFilter = null;
-          var tabs = getClassTabsConfig();
-          if (tabs.length) setActiveClassFromTab(tabs[0]);
+        var categoryId = btn.getAttribute("data-category");
+        if (categoryId != null && categoryId !== "") {
+          activeSubjectView = categoryId;
+          renderResults(null, spreadsheetId, lastMultiResult);
+          syncViewUrl();
+          return;
         }
+        activeSheetView = btn.getAttribute("data-sheet");
+        activeClassFilter = btn.getAttribute("data-class") || null;
         renderResults(null, spreadsheetId, lastMultiResult);
         syncViewUrl();
       });
