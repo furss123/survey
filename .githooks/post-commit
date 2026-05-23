@@ -1,0 +1,6 @@
+#!/bin/sh
+# 커밋 직후 origin/index 자동 푸시 (실패해도 커밋은 유지)
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ "$branch" = "index" ]; then
+  git push origin index 2>/dev/null || true
+fi

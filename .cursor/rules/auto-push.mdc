@@ -1,0 +1,27 @@
+---
+description: survey 저장소 변경 후 자동 커밋·푸시
+alwaysApply: true
+---
+
+# 자동 푸시 (survey)
+
+이 프로젝트(`survey`)에서 코드·HTML·스크립트를 수정한 뒤 작업을 마치면 **반드시** 원격에 반영합니다.
+
+## 절차
+
+1. `git status` / `git diff`로 변경 확인
+2. 관련 파일만 `git add`
+3. 변경 목적이 드러나는 한국어 커밋 메시지로 `git commit`
+4. **`git push origin index`** 실행 (GitHub Pages 배포 브랜치)
+5. push 성공 여부 확인 후 사용자에게 공개 URL 안내: https://furss123.github.io/survey/
+
+## 규칙
+
+- 커밋·푸시는 사용자가 별도 요청하지 않아도 이 저장소 작업의 기본 마무리입니다.
+- 비밀·자격증명 파일(`.env` 등)은 커밋하지 않습니다.
+- push 실패 시(인증·네트워크) 원인을 알리고 재시도합니다.
+- PowerShell에서는 `git commit -m` 또는 here-string(`@"..."@`)을 사용합니다.
+
+## Git 경로 (Windows)
+
+필요 시 PATH에 추가: `C:\Program Files\Git\cmd`
