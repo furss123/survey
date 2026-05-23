@@ -808,6 +808,10 @@
       padding-bottom: 2px;
       background: var(--theme-bg-panel);
     }
+    .results-sticky-chrome .survey-view-head {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+    }
     .results-sticky-chrome .class-picker-bar {
       margin: 0;
       position: static;
@@ -5732,19 +5736,23 @@
     }
   }
 
-  function wrapResultsHtml(pickerHtml, bodyHtml) {
-    var picker = pickerHtml || "";
+  function wrapResultsHtml(chromeHtml, bodyHtml) {
+    var chrome = chromeHtml || "";
     var body = bodyHtml || "";
-    if (!picker) return body;
+    if (!chrome) return body;
     return (
       '<div class="results-layout">' +
       '<div class="results-sticky-chrome no-print">' +
-      picker +
+      chrome +
       "</div>" +
       '<div class="results-main">' +
       body +
       "</div></div>"
     );
+  }
+
+  function renderResultsChrome() {
+    return renderSurveyViewHeader() + renderClassPickerBar();
   }
 
   function renderResults(data, spreadsheetId, multi) {
@@ -5756,12 +5764,11 @@
     setFabStackVisible(true);
     ensureActiveSubjectViewValid();
 
-    var pickerHtml = renderClassPickerBar();
-    var bodyHtml = renderSurveyViewHeader();
-    bodyHtml += renderCategoryPickerBar();
+    var chromeHtml = renderResultsChrome();
+    var bodyHtml = renderCategoryPickerBar();
     if (!sheet) {
       bodyHtml += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
-      el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
+      el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
       el.classList.add("visible");
       syncResultsPrintState(el);
       teardownScrollStudentTracker();
@@ -5772,7 +5779,7 @@
     var s = sheet.summary;
     if (!s.총응답 && !(sheet.participation && sheet.participation.missingCount)) {
       bodyHtml += '<p class="student-cards-empty">이 설문에 분석할 데이터가 없습니다.</p>';
-      el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
+      el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
       el.classList.add("visible");
       syncResultsPrintState(el);
       teardownScrollStudentTracker();
@@ -5782,7 +5789,7 @@
 
     bodyHtml += renderClassStudentList(analysis);
 
-    el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
+    el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
     el.classList.add("visible");
     syncResultsPrintState(el);
 
