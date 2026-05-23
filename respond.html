@@ -171,9 +171,10 @@
       <p class="error" id="errorBox" hidden></p>
 
       <div id="stepIdentify">
-        <p class="step-label">1단계 · 반과 번호 선택</p>
+        <p class="step-label">1단계 · 반 선택</p>
         <div class="class-grid" id="classGrid" role="group" aria-label="반 선택"></div>
-        <label class="field" for="studentPick">번호 · 이름</label>
+        <p class="step-label" style="margin-top:14px">2단계 · 번호 · 이름 선택</p>
+        <label class="field" for="studentPick">본인 선택</label>
         <select id="studentPick" disabled>
           <option value="">먼저 반을 선택하세요</option>
         </select>
@@ -183,7 +184,7 @@
       </div>
 
       <div id="stepForm" hidden>
-        <p class="step-label">2단계 · 설문 작성</p>
+        <p class="step-label">3단계 · 설문 작성</p>
         <div id="questionFields"></div>
         <div class="actions">
           <button type="button" class="btn" id="btnBack">이전</button>
@@ -226,8 +227,15 @@
   function renderClassGrid() {
     var classes = SurveyForm.deriveClassOptions(roster);
     if (!classes.length) {
-      for (var i = 1; i <= 8; i++) classes.push({ 반: i, label: i + "반" });
+      elClassGrid.innerHTML = "";
+      showError(
+        roster.length
+          ? "명렬표에 반 정보가 없습니다. 관리자에게 「명렬표 입력」 시트 형식을 확인해 달라고 요청하세요."
+          : "명렬표가 비어 있습니다. 관리자에게 「명렬표 입력」을 먼저 해 달라고 요청하세요."
+      );
+      return;
     }
+    showError("");
     elClassGrid.innerHTML = classes
       .map(function (c) {
         return (
@@ -255,7 +263,7 @@
     elStudentPick.innerHTML = "";
     selectedNum = null;
     selectedName = "";
-    if (!selectedBan) {
+    if (selectedBan == null) {
       elStudentPick.disabled = true;
       elStudentPick.appendChild(new Option("먼저 반을 선택하세요", ""));
       return;
@@ -350,7 +358,7 @@
   document.getElementById("btnToForm").addEventListener("click", function () {
     onStudentPickChange();
     var num = selectedNum;
-    if (!selectedBan) {
+    if (selectedBan == null) {
       showError("반을 선택해 주세요.");
       return;
     }

@@ -139,9 +139,14 @@
 
   function normalizeBan(value) {
     if (value == null || value === "") return null;
-    if (typeof value === "number" && Number.isFinite(value)) return Math.floor(value);
+    if (typeof value === "number" && Number.isFinite(value)) {
+      var n = Math.floor(value);
+      return n >= 1 ? n : null;
+    }
     var m = coerceText(value).match(/(\d+)/);
-    return m ? parseInt(m[1], 10) : null;
+    if (!m) return null;
+    var ban = parseInt(m[1], 10);
+    return ban >= 1 ? ban : null;
   }
 
   function bansMatch(a, b) {
@@ -291,7 +296,7 @@
     var map = {};
     roster.forEach(function (s) {
       var ban = normalizeBan(s.반);
-      if (ban == null) return;
+      if (ban == null || ban < 1) return;
       var key = String(ban);
       if (!map[key]) map[key] = { 반: ban, label: ban + "반", count: 0 };
       map[key].count += 1;
