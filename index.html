@@ -497,6 +497,36 @@
       text-align: center;
     }
     .home-section-empty[hidden] { display: none !important; }
+    .survey-list-hint {
+      margin: -4px 0 10px;
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+      line-height: 1.45;
+    }
+    .active-survey-panel {
+      padding: var(--space-5);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .active-survey-panel h2 {
+      margin: 0 0 12px;
+      color: var(--theme-heading);
+      font-size: var(--text-lg);
+    }
+    .active-survey-panel p { margin: 0 0 12px; color: var(--theme-text-muted); }
+    .active-survey-url {
+      word-break: break-all;
+      padding: 12px;
+      background: var(--theme-bg-muted);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+    }
+    .active-survey-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
     .sheet-launch-btn--completed {
       border-left-color: var(--theme-border);
       opacity: 0.92;
@@ -1944,11 +1974,13 @@
           <div id="surveyListGroups">
             <section class="survey-list-group" aria-labelledby="activeSurveyHeading">
               <h3 class="survey-list-heading" id="activeSurveyHeading">진행중인 설문</h3>
+              <p class="survey-list-hint">학생 설문은 참여 링크로 응답합니다. (메인에서는 진행 안내·미리보기만)</p>
               <div id="activeSurveyGrid" class="sheet-btn-grid" role="group" aria-label="진행중인 설문"></div>
               <p id="activeEmptyHint" class="home-section-empty" hidden>진행중인 설문이 없습니다.</p>
             </section>
             <section class="survey-list-group" aria-labelledby="completedSurveyHeading">
               <h3 class="survey-list-heading survey-list-heading--done" id="completedSurveyHeading">완료된 설문</h3>
+              <p class="survey-list-hint">버튼을 누르면 반별 분석 결과를 표시합니다. 학생 참여는 종료됩니다.</p>
               <div id="completedSurveyGrid" class="sheet-btn-grid" role="group" aria-label="완료된 설문"></div>
               <p id="completedEmptyHint" class="home-section-empty" hidden>완료된 설문이 없습니다.</p>
             </section>
@@ -3610,13 +3642,58 @@
     );
   }
 
-  function bindSheetLaunchButtons(container) {
+  function showActiveFormSurveyPanel(entry) {
+    if (!entry) return;
+    showResultsView();
+    var results = document.getElementById("results");
+    var participateUrl = SurveyForm.buildStudentRespondUrl(entry.id, location.href);
+    results.innerHTML =
+      '<div class="active-survey-panel">' +
+      "<h2>" +
+      esc(entry.label || "설문") +
+      "</h2>" +
+      "<p>이 설문은 <strong>진행 중</strong>입니다. 학생은 참여 링크로 응답할 수 있습니다.</p>" +
+      '<p class="active-survey-url"><a href="' +
+      esc(participateUrl) +
+      '" target="_blank" rel="noopener">' +
+      esc(participateUrl) +
+      "</a></p>" +
+      '<div class="active-survey-actions">' +
+      '<button type="button" class="sheet-launch-btn" id="btnPreviewActiveForm">결과 미리보기</button>' +
+      '<button type="button" class="sheet-launch-btn" id="btnBackFromActive">목록으로</button>' +
+      "</div></div>";
+    results.classList.add("visible");
+    var previewBtn = document.getElementById("btnPreviewActiveForm");
+    var backBtn = document.getElementById("btnBackFromActive");
+    if (previewBtn) {
+      previewBtn.addEventListener("click", function () {
+        launchFormSurveyAnalysis(entry, previewBtn, null);
+      });
+    }
+    if (backBtn) {
+      backBtn.addEventListener("click", function () {
+        showHomeView();
+      });
+    }
+    results.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function bindSheetLaunchButtons(container, listMode) {
     if (!container) return;
     container.querySelectorAll(".sheet-launch-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-sheet-id");
         var entry = findRegistryEntry(id);
-        if (entry) launchSheetAnalysis(entry, btn);
+        if (!entry) return;
+        if (
+          listMode === "active" &&
+          entry.type === "form" &&
+          !SurveyForm.isSurveyCompleted(entry)
+        ) {
+          showActiveFormSurveyPanel(entry);
+          return;
+        }
+        launchSheetAnalysis(entry, btn);
       });
     });
   }
@@ -3638,7 +3715,7 @@
         return buildSurveyLaunchButtonHtml(entry, isCompleted);
       })
       .join("");
-    bindSheetLaunchButtons(grid);
+    bindSheetLaunchButtons(grid, isCompleted ? "completed" : "active");
     return true;
   }
 

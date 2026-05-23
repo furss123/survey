@@ -130,6 +130,12 @@
       <label for="surveyLabel">설문 이름</label>
       <input type="text" id="surveyLabel" placeholder="예: 1학기 상담 설문" />
 
+      <label for="surveyStatus">설문 상태</label>
+      <select id="surveyStatus" class="field-input">
+        <option value="active">진행중 — 학생 참여 가능</option>
+        <option value="completed">완료 — 학생 참여 종료, 메인에서 분석 조회</option>
+      </select>
+
       <label for="webAppUrl">Apps Script 웹 앱 URL (제출·학생 링크용)</label>
       <input type="url" id="webAppUrl" class="field-input" placeholder="https://script.google.com/macros/s/…/exec" />
       <p class="hint">한 번만 입력하면 저장됩니다. 학생이 다른 기기에서 참여 링크를 열 때 설문·제출에 필요합니다.</p>
@@ -200,6 +206,9 @@
     }
     var id = editId || SurveyForm.generateSurveyId();
     var existing = editId ? SurveyForm.findSurvey(editId) : null;
+    var statusEl = document.getElementById("surveyStatus");
+    var surveyStatus =
+      statusEl && statusEl.value === "completed" ? "completed" : "active";
     return {
       id: id,
       type: "form",
@@ -208,6 +217,11 @@
       questions: qs,
       categories: SurveyForm.questionCategories({ questions: qs }),
       categorySelectAll: existing ? !!existing.categorySelectAll : true,
+      surveyStatus: surveyStatus,
+      completedAt:
+        surveyStatus === "completed"
+          ? (existing && existing.completedAt) || Date.now()
+          : null,
       webAppUrl: coerceWebAppUrl(),
       responseSpreadsheetId:
         (existing && existing.responseSpreadsheetId) ||
@@ -267,6 +281,9 @@
     var existing = SurveyForm.findSurvey(editId);
     if (existing && existing.type === "form") {
       document.getElementById("surveyLabel").value = existing.label || "";
+      document.getElementById("surveyStatus").value = SurveyForm.isSurveyCompleted(existing)
+        ? "completed"
+        : "active";
       if (existing.webAppUrl) {
         document.getElementById("webAppUrl").value = existing.webAppUrl;
         SurveyForm.saveWebAppUrl(existing.webAppUrl);

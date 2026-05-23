@@ -569,6 +569,28 @@
       color: var(--theme-text-muted);
       border-bottom-color: var(--theme-border-light);
     }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .survey-status-select {
+      padding: 6px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      font: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      min-width: 7.5rem;
+    }
     .registry-section-empty {
       margin: 0 0 12px;
       padding: 12px;
@@ -1065,16 +1087,19 @@
         esc(item.id) +
         "\">수정</button>";
     }
-    if (isCompleted) {
+    if (isForm) {
       html +=
-        "<button type=\"button\" class=\"admin-btn\" data-reopen-id=\"" +
+        "<label class=\"visually-hidden\" for=\"status-" +
         esc(item.id) +
-        "\">다시 진행</button>";
-    } else {
-      html +=
-        "<button type=\"button\" class=\"admin-btn\" data-complete-id=\"" +
+        "\">설문 상태</label><select id=\"status-" +
         esc(item.id) +
-        "\">완료 처리</button>";
+        "\" class=\"survey-status-select\" data-status-id=\"" +
+        esc(item.id) +
+        "\" aria-label=\"설문 상태\"><option value=\"active\"" +
+        (isCompleted ? "" : " selected") +
+        ">진행중</option><option value=\"completed\"" +
+        (isCompleted ? " selected" : "") +
+        ">완료</option></select>";
     }
     html +=
       "<button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
@@ -1095,10 +1120,9 @@
     listEl.querySelectorAll("[data-respond-id]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-respond-id");
-        var url =
-          "respond.html?s=" + encodeURIComponent(id);
+        var url = SurveyForm.buildStudentRespondUrl(id, location.href);
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(new URL(url, location.href).href).then(function () {
+          navigator.clipboard.writeText(url).then(function () {
             alert("학생 참여 링크를 복사했습니다.\n\n" + url);
           }).catch(function () {
             prompt("학생 참여 링크", url);
@@ -1144,19 +1168,21 @@
         if (id) startEditSheet(id);
       });
     });
-    listEl.querySelectorAll("[data-complete-id]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var id = btn.getAttribute("data-complete-id");
-        if (!id || !confirm("이 설문을 완료 처리할까요?\n학생 참여는 막히고 결과 조회는 가능합니다.")) return;
-        SurveyForm.setSurveyStatus(id, "completed");
-        renderAdminRegistryList();
-      });
-    });
-    listEl.querySelectorAll("[data-reopen-id]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var id = btn.getAttribute("data-reopen-id");
-        if (!id) return;
-        SurveyForm.setSurveyStatus(id, "active");
+    listEl.querySelectorAll("[data-status-id]").forEach(function (sel) {
+      sel.addEventListener("change", function () {
+        var id = sel.getAttribute("data-status-id");
+        var next = sel.value === "completed" ? "completed" : "active";
+        if (next === "completed") {
+          if (
+            !confirm(
+              "이 설문을 완료로 변경할까요?\n학생 참여는 막히고, 메인에서는 분석 결과로 열립니다."
+            )
+          ) {
+            sel.value = "active";
+            return;
+          }
+        }
+        SurveyForm.setSurveyStatus(id, next);
         renderAdminRegistryList();
       });
     });

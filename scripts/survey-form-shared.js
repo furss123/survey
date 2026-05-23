@@ -169,7 +169,14 @@
   }
 
   function isSurveyCompleted(entry) {
-    return !!(entry && entry.surveyStatus === "completed");
+    if (!entry) return false;
+    if (entry.surveyStatus === "completed") return true;
+    if (entry.surveyStatus === "active") return false;
+    return false;
+  }
+
+  function defaultSurveyStatus() {
+    return "active";
   }
 
   function setSurveyStatus(id, status) {
@@ -184,7 +191,11 @@
       completedAt: completed ? Date.now() : null,
     });
     saveRegistry(list);
-    return list[idx];
+    var entry = list[idx];
+    if (entry && entry.type === "form" && resolveWebAppUrl(entry)) {
+      registerSurveyOnServer(entry).catch(function () { /* ignore */ });
+    }
+    return entry;
   }
 
   function partitionRegistryByStatus(registry) {
@@ -473,6 +484,7 @@
         grade: values[i][2] || GRADE,
         questions: questions,
         categorySelectAll: String(values[i][4]).toUpperCase() === "Y",
+        surveyStatus: String(values[i][5] || "active") === "completed" ? "completed" : "active",
         responseSpreadsheetId: spreadsheetId,
       });
     }
@@ -707,6 +719,7 @@
           grade: entry.grade || GRADE,
           questions: entry.questions || [],
           categorySelectAll: !!entry.categorySelectAll,
+          surveyStatus: entry.surveyStatus === "completed" ? "completed" : "active",
         },
       }),
     });
@@ -738,6 +751,7 @@
     loadRegistry: loadRegistry,
     saveRegistry: saveRegistry,
     isSurveyCompleted: isSurveyCompleted,
+    defaultSurveyStatus: defaultSurveyStatus,
     setSurveyStatus: setSurveyStatus,
     partitionRegistryByStatus: partitionRegistryByStatus,
     findSurvey: findSurvey,

@@ -43,7 +43,7 @@ function ensureSheets_() {
   var config = ss.getSheetByName(CONFIG_SHEET);
   if (!config) {
     config = ss.insertSheet(CONFIG_SHEET);
-    config.appendRow(["id", "label", "grade", "questionsJson", "categorySelectAll"]);
+    config.appendRow(["id", "label", "grade", "questionsJson", "categorySelectAll", "surveyStatus"]);
   }
   var resp = ss.getSheetByName(RESPONSES_SHEET);
   if (!resp) {
@@ -78,6 +78,7 @@ function registerSurvey_(survey) {
     survey.grade || 1,
     JSON.stringify(survey.questions || []),
     survey.categorySelectAll ? "Y" : "",
+    survey.surveyStatus === "completed" ? "completed" : "active",
   ];
   if (row > 0) config.getRange(row, 1, 1, line.length).setValues([line]);
   else config.appendRow(line);
@@ -118,6 +119,7 @@ function getSurvey_(id) {
         grade: data[i][2],
         questions: questions,
         categorySelectAll: String(data[i][4]).toUpperCase() === "Y",
+        surveyStatus: String(data[i][5] || "active") === "completed" ? "completed" : "active",
       },
     };
   }
