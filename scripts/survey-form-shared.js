@@ -2,8 +2,63 @@
   "use strict";
 
   var REGISTRY_KEY = "school-sheet-registry-v1";
-  var ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  var ROSTER_STORAGE_KEY = "school-roster-sheet-v1";
+  var ROSTER_SESSION_KEY = "school-roster-sheet-session-v1";
+  var DEFAULT_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
   var GRADE = 1;
+
+  function parseSpreadsheetId(url) {
+    var trimmed = coerceText(url);
+    var match = trimmed.match(SPREADSHEET_ID_PATTERN);
+    if (match && match[1]) return match[1];
+    if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) return trimmed;
+    throw new Error("스프레드시트 ID를 URL에서 찾을 수 없습니다.");
+  }
+
+  function loadRosterConfig() {
+    try {
+      var raw = localStorage.getItem(ROSTER_STORAGE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.id && parsed.remember !== false) return parsed;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function loadSessionRosterConfig() {
+    try {
+      var raw = sessionStorage.getItem(ROSTER_SESSION_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.id) return parsed;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function getActiveRosterConfig() {
+    return loadSessionRosterConfig() || loadRosterConfig();
+  }
+
+  function saveRosterConfig(config, remember) {
+    var payload = Object.assign({}, config, {
+      remember: !!remember,
+      savedAt: Date.now(),
+    });
+    sessionStorage.setItem(ROSTER_SESSION_KEY, JSON.stringify(payload));
+    if (remember) {
+      localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(payload));
+    } else {
+      try {
+        localStorage.removeItem(ROSTER_STORAGE_KEY);
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  function getRosterSpreadsheetId() {
+    var cfg = getActiveRosterConfig();
+    return (cfg && cfg.id) || DEFAULT_ROSTER_SPREADSHEET_ID;
+  }
 
   function esc(s) {
     var d = document.createElement("div");
@@ -85,7 +140,7 @@
   async function fetchRosterRows() {
     var url =
       "https://docs.google.com/spreadsheets/d/" +
-      ROSTER_SPREADSHEET_ID +
+      getRosterSpreadsheetId() +
       "/gviz/tq?tqx=out:json";
     var res = await fetch(url);
     if (!res.ok) throw new Error("명렬표 시트를 불러오지 못했습니다.");
@@ -346,7 +401,15 @@
 
   global.SurveyForm = {
     REGISTRY_KEY: REGISTRY_KEY,
-    ROSTER_SPREADSHEET_ID: ROSTER_SPREADSHEET_ID,
+    ROSTER_STORAGE_KEY: ROSTER_STORAGE_KEY,
+    ROSTER_SESSION_KEY: ROSTER_SESSION_KEY,
+    DEFAULT_ROSTER_SPREADSHEET_ID: DEFAULT_ROSTER_SPREADSHEET_ID,
+    getRosterSpreadsheetId: getRosterSpreadsheetId,
+    getActiveRosterConfig: getActiveRosterConfig,
+    loadRosterConfig: loadRosterConfig,
+    loadSessionRosterConfig: loadSessionRosterConfig,
+    saveRosterConfig: saveRosterConfig,
+    parseSpreadsheetId: parseSpreadsheetId,
     GRADE: GRADE,
     esc: esc,
     loadRegistry: loadRegistry,
