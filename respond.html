@@ -414,6 +414,12 @@
       elTitle.textContent = "설문 없음";
       return;
     }
+    if (SurveyForm.isSurveyCompleted(entry)) {
+      showError("이 설문은 종료되었습니다. 새 응답은 받지 않습니다.");
+      elTitle.textContent = entry.label || "설문 종료";
+      document.getElementById("stepIdentify").hidden = true;
+      return;
+    }
     try {
       var cfg = await SurveyForm.fetchSurveyConfig(entry);
       if (cfg) entry = Object.assign({}, entry, cfg);

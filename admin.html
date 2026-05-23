@@ -557,6 +557,28 @@
       color: var(--theme-text-muted);
       word-break: break-all;
     }
+    .registry-section-title {
+      margin: var(--space-4) 0 10px;
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: var(--theme-heading);
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--border-accent);
+    }
+    .registry-section-title--done {
+      color: var(--theme-text-muted);
+      border-bottom-color: var(--theme-border-light);
+    }
+    .registry-section-empty {
+      margin: 0 0 12px;
+      padding: 12px;
+      text-align: center;
+      color: var(--theme-text-muted);
+      font-size: var(--text-sm);
+      border: 1px dashed var(--theme-border-light);
+      border-radius: var(--radius-md);
+      background: var(--theme-bg-muted);
+    }
     .login-hint {
       margin: 10px 0 0;
       font-size: var(--text-sm);
@@ -676,7 +698,14 @@
               <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>
             </div>
           </form>
-          <ul id="adminRegistryList" class="admin-registry-list" aria-label="등록된 시트"></ul>
+          <div id="adminRegistryGroups">
+            <h3 class="registry-section-title">진행중인 설문</h3>
+            <ul id="adminRegistryListActive" class="admin-registry-list" aria-label="진행중인 설문"></ul>
+            <p id="adminRegistryActiveEmpty" class="registry-section-empty" hidden>진행중인 설문이 없습니다.</p>
+            <h3 class="registry-section-title registry-section-title--done">완료된 설문</h3>
+            <ul id="adminRegistryListCompleted" class="admin-registry-list" aria-label="완료된 설문"></ul>
+            <p id="adminRegistryCompletedEmpty" class="registry-section-empty" hidden>완료된 설문이 없습니다.</p>
+          </div>
         </div>
       </section>
     </div>
@@ -1003,53 +1032,59 @@
     saveSheetRegistry(registry);
   }
 
-  function renderAdminRegistryList() {
-    var listEl = document.getElementById("adminRegistryList");
-    if (!listEl) return;
-    var registry = loadSheetRegistry();
-    if (!registry.length) {
-      listEl.innerHTML = "<li style=\"justify-content:center;color:var(--theme-text-muted);\">등록된 시트가 없습니다.</li>";
-      return;
+  function buildRegistryItemHtml(item) {
+    var isForm = item.type === "form";
+    var isCompleted = SurveyForm.isSurveyCompleted(item);
+    var meta = isForm
+      ? "학생 설문 · " + (item.webAppUrl ? "제출 연동됨" : "웹 앱 URL 미설정")
+      : item.url;
+    var html =
+      "<li><div class=\"registry-meta\"><strong>" +
+      esc(item.label) +
+      (isForm ? " <span style=\"font-size:0.75em;opacity:0.85\">(설문)</span>" : "") +
+      (isCompleted ? " <span style=\"font-size:0.75em;opacity:0.85\">(완료)</span>" : "") +
+      "</strong><span>" +
+      esc(meta) +
+      "</span></div><div class=\"admin-actions registry-actions\">";
+    if (isForm) {
+      html +=
+        "<button type=\"button\" class=\"admin-btn admin-btn-primary\" data-respond-id=\"" +
+        esc(item.id) +
+        "\">참여 링크</button><button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
+        esc(item.id) +
+        "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-form-edit-id=\"" +
+        esc(item.id) +
+        "\">수정</button>";
+    } else {
+      html +=
+        "<button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
+        esc(item.id) +
+        "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-config-id=\"" +
+        esc(item.id) +
+        "\">구성</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-edit-id=\"" +
+        esc(item.id) +
+        "\">수정</button>";
     }
-    listEl.innerHTML = registry
-      .map(function (item) {
-        var isForm = item.type === "form";
-        var meta = isForm
-          ? "학생 설문 · " + (item.webAppUrl ? "제출 연동됨" : "웹 앱 URL 미설정")
-          : item.url;
-        var html =
-          "<li><div class=\"registry-meta\"><strong>" +
-          esc(item.label) +
-          (isForm ? " <span style=\"font-size:0.75em;opacity:0.85\">(설문)</span>" : "") +
-          "</strong><span>" +
-          esc(meta) +
-          "</span></div><div class=\"admin-actions registry-actions\">";
-        if (isForm) {
-          html +=
-            "<button type=\"button\" class=\"admin-btn admin-btn-primary\" data-respond-id=\"" +
-            esc(item.id) +
-            "\">참여 링크</button><button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
-            esc(item.id) +
-            "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-form-edit-id=\"" +
-            esc(item.id) +
-            "\">수정</button>";
-        } else {
-          html +=
-            "<button type=\"button\" class=\"admin-btn admin-btn-primary\" data-open-id=\"" +
-            esc(item.id) +
-            "\">조회</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-config-id=\"" +
-            esc(item.id) +
-            "\">구성</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-edit-id=\"" +
-            esc(item.id) +
-            "\">수정</button>";
-        }
-        html +=
-          "<button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
-          esc(item.id) +
-          "\">삭제</button></div></li>";
-        return html;
-      })
-      .join("");
+    if (isCompleted) {
+      html +=
+        "<button type=\"button\" class=\"admin-btn\" data-reopen-id=\"" +
+        esc(item.id) +
+        "\">다시 진행</button>";
+    } else {
+      html +=
+        "<button type=\"button\" class=\"admin-btn\" data-complete-id=\"" +
+        esc(item.id) +
+        "\">완료 처리</button>";
+    }
+    html +=
+      "<button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
+      esc(item.id) +
+      "\">삭제</button></div></li>";
+    return html;
+  }
+
+  function bindRegistryListEvents(listEl) {
+    if (!listEl) return;
     listEl.querySelectorAll("[data-open-id]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-open-id");
@@ -1109,6 +1144,22 @@
         if (id) startEditSheet(id);
       });
     });
+    listEl.querySelectorAll("[data-complete-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-complete-id");
+        if (!id || !confirm("이 설문을 완료 처리할까요?\n학생 참여는 막히고 결과 조회는 가능합니다.")) return;
+        SurveyForm.setSurveyStatus(id, "completed");
+        renderAdminRegistryList();
+      });
+    });
+    listEl.querySelectorAll("[data-reopen-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-reopen-id");
+        if (!id) return;
+        SurveyForm.setSurveyStatus(id, "active");
+        renderAdminRegistryList();
+      });
+    });
     listEl.querySelectorAll("[data-delete-id]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-delete-id");
@@ -1121,6 +1172,37 @@
         renderAdminRegistryList();
       });
     });
+  }
+
+  function renderRegistrySection(listEl, emptyEl, items) {
+    if (!listEl) return;
+    if (!items.length) {
+      listEl.innerHTML = "";
+      listEl.hidden = true;
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+    listEl.hidden = false;
+    listEl.innerHTML = items.map(buildRegistryItemHtml).join("");
+    bindRegistryListEvents(listEl);
+  }
+
+  function renderAdminRegistryList() {
+    var groups = document.getElementById("adminRegistryGroups");
+    var activeList = document.getElementById("adminRegistryListActive");
+    var completedList = document.getElementById("adminRegistryListCompleted");
+    var activeEmpty = document.getElementById("adminRegistryActiveEmpty");
+    var completedEmpty = document.getElementById("adminRegistryCompletedEmpty");
+    var registry = loadSheetRegistry();
+    if (!registry.length) {
+      if (groups) groups.hidden = true;
+      return;
+    }
+    if (groups) groups.hidden = false;
+    var parts = SurveyForm.partitionRegistryByStatus(registry);
+    renderRegistrySection(activeList, activeEmpty, parts.active);
+    renderRegistrySection(completedList, completedEmpty, parts.completed);
   }
 
   (function initTheme() {

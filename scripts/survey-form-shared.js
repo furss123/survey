@@ -85,6 +85,35 @@
     localStorage.setItem(REGISTRY_KEY, JSON.stringify(list));
   }
 
+  function isSurveyCompleted(entry) {
+    return !!(entry && entry.surveyStatus === "completed");
+  }
+
+  function setSurveyStatus(id, status) {
+    var list = loadRegistry();
+    var idx = list.findIndex(function (item) {
+      return item && item.id === id;
+    });
+    if (idx < 0) throw new Error("설문을 찾을 수 없습니다.");
+    var completed = status === "completed";
+    list[idx] = Object.assign({}, list[idx], {
+      surveyStatus: completed ? "completed" : "active",
+      completedAt: completed ? Date.now() : null,
+    });
+    saveRegistry(list);
+    return list[idx];
+  }
+
+  function partitionRegistryByStatus(registry) {
+    var active = [];
+    var completed = [];
+    (registry || []).forEach(function (entry) {
+      if (isSurveyCompleted(entry)) completed.push(entry);
+      else active.push(entry);
+    });
+    return { active: active, completed: completed };
+  }
+
   function findSurvey(id) {
     return (
       loadRegistry().find(function (item) {
@@ -541,6 +570,9 @@
     esc: esc,
     loadRegistry: loadRegistry,
     saveRegistry: saveRegistry,
+    isSurveyCompleted: isSurveyCompleted,
+    setSurveyStatus: setSurveyStatus,
+    partitionRegistryByStatus: partitionRegistryByStatus,
     findSurvey: findSurvey,
     parseStudentId: parseStudentId,
     formatStudentId: formatStudentId,
