@@ -118,22 +118,12 @@
       <label for="surveyLabel">설문 이름</label>
       <input type="text" id="surveyLabel" placeholder="예: 1학기 상담 설문" />
 
-      <label for="webAppUrl">Apps Script 웹 앱 URL (제출·등록용)</label>
-      <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
-      <p class="hint"><a href="docs/SURVEY_FORM_SETUP.md" target="_blank" rel="noopener">설치 안내</a>에 따라 스크립트를 배포한 뒤 URL을 붙여 넣으세요.</p>
-
-      <label for="responseSheetId">응답 저장 스프레드시트 ID (선택)</label>
-      <input type="text" id="responseSheetId" placeholder="비우면 기본 응답 시트 사용" />
-
-      <label><input type="checkbox" id="categorySelectAll" checked /> 결과 화면에서 문항 탭 숨기기(전체 문항 한 번에 표시)</label>
-
       <h2 style="font-size:1.05rem;margin:20px 0 8px;color:var(--theme-heading)">문항</h2>
       <div id="questionList"></div>
       <button type="button" class="btn" id="btnAddQuestion">+ 문항 추가</button>
 
       <div class="actions">
         <button type="button" class="btn btn-primary" id="btnSave">메인에 등록</button>
-        <button type="button" class="btn" id="btnSyncServer">서버에 설문 동기화</button>
       </div>
       <p class="msg" id="statusMsg" hidden></p>
       <div class="link-box" id="studentLinkBox" hidden>
@@ -197,7 +187,7 @@
     var qs = collectQuestions();
     if (!qs.length) throw new Error("문항을 1개 이상 추가해 주세요.");
     var id = editId || SurveyForm.generateSurveyId();
-    var sheetId = document.getElementById("responseSheetId").value.trim();
+    var existing = editId ? SurveyForm.findSurvey(editId) : null;
     return {
       id: id,
       type: "form",
@@ -205,9 +195,9 @@
       grade: SurveyForm.GRADE,
       questions: qs,
       categories: SurveyForm.questionCategories({ questions: qs }),
-      categorySelectAll: document.getElementById("categorySelectAll").checked,
-      webAppUrl: document.getElementById("webAppUrl").value.trim(),
-      responseSpreadsheetId: sheetId || undefined,
+      categorySelectAll: existing ? !!existing.categorySelectAll : true,
+      webAppUrl: existing && existing.webAppUrl ? existing.webAppUrl : "",
+      responseSpreadsheetId: existing && existing.responseSpreadsheetId,
       responseTab: "Responses",
     };
   }
@@ -245,25 +235,10 @@
     }
   });
 
-  document.getElementById("btnSyncServer").addEventListener("click", async function () {
-    try {
-      var entry = buildEntry();
-      if (!entry.webAppUrl) throw new Error("웹 앱 URL을 입력해 주세요.");
-      var res = await SurveyForm.registerSurveyOnServer(entry);
-      if (res && res.ok === false) throw new Error(res.error || "동기화 실패");
-      showStatus("서버(스프레드시트)에 설문 정보를 저장했습니다.", true);
-    } catch (err) {
-      showStatus(err.message || "동기화 실패", false);
-    }
-  });
-
   if (editId) {
     var existing = SurveyForm.findSurvey(editId);
     if (existing && existing.type === "form") {
       document.getElementById("surveyLabel").value = existing.label || "";
-      document.getElementById("webAppUrl").value = existing.webAppUrl || "";
-      document.getElementById("responseSheetId").value = existing.responseSpreadsheetId || "";
-      document.getElementById("categorySelectAll").checked = !!existing.categorySelectAll;
       (existing.questions || []).forEach(makeQuestionRow);
       updateStudentLink(existing.id);
     }
