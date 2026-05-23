@@ -4,7 +4,9 @@
   var REGISTRY_KEY = "school-sheet-registry-v1";
   var ROSTER_STORAGE_KEY = "school-roster-sheet-v1";
   var ROSTER_SESSION_KEY = "school-roster-sheet-session-v1";
+  var WEBAPP_STORAGE_KEY = "school-survey-webapp-v1";
   var DEFAULT_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  var DEFAULT_RESPONSE_SPREADSHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
   var GRADE = 1;
 
@@ -58,6 +60,87 @@
   function getRosterSpreadsheetId() {
     var cfg = getActiveRosterConfig();
     return (cfg && cfg.id) || DEFAULT_ROSTER_SPREADSHEET_ID;
+  }
+
+  function loadWebAppUrl() {
+    try {
+      return coerceText(localStorage.getItem(WEBAPP_STORAGE_KEY));
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function saveWebAppUrl(url) {
+    var trimmed = coerceText(url);
+    if (trimmed) localStorage.setItem(WEBAPP_STORAGE_KEY, trimmed);
+    else localStorage.removeItem(WEBAPP_STORAGE_KEY);
+  }
+
+  function isValidWebAppUrl(url) {
+    url = coerceText(url);
+    return (
+      url.indexOf("script.google.com") >= 0 &&
+      /\/exec\/?(\?|$)/i.test(url)
+    );
+  }
+
+  function resolveWebAppUrl(entry) {
+    var fromEntry = entry && coerceText(entry.webAppUrl);
+    var global = loadWebAppUrl();
+    if (fromEntry && isValidWebAppUrl(fromEntry)) return fromEntry;
+    if (global && isValidWebAppUrl(global)) return global;
+    return global || fromEntry;
+  }
+
+  function getResponseSpreadsheetId(entry) {
+    return (
+      (entry && entry.responseSpreadsheetId) ||
+      DEFAULT_RESPONSE_SPREADSHEET_ID
+    );
+  }
+
+  function normalizeFormEntry(entry) {
+    if (!entry) return null;
+    return Object.assign(
+      {
+        type: "form",
+        grade: GRADE,
+        responseSpreadsheetId: DEFAULT_RESPONSE_SPREADSHEET_ID,
+        responseTab: "Responses",
+      },
+      entry,
+      {
+        webAppUrl: resolveWebAppUrl(entry),
+        responseSpreadsheetId: getResponseSpreadsheetId(entry),
+      }
+    );
+  }
+
+  function buildStudentRespondUrl(surveyId, baseHref) {
+    var base = String(baseHref || location.href).replace(
+      /admin-survey\.html.*$/,
+      "respond.html?s=" + encodeURIComponent(surveyId)
+    );
+    var rosterId = getRosterSpreadsheetId();
+    if (rosterId && rosterId !== DEFAULT_ROSTER_SPREADSHEET_ID) {
+      base += "&roster=" + encodeURIComponent(rosterId);
+    }
+    return base;
+  }
+
+  async function readJsonResponse(res) {
+    var text = await res.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      if (/^\s*<!DOCTYPE/i.test(text) || /^\s*<html/i.test(text)) {
+        throw new Error(
+          "서버가 HTML을 반환했습니다. Apps Script 웹 앱 URL(/exec)이 맞는지 확인하세요."
+        );
+      }
+      throw new Error("서버 응답을 JSON으로 읽을 수 없습니다.");
+    }
   }
 
   function esc(s) {
@@ -160,10 +243,19 @@
   }
 
   function parseGvizJson(text) {
+    if (/^\s*<!DOCTYPE/i.test(text) || /^\s*<html/i.test(text)) {
+      throw new Error(
+        "시트를 불러올 수 없습니다. 공유 설정(링크가 있는 사용자 → 보기)을 확인하세요."
+      );
+    }
     var start = text.indexOf("{");
     var end = text.lastIndexOf("}");
     if (start < 0 || end <= start) throw new Error("응답 파싱 실패");
-    return JSON.parse(text.slice(start, end + 1));
+    try {
+      return JSON.parse(text.slice(start, end + 1));
+    } catch (e) {
+      throw new Error("시트 응답을 읽을 수 없습니다.");
+    }
   }
 
   function normalizeBan(value) {
@@ -308,8 +400,8 @@
     return rows;
   }
 
-  async function fetchRosterRows() {
-    var spreadsheetId = getRosterSpreadsheetId();
+  async function fetchRosterRows(overrideSpreadsheetId) {
+    var spreadsheetId = overrideSpreadsheetId || getRosterSpreadsheetId();
     var probes = ["1반", "명단", "명렬표", "list", ""];
     for (var i = 0; i < probes.length; i++) {
       try {
@@ -357,30 +449,93 @@
       });
   }
 
-  async function fetchSurveyConfig(entry) {
-    if (!entry) return null;
-    if (entry.webAppUrl) {
-      var u =
-        entry.webAppUrl +
-        (entry.webAppUrl.indexOf("?") >= 0 ? "&" : "?") +
-        "action=get&id=" +
-        encodeURIComponent(entry.id);
-      var res = await fetch(u);
-      var data = await res.json();
-      if (data && data.ok && data.survey) return data.survey;
-      throw new Error((data && data.error) || "설문 정보를 불러오지 못했습니다.");
+  async function fetchSurveyFromConfigSheet(surveyId, spreadsheetId) {
+    if (!surveyId) return null;
+    spreadsheetId = spreadsheetId || DEFAULT_RESPONSE_SPREADSHEET_ID;
+    var values;
+    try {
+      values = await fetchGvizValues(spreadsheetId, "Config");
+    } catch (e) {
+      return null;
     }
-    if (entry.type === "form" && entry.questions) return entry;
+    if (!values || values.length < 2) return null;
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][0]) !== String(surveyId)) continue;
+      var questions = [];
+      try {
+        questions = JSON.parse(values[i][3] || "[]");
+      } catch (e) {
+        questions = [];
+      }
+      return normalizeFormEntry({
+        id: values[i][0],
+        label: values[i][1],
+        grade: values[i][2] || GRADE,
+        questions: questions,
+        categorySelectAll: String(values[i][4]).toUpperCase() === "Y",
+        responseSpreadsheetId: spreadsheetId,
+      });
+    }
     return null;
   }
 
+  async function loadSurveyForRespond(surveyId, options) {
+    options = options || {};
+    var local = findSurvey(surveyId);
+    if (local && local.type === "form" && local.questions && local.questions.length) {
+      return normalizeFormEntry(local);
+    }
+
+    var webAppUrl = resolveWebAppUrl(local || { id: surveyId });
+    if (webAppUrl) {
+      try {
+        var u =
+          webAppUrl +
+          (webAppUrl.indexOf("?") >= 0 ? "&" : "?") +
+          "action=get&id=" +
+          encodeURIComponent(surveyId);
+        var res = await fetch(u);
+        var data = await readJsonResponse(res);
+        if (data && data.ok && data.survey) {
+          return normalizeFormEntry(
+            Object.assign({}, local || {}, data.survey, { id: surveyId, type: "form" })
+          );
+        }
+      } catch (e) {
+        /* Config 시트·로컬로 이어서 조회 */
+      }
+    }
+
+    var sheetId =
+      (local && local.responseSpreadsheetId) ||
+      options.responseSpreadsheetId ||
+      DEFAULT_RESPONSE_SPREADSHEET_ID;
+    var fromSheet = await fetchSurveyFromConfigSheet(surveyId, sheetId);
+    if (fromSheet) return fromSheet;
+    if (local && local.type === "form") return normalizeFormEntry(local);
+    return null;
+  }
+
+  async function fetchSurveyConfig(entry) {
+    if (!entry) return null;
+    if (entry.type === "form" && entry.questions && entry.questions.length) {
+      return normalizeFormEntry(entry);
+    }
+    var loaded = await loadSurveyForRespond(entry.id, {
+      responseSpreadsheetId: getResponseSpreadsheetId(entry),
+      allowFallback: true,
+    });
+    return loaded || (entry.type === "form" ? normalizeFormEntry(entry) : null);
+  }
+
   async function submitSurveyResponse(entry, payload) {
-    if (!entry || !entry.webAppUrl) {
+    var webAppUrl = resolveWebAppUrl(entry);
+    if (!webAppUrl) {
       throw new Error(
-        "제출 주소가 없습니다. 관리자에게 Apps Script 배포 URL을 등록해 달라고 요청하세요."
+        "제출 주소가 없습니다. 관리자에게 Apps Script 웹 앱 URL을 등록해 달라고 요청하세요."
       );
     }
-    var res = await fetch(entry.webAppUrl, {
+    var res = await fetch(webAppUrl, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify(
@@ -539,8 +694,9 @@
   }
 
   async function registerSurveyOnServer(entry) {
-    if (!entry || !entry.webAppUrl) return { ok: false, skipped: true };
-    var res = await fetch(entry.webAppUrl, {
+    var webAppUrl = resolveWebAppUrl(entry);
+    if (!entry || !webAppUrl) return { ok: false, skipped: true, reason: "no-webapp" };
+    var res = await fetch(webAppUrl, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
@@ -554,7 +710,7 @@
         },
       }),
     });
-    return res.json();
+    return readJsonResponse(res);
   }
 
   global.SurveyForm = {
@@ -562,7 +718,16 @@
     ROSTER_STORAGE_KEY: ROSTER_STORAGE_KEY,
     ROSTER_SESSION_KEY: ROSTER_SESSION_KEY,
     DEFAULT_ROSTER_SPREADSHEET_ID: DEFAULT_ROSTER_SPREADSHEET_ID,
+    DEFAULT_RESPONSE_SPREADSHEET_ID: DEFAULT_RESPONSE_SPREADSHEET_ID,
+    WEBAPP_STORAGE_KEY: WEBAPP_STORAGE_KEY,
     getRosterSpreadsheetId: getRosterSpreadsheetId,
+    loadWebAppUrl: loadWebAppUrl,
+    saveWebAppUrl: saveWebAppUrl,
+    resolveWebAppUrl: resolveWebAppUrl,
+    getResponseSpreadsheetId: getResponseSpreadsheetId,
+    buildStudentRespondUrl: buildStudentRespondUrl,
+    loadSurveyForRespond: loadSurveyForRespond,
+    fetchSurveyFromConfigSheet: fetchSurveyFromConfigSheet,
     getActiveRosterConfig: getActiveRosterConfig,
     loadRosterConfig: loadRosterConfig,
     loadSessionRosterConfig: loadSessionRosterConfig,

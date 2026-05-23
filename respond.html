@@ -209,6 +209,7 @@
 
   var params = new URLSearchParams(location.search);
   var surveyId = params.get("s") || params.get("survey") || params.get("id");
+  var rosterSheetId = params.get("roster") || "";
   var entry = null;
   var roster = [];
   var selectedBan = null;
@@ -381,22 +382,22 @@
       elTitle.textContent = "설문 참여";
       return;
     }
-    entry = SurveyForm.findSurvey(surveyId);
-    if (!entry || entry.type !== "form") {
-      showError("등록된 설문을 찾을 수 없습니다. 관리자에게 문의하세요.");
-      elTitle.textContent = "설문 없음";
-      return;
-    }
-    if (SurveyForm.isSurveyCompleted(entry)) {
-      showError("이 설문은 종료되었습니다. 새 응답은 받지 않습니다.");
-      elTitle.textContent = entry.label || "설문 종료";
-      document.getElementById("stepIdentify").hidden = true;
-      return;
-    }
     try {
-      var cfg = await SurveyForm.fetchSurveyConfig(entry);
-      if (cfg) entry = Object.assign({}, entry, cfg);
-      roster = await SurveyForm.fetchRosterRows();
+      entry = await SurveyForm.loadSurveyForRespond(surveyId);
+      if (!entry || entry.type !== "form") {
+        showError(
+          "등록된 설문을 찾을 수 없습니다. 관리자가 설문을 저장한 뒤 「서버 동기화」가 되었는지 확인해 주세요."
+        );
+        elTitle.textContent = "설문 없음";
+        return;
+      }
+      if (SurveyForm.isSurveyCompleted(entry)) {
+        showError("이 설문은 종료되었습니다. 새 응답은 받지 않습니다.");
+        elTitle.textContent = entry.label || "설문 종료";
+        document.getElementById("stepIdentify").hidden = true;
+        return;
+      }
+      roster = await SurveyForm.fetchRosterRows(rosterSheetId || undefined);
     } catch (err) {
       showError(err.message || "초기화 실패");
       elTitle.textContent = "오류";

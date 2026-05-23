@@ -130,6 +130,10 @@
       <label for="surveyLabel">설문 이름</label>
       <input type="text" id="surveyLabel" placeholder="예: 1학기 상담 설문" />
 
+      <label for="webAppUrl">Apps Script 웹 앱 URL (제출·학생 링크용)</label>
+      <input type="url" id="webAppUrl" class="field-input" placeholder="https://script.google.com/macros/s/…/exec" />
+      <p class="hint">한 번만 입력하면 저장됩니다. 학생이 다른 기기에서 참여 링크를 열 때 설문·제출에 필요합니다.</p>
+
       <h2 style="font-size:1.05rem;margin:20px 0 8px;color:var(--theme-heading)">문항</h2>
       <p class="type-legend">단답·장문·이메일·숫자·URL·날짜·시간·객관식·체크박스·드롭다운·선형 배율·객관식/체크박스 격자·제목 및 설명</p>
       <div class="q-toolbar">
@@ -168,6 +172,13 @@
     statusMsg.className = "msg " + (ok ? "ok" : "err");
   }
 
+  function coerceWebAppUrl() {
+    var el = document.getElementById("webAppUrl");
+    var url = el ? el.value.trim() : "";
+    if (url) SurveyForm.saveWebAppUrl(url);
+    return url || SurveyForm.loadWebAppUrl();
+  }
+
   function addQuestion(q) {
     SurveyQuestions.mountAdminQuestionRow(questionList, q);
   }
@@ -197,15 +208,16 @@
       questions: qs,
       categories: SurveyForm.questionCategories({ questions: qs }),
       categorySelectAll: existing ? !!existing.categorySelectAll : true,
-      webAppUrl: existing && existing.webAppUrl ? existing.webAppUrl : "",
-      responseSpreadsheetId: existing && existing.responseSpreadsheetId,
+      webAppUrl: coerceWebAppUrl(),
+      responseSpreadsheetId:
+        (existing && existing.responseSpreadsheetId) ||
+        SurveyForm.DEFAULT_RESPONSE_SPREADSHEET_ID,
       responseTab: "Responses",
     };
   }
 
   function updateStudentLink(id) {
-    var url =
-      location.href.replace(/admin-survey\.html.*$/, "respond.html?s=" + encodeURIComponent(id));
+    var url = SurveyForm.buildStudentRespondUrl(id, location.href);
     document.getElementById("studentLink").textContent = url;
     document.getElementById("studentLinkBox").hidden = false;
     document.getElementById("btnCopyLink").onclick = function () {
@@ -222,7 +234,7 @@
     addQuestion({ type: "section", label: "섹션 제목", description: "", required: false });
   });
 
-  document.getElementById("btnSave").addEventListener("click", function () {
+  document.getElementById("btnSave").addEventListener("click", async function () {
     try {
       var entry = buildEntry();
       var list = SurveyForm.loadRegistry();
@@ -233,16 +245,32 @@
       editId = entry.id;
       history.replaceState({}, "", "admin-survey.html?edit=" + encodeURIComponent(entry.id));
       updateStudentLink(entry.id);
-      showStatus("메인 목록에 등록했습니다.", true);
+      var syncMsg = "메인 목록에 등록했습니다.";
+      if (entry.webAppUrl) {
+        showStatus("서버에 설문을 동기화하는 중…", true);
+        var sync = await SurveyForm.registerSurveyOnServer(entry);
+        if (sync && sync.ok) syncMsg += " 서버(Config 시트) 동기화 완료.";
+        else if (sync && sync.skipped) syncMsg += " (웹 앱 URL 없음 — 학생 링크용 URL을 입력하세요.)";
+        else syncMsg += " 서버 동기화 실패: " + ((sync && sync.error) || "알 수 없음");
+      } else {
+        syncMsg += " 웹 앱 URL을 입력하면 다른 기기에서도 참여 링크가 동작합니다.";
+      }
+      showStatus(syncMsg, true);
     } catch (err) {
       showStatus(err.message, false);
     }
   });
 
+  document.getElementById("webAppUrl").value = SurveyForm.loadWebAppUrl();
+
   if (editId) {
     var existing = SurveyForm.findSurvey(editId);
     if (existing && existing.type === "form") {
       document.getElementById("surveyLabel").value = existing.label || "";
+      if (existing.webAppUrl) {
+        document.getElementById("webAppUrl").value = existing.webAppUrl;
+        SurveyForm.saveWebAppUrl(existing.webAppUrl);
+      }
       (existing.questions || []).forEach(addQuestion);
       updateStudentLink(existing.id);
     }
