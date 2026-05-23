@@ -90,9 +90,13 @@ function syncResponseHeaders_(survey) {
   var resp = sheets.responses;
   var header = resp.getRange(1, 1, 1, resp.getLastColumn()).getValues()[0];
   var base = ["제출시각", "설문ID", "학번", "반", "번호", "이름"];
-  var labels = (survey.questions || []).map(function (q) {
-    return q.label || q.id;
-  });
+  var labels = (survey.questions || [])
+    .filter(function (q) {
+      return q && q.type !== "section";
+    })
+    .map(function (q) {
+      return q.label || q.id;
+    });
   var merged = base.concat(labels);
   if (header.join("|") !== merged.join("|")) {
     resp.clear();

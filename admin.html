@@ -16,6 +16,7 @@
   <title>설문 관리자 · 남악고</title>
   <link rel="icon" href="assets/namak-logo.png" type="image/png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="styles/admin-sidebar.css">
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -546,18 +547,18 @@
     </div>
   </header>
 
-  <div class="app-layout">
-    <div class="search-container">
-      <section class="panel-section">
-        <div class="section-head-row">
-          <div class="section-label">시트 등록·관리</div>
-          <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
-        </div>
-        <div id="adminPanel">
-          <p style="margin:0 0 14px;">
-            <a href="admin-survey.html" class="admin-btn admin-btn-primary" style="display:inline-block;text-decoration:none;">학생 설문 만들기 (구글 폼 대체)</a>
-          </p>
-          <form id="adminSheetForm" class="admin-form">
+  <div class="admin-app-shell">
+    <div class="admin-app-grid">
+      <aside id="adminSidebarMount" aria-label="관리자 좌측 메뉴"></aside>
+      <div class="admin-main-content">
+        <div class="search-container">
+          <section class="panel-section">
+            <div class="section-head-row">
+              <div class="section-label">시트 등록·관리</div>
+              <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
+            </div>
+            <div id="adminPanel">
+              <form id="adminSheetForm" class="admin-form">
             <label for="adminSheetUrl">구글 시트 주소</label>
             <div class="admin-url-row">
               <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
@@ -576,8 +577,10 @@
             </div>
           </form>
           <ul id="adminRegistryList" class="admin-registry-list" aria-label="등록된 시트"></ul>
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </div>
   </div>
 
@@ -586,6 +589,7 @@
   </footer>
 
   <script src="scripts/admin-session.js"></script>
+  <script src="scripts/admin-sidebar.js"></script>
   <script>
 (function () {
   "use strict";
@@ -1018,6 +1022,8 @@
   })();
 
   if (!AdminSession.require()) return;
+
+  AdminSidebar.mount(document.getElementById("adminSidebarMount"), "sheets");
 
   renderAdminRegistryList();
   bindSurveyNameField();

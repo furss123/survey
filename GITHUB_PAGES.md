@@ -39,3 +39,4 @@ git push origin main:index
 
 - `client/`, `server/`는 로컬 개발용이며 Pages에서 Node 서버는 동작하지 않습니다.
 - 예전 주소 `/froms/`, `/school/`는 이 사이트와 별개입니다. 정본 URL은 `/survey/` 입니다.
+33333
