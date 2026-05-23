@@ -706,6 +706,7 @@
         var cfg = await SurveyForm.fetchSurveyConfig(entry);
         if (cfg) entry = Object.assign({}, entry, cfg);
       }
+      entry = SurveyForm.mergeRosterIntoEntry(entry);
     } catch (err) {
       if (!entry.questions || !entry.questions.length) {
         showError(err.message || "설문 정보를 불러오지 못했습니다.");

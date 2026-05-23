@@ -519,6 +519,57 @@
       }
       .admin-registry-list li { flex-direction: column; align-items: stretch; }
     }
+    .roster-box {
+      margin: 0 0 20px;
+      padding: 16px 18px;
+      border: 1px solid var(--theme-border);
+      border-radius: var(--radius-md);
+      background: var(--theme-bg-muted);
+    }
+    .roster-box-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .roster-box-head strong {
+      color: var(--theme-heading-strong);
+      font-size: var(--text-base);
+    }
+    .roster-panel {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--theme-border);
+    }
+    .roster-hint-text {
+      margin: 0 0 8px;
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+    }
+    .roster-preview {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      font-size: var(--text-sm);
+    }
+    .roster-preview.ok { border-color: #047857; color: #047857; }
+    .roster-preview.err { border-color: var(--danger-text); color: var(--danger-text); }
+    .admin-form input[type="file"] {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px 0;
+      font-size: var(--text-sm);
+    }
+    .admin-roster-msg {
+      margin-top: 8px;
+      font-size: var(--text-sm);
+    }
+    .admin-roster-msg.ok { color: #047857; }
+    .admin-roster-msg.err { color: var(--danger-text); }
   </style>
 </head>
 <body>
@@ -558,6 +609,31 @@
               <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
             </div>
             <div id="adminPanel">
+              <div class="roster-box">
+                <div class="roster-box-head">
+                  <strong>학생 명렬표</strong>
+                  <button type="button" class="admin-btn admin-btn-primary" id="btnToggleRoster">학생 명렬표 추가</button>
+                </div>
+                <p class="roster-hint-text" id="rosterSummary">등록된 명렬표 없음 — 설문 응답 시 기본 명렬표를 사용합니다.</p>
+                <div id="rosterPanel" class="roster-panel" hidden>
+                  <div class="admin-form" style="margin:0">
+                    <label for="rosterSheetUrl">구글 시트 주소 또는 스프레드시트 ID</label>
+                    <input type="text" id="rosterSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/... 또는 ID" />
+                    <label for="rosterSheetName">시트 탭 이름 (선택)</label>
+                    <input type="text" id="rosterSheetName" placeholder="비우면 첫 번째 탭" />
+                    <label for="rosterFile">또는 CSV / TSV 파일 업로드</label>
+                    <input type="file" id="rosterFile" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" />
+                    <p class="roster-hint-text">학번(4자리) 또는 반·번호·이름 열을 인식합니다. 저장하면 모든 설문 응답에 적용됩니다.</p>
+                    <div class="admin-actions">
+                      <button type="button" class="admin-btn admin-btn-primary" id="btnLoadRoster">명렬표 저장</button>
+                      <button type="button" class="admin-btn" id="btnClearRoster">명렬표 제거</button>
+                    </div>
+                    <div id="rosterPreview" class="roster-preview" hidden></div>
+                    <p class="admin-roster-msg" id="rosterStatusMsg" hidden></p>
+                  </div>
+                </div>
+              </div>
+
               <form id="adminSheetForm" class="admin-form">
             <label for="adminSheetUrl">구글 시트 주소</label>
             <div class="admin-url-row">
@@ -590,6 +666,8 @@
 
   <script src="scripts/admin-session.js"></script>
   <script src="scripts/admin-sidebar.js"></script>
+  <script src="scripts/survey-form-shared.js"></script>
+  <script src="scripts/admin-roster.js"></script>
   <script>
 (function () {
   "use strict";
@@ -1024,6 +1102,20 @@
   if (!AdminSession.require()) return;
 
   AdminSidebar.mount(document.getElementById("adminSidebarMount"), "sheets");
+
+  AdminRosterUI.bind({
+    emptyText: "등록된 명렬표 없음 — 설문 응답 시 기본 명렬표를 사용합니다.",
+    openLabel: "학생 명렬표 추가",
+    closeLabel: "명렬표 입력 닫기",
+    previewClass: "roster-preview",
+    onStatus: function (text, ok) {
+      var el = document.getElementById("rosterStatusMsg");
+      if (!el) return;
+      el.textContent = text || "";
+      el.hidden = !text;
+      el.className = "admin-roster-msg" + (ok ? " ok" : text ? " err" : "");
+    },
+  });
 
   renderAdminRegistryList();
   bindSurveyNameField();

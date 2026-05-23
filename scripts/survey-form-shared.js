@@ -2,6 +2,7 @@
   "use strict";
 
   var REGISTRY_KEY = "school-sheet-registry-v1";
+  var ROSTER_CONFIG_KEY = "school-roster-config-v1";
   var ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
   var GRADE = 1;
 
@@ -245,11 +246,62 @@
         grade
       );
     }
+    var globalCfg = loadGlobalRosterConfig();
+    if (globalCfg && globalCfg.rosterSource) {
+      if (globalCfg.rosterStudents && globalCfg.rosterStudents.length) {
+        return globalCfg.rosterStudents
+          .map(function (s) {
+            return normalizeRosterStudent(s, grade);
+          })
+          .filter(Boolean);
+      }
+      if (globalCfg.rosterSpreadsheetId) {
+        return fetchRosterFromSpreadsheet(
+          globalCfg.rosterSpreadsheetId,
+          globalCfg.rosterSheetName || null,
+          grade
+        );
+      }
+    }
     try {
       return await fetchRosterRows();
     } catch (err) {
       return [];
     }
+  }
+
+  function loadGlobalRosterConfig() {
+    try {
+      var raw = localStorage.getItem(ROSTER_CONFIG_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveGlobalRosterConfig(cfg) {
+    localStorage.setItem(ROSTER_CONFIG_KEY, JSON.stringify(cfg || {}));
+  }
+
+  function clearGlobalRosterConfig() {
+    localStorage.removeItem(ROSTER_CONFIG_KEY);
+  }
+
+  function mergeRosterIntoEntry(entry) {
+    entry = entry || {};
+    if (entry.rosterSource || entry.rosterSpreadsheetId || (entry.rosterStudents && entry.rosterStudents.length)) {
+      return entry;
+    }
+    var globalCfg = loadGlobalRosterConfig();
+    if (!globalCfg || !globalCfg.rosterSource) return entry;
+    return Object.assign({}, entry, {
+      rosterSource: globalCfg.rosterSource,
+      rosterSpreadsheetId: globalCfg.rosterSpreadsheetId || "",
+      rosterSheetName: globalCfg.rosterSheetName || "",
+      rosterLabel: globalCfg.rosterLabel || "",
+      rosterStudents: globalCfg.rosterStudents || [],
+    });
   }
 
   function deriveClassOptions(roster) {
@@ -1226,6 +1278,7 @@
 
   global.SurveyForm = {
     REGISTRY_KEY: REGISTRY_KEY,
+    ROSTER_CONFIG_KEY: ROSTER_CONFIG_KEY,
     ROSTER_SPREADSHEET_ID: ROSTER_SPREADSHEET_ID,
     GRADE: GRADE,
     QUESTION_TYPES: QUESTION_TYPES,
@@ -1261,6 +1314,10 @@
     summarizeRoster: summarizeRoster,
     fetchRosterFromSpreadsheet: fetchRosterFromSpreadsheet,
     fetchRosterForSurvey: fetchRosterForSurvey,
+    loadGlobalRosterConfig: loadGlobalRosterConfig,
+    saveGlobalRosterConfig: saveGlobalRosterConfig,
+    clearGlobalRosterConfig: clearGlobalRosterConfig,
+    mergeRosterIntoEntry: mergeRosterIntoEntry,
     normalizeRosterStudent: normalizeRosterStudent,
     buildSurveyConfigJson: buildSurveyConfigJson,
     parseSurveyConfigJson: parseSurveyConfigJson,
