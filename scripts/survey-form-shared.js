@@ -137,51 +137,163 @@
     return JSON.parse(text.slice(start, end + 1));
   }
 
-  async function fetchRosterRows() {
-    var url =
-      "https://docs.google.com/spreadsheets/d/" +
-      getRosterSpreadsheetId() +
-      "/gviz/tq?tqx=out:json";
-    var res = await fetch(url);
-    if (!res.ok) throw new Error("명렬표 시트를 불러오지 못했습니다.");
-    var values = gvizTableToValues(parseGvizJson(await res.text()));
-    if (!values.length) return [];
-    var header = values[0].map(coerceText);
-    var banIdx = header.findIndex(function (h) {
-      return /반/.test(h);
+  function normalizeBan(value) {
+    if (value == null || value === "") return null;
+    if (typeof value === "number" && Number.isFinite(value)) return Math.floor(value);
+    var m = coerceText(value).match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function bansMatch(a, b) {
+    var na = normalizeBan(a);
+    var nb = normalizeBan(b);
+    return na != null && nb != null && na === nb;
+  }
+
+  function coerceNumber(value) {
+    var s = coerceText(value).replace(/,/g, "");
+    var n = Number(s);
+    if (Number.isFinite(n) && n === Math.floor(n) && n >= 0) return Math.floor(n);
+    var m = s.match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+
+  function findColumnIndex(headers, aliases) {
+    for (var i = 0; i < headers.length; i++) {
+      var h = coerceText(headers[i]).toLowerCase();
+      for (var j = 0; j < aliases.length; j++) {
+        if (h.indexOf(String(aliases[j]).toLowerCase()) >= 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  function findColumnIndexExact(headers, aliases) {
+    for (var i = 0; i < headers.length; i++) {
+      var h = coerceText(headers[i]).toLowerCase();
+      for (var j = 0; j < aliases.length; j++) {
+        if (h === String(aliases[j]).toLowerCase()) return i;
+      }
+    }
+    return -1;
+  }
+
+  function isMatrixClassRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return false;
+    var headerRow = rawValues[0].map(coerceText);
+    var classCols = 0;
+    headerRow.forEach(function (h) {
+      if (/^\d+\s*반$/.test(String(h || "").trim())) classCols += 1;
     });
-    var numIdx = header.findIndex(function (h) {
-      return /번호/.test(h);
+    return classCols >= 2;
+  }
+
+  function parseMatrixClassRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return [];
+    var headerRow = rawValues[0].map(coerceText);
+    var dataRows = rawValues.slice(1).filter(function (row) {
+      return row && row.some(function (cell) {
+        return coerceText(cell) !== "";
+      });
     });
-    var nameIdx = header.findIndex(function (h) {
-      return /이름|성명/.test(h);
+    var numberIdx = findColumnIndexExact(headerRow, ["번호", "number", "no", "no."]);
+    if (numberIdx < 0) numberIdx = findColumnIndex(headerRow, ["번호", "number", "no"]);
+    if (numberIdx < 0) numberIdx = 0;
+
+    var classColumns = [];
+    headerRow.forEach(function (h, idx) {
+      if (idx === numberIdx) return;
+      var m = String(h || "").trim().match(/^(\d+)\s*반$/);
+      if (m) classColumns.push({ idx: idx, ban: parseInt(m[1], 10) });
     });
+    if (!classColumns.length) return [];
+
+    var roster = [];
+    dataRows.forEach(function (raw, rowIndex) {
+      var numberVal = numberIdx >= 0 ? coerceNumber(raw[numberIdx]) : null;
+      if (numberVal == null) numberVal = rowIndex + 1;
+      classColumns.forEach(function (col) {
+        var nameVal = coerceText(raw[col.idx]);
+        if (!nameVal) return;
+        roster.push({
+          반: col.ban,
+          번호: numberVal,
+          이름: nameVal,
+          학번: formatStudentId(GRADE, col.ban, numberVal),
+        });
+      });
+    });
+    return roster;
+  }
+
+  function parseListRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return [];
+    if (isMatrixClassRoster(rawValues)) return parseMatrixClassRoster(rawValues);
+
+    var header = rawValues[0].map(coerceText);
+    var dataRows = rawValues.slice(1).filter(function (row) {
+      return row && row.some(function (cell) {
+        return coerceText(cell) !== "";
+      });
+    });
+
+    var banIdx = findColumnIndexExact(header, ["반", "class", "학급"]);
+    if (banIdx < 0) banIdx = findColumnIndex(header, ["반", "class", "학급", "반명"]);
+    var numIdx = findColumnIndexExact(header, ["번호", "number", "no"]);
+    if (numIdx < 0) numIdx = findColumnIndex(header, ["번호", "number", "no"]);
+    var nameIdx = findColumnIndexExact(header, ["이름", "name", "성명", "성함"]);
+    if (nameIdx < 0) nameIdx = findColumnIndex(header, ["이름", "name", "성명", "성함"]);
+    var sidIdx = findColumnIndexExact(header, ["학번", "student_id", "학생번호"]);
+    if (sidIdx < 0) sidIdx = findColumnIndex(header, ["학번", "student_id"]);
+
     var rows = [];
-    for (var r = 1; r < values.length; r++) {
-      var row = values[r];
+    dataRows.forEach(function (row, rowIndex) {
       var banRaw = banIdx >= 0 ? coerceText(row[banIdx]) : "";
       var numRaw = numIdx >= 0 ? coerceText(row[numIdx]) : "";
       var name = nameIdx >= 0 ? coerceText(row[nameIdx]) : "";
-      var banMatch = banRaw.match(/(\d+)/);
-      var ban = banMatch ? parseInt(banMatch[1], 10) : null;
-      var num = Number(numRaw);
-      if (!Number.isFinite(num)) continue;
+      var sidRaw = sidIdx >= 0 ? coerceText(row[sidIdx]) : "";
+      var ban = normalizeBan(banRaw);
+      var num = coerceNumber(numRaw);
+      var parsedId = parseStudentId(sidRaw);
+      if (ban == null && parsedId.반 != null) ban = parsedId.반;
+      if (num == null && parsedId.번호 != null) num = parsedId.번호;
+      if (num == null && !name && !sidRaw) return;
+      if (num == null) num = rowIndex + 1;
+      var 학번 = sidRaw || formatStudentId(GRADE, ban, num);
+      if (ban == null) {
+        var from학번 = parseStudentId(학번);
+        if (from학번.반 != null) ban = from학번.반;
+      }
       rows.push({
         반: ban,
         번호: num,
         이름: name,
-        학번: formatStudentId(GRADE, ban, num),
+        학번: 학번,
       });
-    }
+    });
     return rows;
+  }
+
+  async function fetchRosterRows() {
+    var spreadsheetId = getRosterSpreadsheetId();
+    var probes = ["1반", "명단", "명렬표", "list", ""];
+    for (var i = 0; i < probes.length; i++) {
+      try {
+        var values = await fetchGvizValues(spreadsheetId, probes[i] || undefined);
+        var roster = parseListRoster(values);
+        if (roster.length) return roster;
+      } catch (err) { /* try next sheet */ }
+    }
+    return [];
   }
 
   function deriveClassOptions(roster) {
     var map = {};
     roster.forEach(function (s) {
-      if (s.반 == null) return;
-      var key = String(s.반);
-      if (!map[key]) map[key] = { 반: s.반, label: s.반 + "반", count: 0 };
+      var ban = normalizeBan(s.반);
+      if (ban == null) return;
+      var key = String(ban);
+      if (!map[key]) map[key] = { 반: ban, label: ban + "반", count: 0 };
       map[key].count += 1;
     });
     return Object.keys(map)
@@ -196,7 +308,7 @@
   function lookupStudent(roster, ban, num) {
     return (
       roster.find(function (s) {
-        return s.반 === ban && s.번호 === num;
+        return bansMatch(s.반, ban) && s.번호 === num;
       }) || null
     );
   }
@@ -204,7 +316,7 @@
   function studentsInClass(roster, ban) {
     return roster
       .filter(function (s) {
-        return s.반 === ban;
+        return bansMatch(s.반, ban);
       })
       .sort(function (a, b) {
         return (a.번호 || 0) - (b.번호 || 0);
