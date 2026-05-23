@@ -408,7 +408,9 @@
   }
 
   function questionCategories(entry) {
-    var qs = (entry && entry.questions) || [];
+    var qs = ((entry && entry.questions) || []).filter(function (q) {
+      return q && q.type !== "section";
+    });
     return [{ id: "all", label: "모든 문항", enabled: true }].concat(
       qs.map(function (q) {
         return { id: q.id, label: q.label || q.id, enabled: true };

@@ -16,6 +16,7 @@
   <title>학생 설문 등록 · 남악고</title>
   <link rel="icon" href="assets/namak-logo.png" type="image/png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="scripts/survey-form-questions.css">
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -74,6 +75,17 @@
       margin-bottom: 10px;
     }
     .q-row-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .field-input { margin-top: 0; }
+    .q-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .type-legend {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(74, 122, 176, 0.08);
+      font-size: 0.8rem;
+      color: var(--theme-text-muted);
+      line-height: 1.5;
+    }
     .btn {
       display: inline-block;
       padding: 10px 14px;
@@ -113,14 +125,18 @@
     <p class="nav-top"><a class="btn" href="admin.html">← 시트 관리</a></p>
     <div class="panel">
       <h1>학생 설문 등록</h1>
-      <p class="lead">관리자가 설문 문항을 등록합니다. 학생은 등록 후 제공되는 <strong>참여 링크</strong>에서 반·번호·이름을 선택하고 설문을 작성합니다.</p>
+      <p class="lead">구글 폼과 같은 문항 유형으로 설문을 만듭니다. 저장 후 <strong>참여 링크</strong>를 학생에게 공유하세요.</p>
 
       <label for="surveyLabel">설문 이름</label>
       <input type="text" id="surveyLabel" placeholder="예: 1학기 상담 설문" />
 
       <h2 style="font-size:1.05rem;margin:20px 0 8px;color:var(--theme-heading)">문항</h2>
+      <p class="type-legend">단답·장문·이메일·숫자·URL·날짜·시간·객관식·체크박스·드롭다운·선형 배율·객관식/체크박스 격자·제목 및 설명</p>
+      <div class="q-toolbar">
+        <button type="button" class="btn" id="btnAddQuestion">+ 문항 추가</button>
+        <button type="button" class="btn" id="btnAddSection">+ 제목/설명 추가</button>
+      </div>
       <div id="questionList"></div>
-      <button type="button" class="btn" id="btnAddQuestion">+ 문항 추가</button>
 
       <div class="actions">
         <button type="button" class="btn btn-primary" id="btnSave">메인에 등록</button>
@@ -136,6 +152,7 @@
 
   <script src="scripts/admin-session.js"></script>
   <script src="scripts/survey-form-shared.js"></script>
+  <script src="scripts/survey-question-types.js"></script>
   <script>
 (function () {
   "use strict";
@@ -151,41 +168,25 @@
     statusMsg.className = "msg " + (ok ? "ok" : "err");
   }
 
-  function makeQuestionRow(q) {
-    q = q || { id: "q" + Date.now(), label: "", type: "textarea", required: true };
-    var row = document.createElement("div");
-    row.className = "q-row";
-    row.dataset.qid = q.id;
-    row.innerHTML =
-      '<div class="q-row-head"><strong>문항</strong><button type="button" class="btn btn-danger btn-remove">삭제</button></div>' +
-      '<label>질문</label><input type="text" class="q-label" placeholder="예: 상담 받고 싶은 주제" />' +
-      '<label>입력 형식</label><select class="q-type"><option value="text">한 줄</option><option value="textarea">여러 줄</option></select>' +
-      '<label><input type="checkbox" class="q-required" /> 필수</label>';
-    row.querySelector(".q-label").value = q.label || "";
-    row.querySelector(".q-type").value = q.type === "text" ? "text" : "textarea";
-    row.querySelector(".q-required").checked = q.required !== false;
-    row.querySelector(".btn-remove").addEventListener("click", function () {
-      row.remove();
-    });
-    questionList.appendChild(row);
+  function addQuestion(q) {
+    SurveyQuestions.mountAdminQuestionRow(questionList, q);
   }
 
   function collectQuestions() {
     return Array.prototype.map.call(questionList.querySelectorAll(".q-row"), function (row) {
-      return {
-        id: row.dataset.qid,
-        label: row.querySelector(".q-label").value.trim() || "문항",
-        type: row.querySelector(".q-type").value,
-        required: row.querySelector(".q-required").checked,
-      };
+      return SurveyQuestions.readAdminQuestionFromRow(row);
     });
   }
 
   function buildEntry() {
     var label = document.getElementById("surveyLabel").value.trim();
     if (!label) throw new Error("설문 이름을 입력해 주세요.");
-    var qs = collectQuestions();
-    if (!qs.length) throw new Error("문항을 1개 이상 추가해 주세요.");
+    var qs = collectQuestions().filter(function (q) {
+      return q.type === "section" ? q.label || q.description : true;
+    });
+    if (!qs.some(function (q) { return SurveyQuestions.hasInput(q.type); })) {
+      throw new Error("응답이 있는 문항을 1개 이상 추가해 주세요.");
+    }
     var id = editId || SurveyForm.generateSurveyId();
     var existing = editId ? SurveyForm.findSurvey(editId) : null;
     return {
@@ -215,7 +216,10 @@
   }
 
   document.getElementById("btnAddQuestion").addEventListener("click", function () {
-    makeQuestionRow();
+    addQuestion({ type: "textarea", label: "", required: true });
+  });
+  document.getElementById("btnAddSection").addEventListener("click", function () {
+    addQuestion({ type: "section", label: "섹션 제목", description: "", required: false });
   });
 
   document.getElementById("btnSave").addEventListener("click", function () {
@@ -239,13 +243,13 @@
     var existing = SurveyForm.findSurvey(editId);
     if (existing && existing.type === "form") {
       document.getElementById("surveyLabel").value = existing.label || "";
-      (existing.questions || []).forEach(makeQuestionRow);
+      (existing.questions || []).forEach(addQuestion);
       updateStudentLink(existing.id);
     }
   }
   if (!questionList.children.length) {
-    makeQuestionRow({ id: "q1", label: "상담 받고 싶은 주제", type: "textarea" });
-    makeQuestionRow({ id: "q2", label: "전하고 싶은 말", type: "textarea" });
+    addQuestion({ id: "q1", label: "상담 받고 싶은 주제", type: "textarea" });
+    addQuestion({ id: "q2", label: "전하고 싶은 말", type: "textarea" });
   }
 })();
   </script>

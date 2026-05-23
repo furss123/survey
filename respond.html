@@ -16,6 +16,7 @@
   <title>설문 참여 · 남악고</title>
   <link rel="icon" href="assets/namak-logo.png" type="image/png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="scripts/survey-form-questions.css">
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -201,6 +202,7 @@
   </div>
 
   <script src="scripts/survey-form-shared.js"></script>
+  <script src="scripts/survey-question-types.js"></script>
   <script>
 (function () {
   "use strict";
@@ -302,53 +304,24 @@
     var qs = entry.questions || [];
     elQuestions.innerHTML = qs
       .map(function (q, idx) {
-        var id = "q_" + q.id;
-        var req = q.required !== false ? " *" : "";
-        var inner = "";
-        if (q.type === "textarea" || !q.type) {
-          inner =
-            '<textarea id="' +
-            id +
-            '" name="' +
-            SurveyForm.esc(q.id) +
-            '" rows="4"></textarea>';
-        } else {
-          inner =
-            '<input type="text" id="' +
-            id +
-            '" name="' +
-            SurveyForm.esc(q.id) +
-            '" />';
-        }
-        return (
-          '<div class="q-block"><p class="q-title">' +
-          SurveyForm.esc(q.label || "문항 " + (idx + 1)) +
-          req +
-          "</p>" +
-          inner +
-          "</div>"
-        );
+        return SurveyQuestions.renderRespondField(q, idx);
       })
       .join("");
+    SurveyQuestions.bindRespondInteractions(elQuestions);
   }
 
   function collectAnswers() {
-    var answers = {};
-    (entry.questions || []).forEach(function (q) {
-      var el = document.querySelector('[name="' + q.id + '"]');
-      answers[q.id] = el ? String(el.value || "").trim() : "";
-    });
-    return answers;
+    return SurveyQuestions.collectAllAnswers(entry.questions, elQuestions);
   }
 
   function validateAnswers() {
-    var missing = (entry.questions || []).filter(function (q) {
-      if (q.required === false) return false;
-      var el = document.querySelector('[name="' + q.id + '"]');
-      return !el || !String(el.value || "").trim();
-    });
-    if (missing.length) {
-      showError("필수 문항을 모두 작성해 주세요: " + missing.map(function (q) { return q.label; }).join(", "));
+    var result = SurveyQuestions.validateAll(entry.questions, elQuestions);
+    if (result.missing.length) {
+      showError("필수 문항을 모두 작성해 주세요: " + result.missing.join(", "));
+      return false;
+    }
+    if (result.invalid.length) {
+      showError("입력 형식을 확인해 주세요: " + result.invalid.join(", "));
       return false;
     }
     showError("");
