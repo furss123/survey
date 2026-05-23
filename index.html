@@ -3636,8 +3636,9 @@
                 : activeClassFilter,
         })
       );
-      var sheetId =
-        entry.responseSpreadsheetId || DEFAULT_RESPONSE_SHEET_ID;
+      var sheetId = SurveyForm.usesGithubResponseStorage(entry)
+        ? null
+        : entry.responseSpreadsheetId || DEFAULT_RESPONSE_SHEET_ID;
       renderResults(getActiveAnalysis(), sheetId, lastMultiResult);
       syncViewUrl();
       document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });

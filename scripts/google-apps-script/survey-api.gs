@@ -69,6 +69,8 @@ function buildSurveyConfigJson_(survey) {
     rosterSource: survey.rosterSource || "",
     rosterLabel: survey.rosterLabel || "",
     rosterStudents: survey.rosterStudents || [],
+    responseStorage: survey.responseStorage || "github",
+    responseSpreadsheetId: survey.responseSpreadsheetId || "",
   });
 }
 
@@ -87,6 +89,8 @@ function parseSurveyConfigJson_(raw) {
       rosterSource: parsed.rosterSource || "",
       rosterLabel: parsed.rosterLabel || "",
       rosterStudents: parsed.rosterStudents || [],
+      responseStorage: parsed.responseStorage || "github",
+      responseSpreadsheetId: parsed.responseSpreadsheetId || "",
     };
   } catch (e) {
     return { questions: [] };
@@ -157,6 +161,8 @@ function getSurvey_(id) {
         rosterSource: cfg.rosterSource,
         rosterLabel: cfg.rosterLabel,
         rosterStudents: cfg.rosterStudents,
+        responseStorage: cfg.responseStorage,
+        responseSpreadsheetId: cfg.responseSpreadsheetId,
         categorySelectAll: String(data[i][4]).toUpperCase() === "Y",
       },
     };
@@ -164,31 +170,142 @@ function getSurvey_(id) {
   return { ok: false, error: "survey not found" };
 }
 
+function githubGetConfig_() {
+  var props = PropertiesService.getScriptProperties();
+  return {
+    token: props.getProperty("GITHUB_TOKEN") || "",
+    owner: props.getProperty("GITHUB_OWNER") || "furss123",
+    repo: props.getProperty("GITHUB_REPO") || "survey",
+    branch: props.getProperty("GITHUB_BRANCH") || "main",
+  };
+}
+
+function githubApi_(method, path, payload) {
+  var cfg = githubGetConfig_();
+  if (!cfg.token) return { ok: false, error: "GITHUB_TOKEN not configured" };
+  var url =
+    "https://api.github.com/repos/" +
+    cfg.owner +
+    "/" +
+    cfg.repo +
+    "/contents/" +
+    path;
+  if (method === "GET") url += "?ref=" + encodeURIComponent(cfg.branch);
+  var options = {
+    method: method,
+    headers: {
+      Authorization: "Bearer " + cfg.token,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "namak-survey-api",
+    },
+    muteHttpExceptions: true,
+  };
+  if (payload) {
+    options.contentType = "application/json";
+    options.payload = JSON.stringify(payload);
+  }
+  var resp = UrlFetchApp.fetch(url, options);
+  var code = resp.getResponseCode();
+  var text = resp.getContentText();
+  var data = {};
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    data = {};
+  }
+  if (code >= 200 && code < 300) return { ok: true, data: data };
+  if (code === 404 && method === "GET") return { ok: true, missing: true };
+  return { ok: false, error: (data && data.message) || text, code: code };
+}
+
+function appendGithubResponse_(surveyId, record) {
+  var path = "responses/" + surveyId + "/data.json";
+  var got = githubApi_("GET", path);
+  var list = [];
+  var sha = null;
+  if (got.ok && !got.missing && got.data && got.data.content) {
+    var decoded = Utilities.newBlob(
+      Utilities.base64Decode(String(got.data.content).replace(/\n/g, ""))
+    ).getDataAsString("UTF-8");
+    try {
+      list = JSON.parse(decoded);
+    } catch (e) {
+      list = [];
+    }
+    if (Object.prototype.toString.call(list) !== "[object Array]") list = [];
+    sha = got.data.sha;
+  }
+  list.push(record);
+  var cfg = githubGetConfig_();
+  var body = {
+    message:
+      "Add response: " +
+      surveyId +
+      " (" +
+      (record["학번"] || record.submittedAt || "") +
+      ")",
+    content: Utilities.base64Encode(JSON.stringify(list, null, 2)),
+    branch: cfg.branch,
+  };
+  if (sha) body.sha = sha;
+  return githubApi_("PUT", path, body);
+}
+
+function usesSheetStorage_(survey) {
+  return survey && String(survey.responseStorage || "").toLowerCase() === "sheet";
+}
+
 function submitResponse_(body) {
   if (!body.surveyId) throw new Error("surveyId required");
   var got = getSurvey_(body.surveyId);
   if (!got.ok) throw new Error(got.error || "survey not found");
   var survey = got.survey;
-  syncResponseHeaders_(survey);
-  var sheets = ensureSheets_();
-  var resp = sheets.responses;
-  var header = resp.getRange(1, 1, 1, resp.getLastColumn()).getValues()[0];
   var answers = body.answers || {};
-  var row = [];
-  header.forEach(function (h) {
-    if (h === "제출시각") row.push(body.submittedAt || new Date().toISOString());
-    else if (h === "설문ID") row.push(body.surveyId);
-    else if (h === "학번") row.push(body.학번 || "");
-    else if (h === "반") row.push(body.반 || "");
-    else if (h === "번호") row.push(body.번호 != null ? body.번호 : "");
-    else if (h === "이름") row.push(body.이름 || "");
-    else {
-      var q = (survey.questions || []).find(function (x) {
-        return (x.label || x.id) === h;
-      });
-      row.push(q ? answers[q.id] || "" : "");
+  var record = {
+    submittedAt: body.submittedAt || new Date().toISOString(),
+    surveyId: body.surveyId,
+    학번: body.학번 || "",
+    반: body.반 || "",
+    번호: body.번호 != null ? body.번호 : "",
+    이름: body.이름 || "",
+    answers: answers,
+  };
+  var githubResult = null;
+  if (!usesSheetStorage_(survey)) {
+    githubResult = appendGithubResponse_(body.surveyId, record);
+    if (!githubResult.ok) {
+      throw new Error(
+        "GitHub 저장 실패: " +
+          (githubResult.error || "unknown") +
+          ". Apps Script 스크립트 속성에 GITHUB_TOKEN을 설정했는지 확인하세요."
+      );
     }
-  });
-  resp.appendRow(row);
-  return { ok: true };
+  }
+  if (usesSheetStorage_(survey)) {
+    syncResponseHeaders_(survey);
+    var sheets = ensureSheets_();
+    var resp = sheets.responses;
+    var header = resp.getRange(1, 1, 1, resp.getLastColumn()).getValues()[0];
+    var row = [];
+    header.forEach(function (h) {
+      if (h === "제출시각") row.push(record.submittedAt);
+      else if (h === "설문ID") row.push(body.surveyId);
+      else if (h === "학번") row.push(record["학번"]);
+      else if (h === "반") row.push(record["반"]);
+      else if (h === "번호") row.push(record["번호"]);
+      else if (h === "이름") row.push(record["이름"]);
+      else {
+        var q = (survey.questions || []).find(function (x) {
+          return (x.label || x.id) === h;
+        });
+        row.push(q ? answers[q.id] || "" : "");
+      }
+    });
+    resp.appendRow(row);
+  }
+  return {
+    ok: true,
+    storage: usesSheetStorage_(survey) ? "sheet" : "github",
+    github: githubResult,
+  };
 }

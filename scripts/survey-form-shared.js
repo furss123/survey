@@ -5,6 +5,10 @@
   var ROSTER_CONFIG_KEY = "school-roster-config-v1";
   var ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
   var GRADE = 1;
+  var GITHUB_OWNER = "furss123";
+  var GITHUB_REPO = "survey";
+  var GITHUB_BRANCH = "main";
+  var DEFAULT_RESPONSE_SHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
 
   function esc(s) {
     var d = document.createElement("div");
@@ -1211,10 +1215,108 @@
     };
   }
 
+  function usesGithubResponseStorage(entry) {
+    if (!entry) return true;
+    if (entry.responseStorage === "sheet") return false;
+    if (entry.responseStorage === "github") return true;
+    return !entry.responseSpreadsheetId;
+  }
+
+  function getGithubResponsesUrl(entry) {
+    var surveyId = entry && entry.id;
+    if (!surveyId) return "";
+    return (
+      "https://raw.githubusercontent.com/" +
+      GITHUB_OWNER +
+      "/" +
+      GITHUB_REPO +
+      "/" +
+      GITHUB_BRANCH +
+      "/responses/" +
+      encodeURIComponent(surveyId) +
+      "/data.json"
+    );
+  }
+
+  async function fetchGithubResponses(entry) {
+    var url = getGithubResponsesUrl(entry);
+    if (!url) throw new Error("설문 ID가 없습니다.");
+    var res = await fetch(url + "?t=" + Date.now());
+    if (res.status === 404) return [];
+    if (!res.ok) throw new Error("GitHub 응답 파일을 불러오지 못했습니다. (" + res.status + ")");
+    var data = await res.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  function buildFormAnalysisFromGithubRecords(entry, roster, records) {
+    var questions = answerableQuestions(entry.questions || []);
+    var respondedKeys = {};
+    var rows = [];
+    (records || []).forEach(function (rec) {
+      if (!rec) return;
+      if (rec.surveyId && rec.surveyId !== entry.id) return;
+      var answers = rec.answers || {};
+      var sections = questions
+        .map(function (q) {
+          var body = answers[q.id];
+          body = body == null ? "" : String(body).trim();
+          if (!body) return null;
+          return { title: q.label || q.id, body: body, fields: [] };
+        })
+        .filter(Boolean);
+      if (!sections.length) return;
+      var 학번 = coerceText(rec.학번);
+      var parsed = parseStudentId(학번);
+      var banRaw = coerceText(rec.반);
+      var banMatch = banRaw.match(/(\d+)/);
+      var 반 = banMatch ? banMatch[1] + "반" : parsed.반 ? parsed.반 + "반" : "";
+      var 번호 = rec.번호 != null && rec.번호 !== "" ? Number(rec.번호) : parsed.번호;
+      var key = 학번 || 반 + "-" + 번호;
+      respondedKeys[key] = true;
+      rows.push({
+        학번: 학번 || formatStudentId(entry.grade || GRADE, parsed.반, 번호),
+        반: 반,
+        번호: Number.isFinite(번호) ? 번호 : null,
+        이름: coerceText(rec.이름),
+        sections: sections,
+        _raw: {},
+      });
+    });
+
+    var missingStudents = roster.filter(function (s) {
+      var k = s.학번 || (s.반 != null ? s.반 + "반-" + s.번호 : "");
+      return !respondedKeys[k] && !respondedKeys[s.학번];
+    });
+
+    return {
+      sheets: [
+        {
+          sheetName: "전체",
+          rows: rows,
+          participation: { missingStudents: missingStudents },
+          meta: {
+            format: "form",
+            surveyId: entry.id,
+            storage: "github",
+            githubPath: "responses/" + entry.id + "/data.json",
+          },
+          summary: { 총응답: rows.length },
+        },
+      ],
+    };
+  }
+
   async function fetchFormResponsesAnalysis(entry, roster) {
+    if (usesGithubResponseStorage(entry)) {
+      try {
+        var records = await fetchGithubResponses(entry);
+        return buildFormAnalysisFromGithubRecords(entry, roster, records);
+      } catch (err) {
+        if (entry.responseStorage === "github") throw err;
+      }
+    }
     var sheetId =
-      (entry && entry.responseSpreadsheetId) ||
-      "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
+      (entry && entry.responseSpreadsheetId) || DEFAULT_RESPONSE_SHEET_ID;
     var tab = (entry && entry.responseTab) || "Responses";
     var values = await fetchGvizValues(sheetId, tab);
     return buildFormAnalysisFromValues(entry, roster, values);
@@ -1229,6 +1331,8 @@
       rosterSource: survey.rosterSource || "",
       rosterLabel: survey.rosterLabel || "",
       rosterStudents: survey.rosterStudents || [],
+      responseStorage: survey.responseStorage || "github",
+      responseSpreadsheetId: survey.responseSpreadsheetId || "",
     });
   }
 
@@ -1245,6 +1349,8 @@
         rosterSource: parsed.rosterSource || "",
         rosterLabel: parsed.rosterLabel || "",
         rosterStudents: parsed.rosterStudents || [],
+        responseStorage: parsed.responseStorage || "github",
+        responseSpreadsheetId: parsed.responseSpreadsheetId || "",
       };
     } catch (e) {
       return { questions: [] };
@@ -1270,6 +1376,8 @@
           rosterSource: entry.rosterSource || "",
           rosterLabel: entry.rosterLabel || "",
           rosterStudents: entry.rosterStudents || [],
+          responseStorage: entry.responseStorage || "github",
+          responseSpreadsheetId: entry.responseSpreadsheetId || "",
         },
       }),
     });
@@ -1278,6 +1386,9 @@
 
   global.SurveyForm = {
     REGISTRY_KEY: REGISTRY_KEY,
+    GITHUB_OWNER: GITHUB_OWNER,
+    GITHUB_REPO: GITHUB_REPO,
+    GITHUB_BRANCH: GITHUB_BRANCH,
     ROSTER_CONFIG_KEY: ROSTER_CONFIG_KEY,
     ROSTER_SPREADSHEET_ID: ROSTER_SPREADSHEET_ID,
     GRADE: GRADE,
@@ -1333,6 +1444,10 @@
     questionCategories: questionCategories,
     fetchFormResponsesAnalysis: fetchFormResponsesAnalysis,
     buildFormAnalysisFromValues: buildFormAnalysisFromValues,
+    buildFormAnalysisFromGithubRecords: buildFormAnalysisFromGithubRecords,
+    usesGithubResponseStorage: usesGithubResponseStorage,
+    getGithubResponsesUrl: getGithubResponsesUrl,
+    fetchGithubResponses: fetchGithubResponses,
     fetchGvizValues: fetchGvizValues,
   };
 })(typeof window !== "undefined" ? window : this);

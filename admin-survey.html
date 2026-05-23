@@ -203,6 +203,17 @@
       margin-top: 10px;
     }
     label.inline-check input { width: auto; }
+    fieldset.storage-fieldset {
+      border: 1px solid var(--theme-border, #ddd);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+    fieldset.storage-fieldset legend {
+      padding: 0 6px;
+      font-weight: 600;
+      color: var(--theme-heading, #333);
+    }
     .roster-box {
       margin: 16px 0;
       padding: 14px;
@@ -285,8 +296,22 @@
       <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
       <p class="hint"><a href="docs/SURVEY_FORM_SETUP.md" target="_blank" rel="noopener">설치 안내</a>에 따라 스크립트를 배포한 뒤 URL을 붙여 넣으세요.</p>
 
-      <label for="responseSheetId">응답 저장 스프레드시트 ID (선택)</label>
-      <input type="text" id="responseSheetId" placeholder="비우면 기본 응답 시트 사용" />
+      <fieldset class="storage-fieldset">
+        <legend>응답 저장</legend>
+        <label class="inline-check">
+          <input type="radio" name="responseStorage" value="github" checked />
+          GitHub (<code>responses/{설문ID}/data.json</code>)
+        </label>
+        <label class="inline-check">
+          <input type="radio" name="responseStorage" value="sheet" />
+          Google 스프레드시트
+        </label>
+        <p class="hint">GitHub 저장은 Apps Script 스크립트 속성 <code>GITHUB_TOKEN</code> 이 필요합니다. <a href="responses/README.md" target="_blank" rel="noopener">설정 안내</a></p>
+      </fieldset>
+      <div id="responseSheetWrap" hidden>
+        <label for="responseSheetId">응답 저장 스프레드시트 ID</label>
+        <input type="text" id="responseSheetId" placeholder="비우면 기본 응답 시트 사용" />
+      </div>
 
       <label><input type="checkbox" id="categorySelectAll" checked /> 결과 화면에서 문항 탭 숨기기(전체 문항 한 번에 표시)</label>
 
@@ -331,6 +356,16 @@
     AdminSession.clear();
     location.href = "admin-login.html";
   });
+
+  function syncResponseStorageUi() {
+    var storageEl = document.querySelector('input[name="responseStorage"]:checked');
+    var storage = storageEl ? storageEl.value : "github";
+    document.getElementById("responseSheetWrap").hidden = storage !== "sheet";
+  }
+  document.querySelectorAll('input[name="responseStorage"]').forEach(function (el) {
+    el.addEventListener("change", syncResponseStorageUi);
+  });
+  syncResponseStorageUi();
 
   var editId = new URLSearchParams(location.search).get("edit");
   var questionList = document.getElementById("questionList");
@@ -609,6 +644,8 @@
     var qs = collectQuestions();
     if (!qs.length) throw new Error("문항을 1개 이상 추가해 주세요.");
     var id = editId || SurveyForm.generateSurveyId();
+    var storageEl = document.querySelector('input[name="responseStorage"]:checked');
+    var storage = storageEl ? storageEl.value : "github";
     var sheetId = document.getElementById("responseSheetId").value.trim();
     var entry = {
       id: id,
@@ -620,9 +657,12 @@
       categories: SurveyForm.questionCategories({ questions: qs }),
       categorySelectAll: document.getElementById("categorySelectAll").checked,
       webAppUrl: document.getElementById("webAppUrl").value.trim(),
-      responseSpreadsheetId: sheetId || undefined,
+      responseStorage: storage,
       responseTab: "Responses",
     };
+    if (storage === "sheet") {
+      entry.responseSpreadsheetId = sheetId || undefined;
+    }
     if (rosterState.source) {
       entry.rosterSource = rosterState.source;
       entry.rosterLabel = rosterState.label;
@@ -697,6 +737,11 @@
       document.getElementById("surveyLabel").value = existing.label || "";
       document.getElementById("surveyDescription").value = existing.description || "";
       document.getElementById("webAppUrl").value = existing.webAppUrl || "";
+      var storage = existing.responseStorage || (existing.responseSpreadsheetId ? "sheet" : "github");
+      document.querySelectorAll('input[name="responseStorage"]').forEach(function (el) {
+        el.checked = el.value === storage;
+      });
+      document.getElementById("responseSheetWrap").hidden = storage !== "sheet";
       document.getElementById("responseSheetId").value = existing.responseSpreadsheetId || "";
       document.getElementById("categorySelectAll").checked = !!existing.categorySelectAll;
       if (existing.rosterSource || existing.rosterSpreadsheetId || (existing.rosterStudents && existing.rosterStudents.length)) {
