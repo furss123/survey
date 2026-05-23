@@ -43,7 +43,16 @@ function ensureSheets_() {
   var config = ss.getSheetByName(CONFIG_SHEET);
   if (!config) {
     config = ss.insertSheet(CONFIG_SHEET);
-    config.appendRow(["id", "label", "grade", "questionsJson", "categorySelectAll", "surveyStatus"]);
+    config.appendRow([
+      "id",
+      "label",
+      "grade",
+      "questionsJson",
+      "categorySelectAll",
+      "surveyStatus",
+    ]);
+  } else if (config.getLastColumn() < 6) {
+    config.getRange(1, 6).setValue("surveyStatus");
   }
   var resp = ss.getSheetByName(RESPONSES_SHEET);
   if (!resp) {
@@ -131,6 +140,9 @@ function submitResponse_(body) {
   var got = getSurvey_(body.surveyId);
   if (!got.ok) throw new Error(got.error || "survey not found");
   var survey = got.survey;
+  if (survey.surveyStatus === "completed") {
+    return { ok: false, error: "이 설문은 종료되었습니다." };
+  }
   syncResponseHeaders_(survey);
   var sheets = ensureSheets_();
   var resp = sheets.responses;

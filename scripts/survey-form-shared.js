@@ -491,13 +491,7 @@
     return null;
   }
 
-  async function loadSurveyForRespond(surveyId, options) {
-    options = options || {};
-    var local = findSurvey(surveyId);
-    if (local && local.type === "form" && local.questions && local.questions.length) {
-      return normalizeFormEntry(local);
-    }
-
+  async function fetchSurveyRemote(surveyId, local) {
     var webAppUrl = resolveWebAppUrl(local || { id: surveyId });
     if (webAppUrl) {
       try {
@@ -509,21 +503,41 @@
         var res = await fetch(u);
         var data = await readJsonResponse(res);
         if (data && data.ok && data.survey) {
-          return normalizeFormEntry(
-            Object.assign({}, local || {}, data.survey, { id: surveyId, type: "form" })
-          );
+          return Object.assign({}, data.survey, { id: surveyId, type: "form" });
         }
       } catch (e) {
-        /* Config 시트·로컬로 이어서 조회 */
+        /* Config 시트로 이어서 조회 */
       }
     }
-
     var sheetId =
       (local && local.responseSpreadsheetId) ||
-      options.responseSpreadsheetId ||
       DEFAULT_RESPONSE_SPREADSHEET_ID;
-    var fromSheet = await fetchSurveyFromConfigSheet(surveyId, sheetId);
-    if (fromSheet) return fromSheet;
+    return fetchSurveyFromConfigSheet(surveyId, sheetId);
+  }
+
+  async function loadSurveyForRespond(surveyId, options) {
+    options = options || {};
+    var local = findSurvey(surveyId);
+    var remote = await fetchSurveyRemote(surveyId, local);
+
+    if (remote) {
+      return normalizeFormEntry(
+        Object.assign({}, local || {}, remote, {
+          id: surveyId,
+          type: "form",
+          questions:
+            (remote.questions && remote.questions.length
+              ? remote.questions
+              : null) ||
+            (local && local.questions) ||
+            [],
+        })
+      );
+    }
+
+    if (local && local.type === "form" && local.questions && local.questions.length) {
+      return normalizeFormEntry(local);
+    }
     if (local && local.type === "form") return normalizeFormEntry(local);
     return null;
   }
@@ -541,6 +555,9 @@
   }
 
   async function submitSurveyResponse(entry, payload) {
+    if (isSurveyCompleted(entry)) {
+      throw new Error("이 설문은 종료되었습니다. 새 응답을 받지 않습니다.");
+    }
     var webAppUrl = resolveWebAppUrl(entry);
     if (!webAppUrl) {
       throw new Error(
