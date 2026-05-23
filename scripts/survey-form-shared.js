@@ -129,13 +129,41 @@
       if (!map[key]) map[key] = { 반: s.반, label: s.반 + "반", count: 0 };
       map[key].count += 1;
     });
-    return Object.keys(map)
+    var list = Object.keys(map)
       .sort(function (a, b) {
         return Number(a) - Number(b);
       })
       .map(function (k) {
         return map[k];
       });
+    if (list.length) return list;
+    return defaultClassOptions();
+  }
+
+  function defaultClassOptions() {
+    var out = [];
+    for (var i = 1; i <= 8; i++) out.push({ 반: i, label: i + "반", count: 0 });
+    return out;
+  }
+
+  function deriveNumberOptions(roster, ban) {
+    var banNum = Number(ban);
+    if (!Number.isFinite(banNum)) return [];
+    var seen = {};
+    var nums = [];
+    roster.forEach(function (s) {
+      if (s.반 !== banNum || !Number.isFinite(s.번호)) return;
+      var key = String(s.번호);
+      if (seen[key]) return;
+      seen[key] = true;
+      nums.push(s.번호);
+    });
+    nums.sort(function (a, b) {
+      return a - b;
+    });
+    if (nums.length) return nums;
+    for (var i = 1; i <= 45; i++) nums.push(i);
+    return nums;
   }
 
   function lookupStudent(roster, ban, num) {
@@ -1060,6 +1088,8 @@
     formatStudentId: formatStudentId,
     fetchRosterRows: fetchRosterRows,
     deriveClassOptions: deriveClassOptions,
+    defaultClassOptions: defaultClassOptions,
+    deriveNumberOptions: deriveNumberOptions,
     lookupStudent: lookupStudent,
     fetchSurveyConfig: fetchSurveyConfig,
     submitSurveyResponse: submitSurveyResponse,
