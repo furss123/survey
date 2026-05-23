@@ -91,6 +91,124 @@
     return (arr || []).join("\n");
   }
 
+  function ensureMinLines(arr, min) {
+    arr = (arr || []).slice();
+    min = min == null ? 2 : min;
+    while (arr.length < min) arr.push("");
+    return arr;
+  }
+
+  function readLineListFromRow(row, role) {
+    var ul = row.querySelector('[data-line-list="' + role + '"]');
+    if (!ul) return [];
+    return Array.prototype.map
+      .call(ul.querySelectorAll(".sq-line-input"), function (inp) {
+        return coerceText(inp.value);
+      })
+      .filter(Boolean);
+  }
+
+  function readAdminOptionsFromDom(row) {
+    return {
+      choices: readLineListFromRow(row, "choices"),
+      rows: readLineListFromRow(row, "grid-rows"),
+      cols: readLineListFromRow(row, "grid-cols"),
+      allowOther: !!(row.querySelector(".q-allow-other") || {}).checked,
+      otherLabel: coerceText((row.querySelector(".q-other-label") || {}).value) || "기타",
+      min: Number((row.querySelector(".q-scale-min") || {}).value),
+      max: Number((row.querySelector(".q-scale-max") || {}).value),
+      minLabel: coerceText((row.querySelector(".q-scale-min-label") || {}).value),
+      maxLabel: coerceText((row.querySelector(".q-scale-max-label") || {}).value),
+    };
+  }
+
+  function renderLineListHtml(items, role, placeholder, addLabel) {
+    items = ensureMinLines(items, 2);
+    var html =
+      '<ul class="sq-line-list" data-line-list="' +
+      esc(role) +
+      '">';
+    items.forEach(function (val, i) {
+      html +=
+        '<li class="sq-line-item"><input type="text" class="sq-line-input field-input" value="' +
+        esc(val) +
+        '" placeholder="' +
+        esc(placeholder) +
+        " " +
+        (i + 1) +
+        '" /><button type="button" class="btn sq-line-remove" title="삭제" aria-label="삭제">×</button></li>";
+    });
+    html +=
+      "</ul><button type=\"button\" class=\"btn sq-line-add\" data-line-list=\"" +
+      esc(role) +
+      '">' +
+      esc(addLabel) +
+      "</button>";
+    return html;
+  }
+
+  function bindLineListEditors(row, onChange) {
+    onChange = onChange || function () {};
+
+    function bindRemove(btn) {
+      btn.addEventListener("click", function () {
+        var li = btn.closest(".sq-line-item");
+        var ul = li && li.parentElement;
+        if (!ul || !ul.hasAttribute("data-line-list")) return;
+        if (ul.querySelectorAll(".sq-line-item").length <= 1) {
+          var inp = li.querySelector(".sq-line-input");
+          if (inp) inp.value = "";
+          onChange();
+          return;
+        }
+        li.remove();
+        onChange();
+      });
+    }
+
+    row.querySelectorAll(".sq-line-remove").forEach(bindRemove);
+
+    row.querySelectorAll(".sq-line-add").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var role = btn.getAttribute("data-line-list");
+        var ul = row.querySelector('[data-line-list="' + role + '"]');
+        if (!ul) return;
+        var n = ul.querySelectorAll(".sq-line-item").length + 1;
+        var placeholder =
+          role === "choices"
+            ? "선택지"
+            : role === "grid-rows"
+              ? "행 항목"
+              : "열 선택지";
+        var li = document.createElement("li");
+        li.className = "sq-line-item";
+        li.innerHTML =
+          '<input type="text" class="sq-line-input field-input" value="" placeholder="' +
+          esc(placeholder) +
+          " " +
+          n +
+          '" /><button type="button" class="btn sq-line-remove" title="삭제" aria-label="삭제">×</button>';
+        ul.appendChild(li);
+        bindRemove(li.querySelector(".sq-line-remove"));
+        var inp = li.querySelector(".sq-line-input");
+        if (inp) inp.focus();
+        onChange();
+      });
+    });
+  }
+
+  function renderAdminPreview(row) {
+    var host = row.querySelector(".sq-admin-preview-body");
+    if (!host) return;
+    try {
+      var q = readAdminQuestionFromRow(row);
+      host.innerHTML = renderRespondField(q, 0);
+      bindRespondInteractions(host);
+    } catch (e) {
+      host.innerHTML = '<p class="sq-type-hint">미리보기를 표시할 수 없습니다.</p>';
+    }
+  }
+
   function fieldName(q, suffix) {
     return suffix ? q.id + "__" + suffix : q.id;
   }
@@ -235,6 +353,10 @@
         inner += "</tr>";
       });
       inner += "</tbody></table></div>";
+    }
+
+    if (!inner && hasInput(q.type)) {
+      inner = '<textarea name="' + esc(q.id) + '" rows="4"></textarea>';
     }
 
     return (
@@ -422,14 +544,12 @@
     if (type === "radio" || type === "checkbox" || type === "dropdown") {
       return (
         '<div class="sq-admin-options">' +
-        '<label>선택지 (한 줄에 하나)</label>' +
-        '<textarea class="q-choices">' +
-        esc(joinLines(options.choices)) +
-        "</textarea>" +
+        "<label>선택지</label>" +
+        renderLineListHtml(options.choices, "choices", "선택지", "+ 선택지 추가") +
         '<label><input type="checkbox" class="q-allow-other"' +
         (options.allowOther ? " checked" : "") +
         " /> 「기타」 항목 추가</label>" +
-        '<label>기타 라벨</label><input type="text" class="q-other-label" value="' +
+        '<label>기타 라벨</label><input type="text" class="q-other-label field-input" value="' +
         esc(options.otherLabel || "기타") +
         '" />' +
         "</div>"
@@ -458,14 +578,10 @@
     if (type === "grid_radio" || type === "grid_checkbox") {
       return (
         '<div class="sq-admin-options">' +
-        '<label>행 (질문 항목, 한 줄에 하나)</label>' +
-        '<textarea class="q-grid-rows">' +
-        esc(joinLines(options.rows)) +
-        "</textarea>" +
-        '<label>열 (선택지, 한 줄에 하나)</label>' +
-        '<textarea class="q-grid-cols">' +
-        esc(joinLines(options.cols)) +
-        "</textarea>" +
+        "<label>행 (질문 항목)</label>" +
+        renderLineListHtml(options.rows, "grid-rows", "행 항목", "+ 행 추가") +
+        "<label>열 (선택지)</label>" +
+        renderLineListHtml(options.cols, "grid-cols", "열 선택지", "+ 열 추가") +
         "</div>"
       );
     }
@@ -488,8 +604,12 @@
     });
 
     if (type === "radio" || type === "checkbox" || type === "dropdown") {
+      var choices = readLineListFromRow(row, "choices");
+      if (!choices.length) {
+        choices = parseLines((row.querySelector(".q-choices") || {}).value);
+      }
       q.options = {
-        choices: parseLines((row.querySelector(".q-choices") || {}).value),
+        choices: choices,
         allowOther: !!(row.querySelector(".q-allow-other") || {}).checked,
         otherLabel: coerceText((row.querySelector(".q-other-label") || {}).value) || "기타",
       };
@@ -501,10 +621,11 @@
         maxLabel: coerceText((row.querySelector(".q-scale-max-label") || {}).value),
       };
     } else if (type === "grid_radio" || type === "grid_checkbox") {
-      q.options = {
-        rows: parseLines((row.querySelector(".q-grid-rows") || {}).value),
-        cols: parseLines((row.querySelector(".q-grid-cols") || {}).value),
-      };
+      var rows = readLineListFromRow(row, "grid-rows");
+      var cols = readLineListFromRow(row, "grid-cols");
+      if (!rows.length) rows = parseLines((row.querySelector(".q-grid-rows") || {}).value);
+      if (!cols.length) cols = parseLines((row.querySelector(".q-grid-cols") || {}).value);
+      q.options = { rows: rows, cols: cols };
     }
     return normalizeQuestion(q);
   }
@@ -522,6 +643,9 @@
       '<label>질문</label><input type="text" class="q-label field-input" placeholder="질문을 입력하세요" />' +
       '<label>설명 (선택)</label><input type="text" class="q-description field-input" placeholder="도움말 텍스트" />' +
       '<div class="q-options-host"></div>' +
+      '<div class="sq-admin-preview">' +
+      '<p class="sq-admin-preview-title">학생 화면 미리보기</p>' +
+      '<div class="sq-admin-preview-body"></div></div>' +
       '<label class="q-required-wrap"><input type="checkbox" class="q-required" /> 필수 응답</label>';
 
     row.querySelector(".q-label").value = q.label || "";
@@ -529,14 +653,46 @@
     row.querySelector(".q-required").checked = q.required !== false;
     if (q.type === "section") row.querySelector(".q-required-wrap").hidden = true;
 
+    var cachedOptions = Object.assign({}, q.options || {});
+
     function refreshOptions() {
       var type = row.querySelector(".q-type").value;
       var host = row.querySelector(".q-options-host");
-      host.innerHTML = renderAdminOptionsPanel(type, readAdminQuestionFromRow(row).options);
+      var domOpts = readAdminOptionsFromDom(row);
+      if (domOpts.choices.length) cachedOptions.choices = domOpts.choices;
+      if (domOpts.rows.length) cachedOptions.rows = domOpts.rows;
+      if (domOpts.cols.length) cachedOptions.cols = domOpts.cols;
+      if (row.querySelector(".q-allow-other")) cachedOptions.allowOther = domOpts.allowOther;
+      if (row.querySelector(".q-other-label")) cachedOptions.otherLabel = domOpts.otherLabel;
+      if (row.querySelector(".q-scale-min")) cachedOptions.min = domOpts.min;
+      if (row.querySelector(".q-scale-max")) cachedOptions.max = domOpts.max;
+      if (row.querySelector(".q-scale-min-label")) cachedOptions.minLabel = domOpts.minLabel;
+      if (row.querySelector(".q-scale-max-label")) cachedOptions.maxLabel = domOpts.maxLabel;
+      host.innerHTML = renderAdminOptionsPanel(
+        type,
+        Object.assign({}, defaultOptions(type), cachedOptions)
+      );
       row.querySelector(".q-required-wrap").hidden = type === "section";
+      var previewWrap = row.querySelector(".sq-admin-preview");
+      if (previewWrap) previewWrap.hidden = type === "section";
+      bindLineListEditors(row, schedulePreview);
+      renderAdminPreview(row);
+    }
+
+    function schedulePreview() {
+      var domOpts = readAdminOptionsFromDom(row);
+      if (domOpts.choices.length) cachedOptions.choices = domOpts.choices;
+      if (domOpts.rows.length) cachedOptions.rows = domOpts.rows;
+      if (domOpts.cols.length) cachedOptions.cols = domOpts.cols;
+      renderAdminPreview(row);
     }
 
     row.querySelector(".q-type").addEventListener("change", refreshOptions);
+    row.querySelector(".q-label").addEventListener("input", schedulePreview);
+    row.querySelector(".q-description").addEventListener("input", schedulePreview);
+    row.querySelector(".q-required").addEventListener("change", schedulePreview);
+    row.querySelector(".q-options-host").addEventListener("input", schedulePreview);
+    row.querySelector(".q-options-host").addEventListener("change", schedulePreview);
     row.querySelector(".btn-remove").addEventListener("click", function () {
       row.remove();
       if (onRemove) onRemove();

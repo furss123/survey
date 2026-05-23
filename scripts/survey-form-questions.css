@@ -26,3 +26,44 @@
 .sq-admin-options .sq-inline-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .sq-admin-options .sq-inline-row > div { flex: 1; min-width: 100px; }
 .sq-type-hint { font-size: 0.75rem; color: var(--theme-text-muted, #475569); margin-top: 4px; }
+.sq-line-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sq-line-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sq-line-item .sq-line-input {
+  flex: 1;
+  margin: 0;
+}
+.sq-line-remove {
+  flex-shrink: 0;
+  width: 2.25rem;
+  padding: 8px 0;
+  line-height: 1;
+  font-size: 1.1rem;
+}
+.sq-line-add {
+  margin-top: 0;
+  font-size: 0.85rem;
+}
+.sq-admin-preview {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-border, #c5d0de);
+  background: var(--theme-bg-panel, #fff);
+}
+.sq-admin-preview-title {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--theme-text-muted, #475569);
+}
