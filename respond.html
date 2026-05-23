@@ -714,7 +714,7 @@
       }
     }
     try {
-      roster = await SurveyForm.fetchRosterRows();
+      roster = await SurveyForm.fetchRosterForSurvey(entry);
       rosterLoaded = roster.length > 0;
     } catch (err) {
       roster = [];

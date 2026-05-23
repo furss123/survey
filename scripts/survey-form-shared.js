@@ -83,42 +83,173 @@
   }
 
   async function fetchRosterRows() {
-    var url =
-      "https://docs.google.com/spreadsheets/d/" +
-      ROSTER_SPREADSHEET_ID +
-      "/gviz/tq?tqx=out:json";
-    var res = await fetch(url);
-    if (!res.ok) throw new Error("명렬표 시트를 불러오지 못했습니다.");
-    var values = gvizTableToValues(parseGvizJson(await res.text()));
-    if (!values.length) return [];
+    return fetchRosterFromSpreadsheet(ROSTER_SPREADSHEET_ID, null, GRADE);
+  }
+
+  function parseSpreadsheetIdFromUrl(url) {
+    var trimmed = coerceText(url);
+    if (!trimmed) return "";
+    var match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (match && match[1]) return match[1];
+    if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) return trimmed;
+    throw new Error("스프레드시트 ID를 URL에서 찾을 수 없습니다.");
+  }
+
+  function findRosterColumnIndex(header, patterns) {
+    for (var i = 0; i < header.length; i++) {
+      var h = coerceText(header[i]).toLowerCase();
+      for (var p = 0; p < patterns.length; p++) {
+        var pat = patterns[p];
+        if (typeof pat === "string") {
+          if (h === pat.toLowerCase()) return i;
+        } else if (pat.test(h)) return i;
+      }
+    }
+    return -1;
+  }
+
+  function normalizeRosterStudent(s, grade) {
+    grade = grade != null ? grade : GRADE;
+    var ban = s.반;
+    var num = s.번호;
+    var name = coerceText(s.이름);
+    var sid = coerceText(s.학번);
+    var parsed = sid ? parseStudentId(sid) : { grade: null, 반: null, 번호: null, 학번: "" };
+    if (sid) {
+      if (parsed.반 != null) ban = parsed.반;
+      if (parsed.번호 != null) num = parsed.번호;
+    }
+    if (!Number.isFinite(num)) return null;
+    return {
+      반: ban != null ? ban : null,
+      번호: num,
+      이름: name,
+      학번: sid || formatStudentId(parsed && parsed.grade != null ? parsed.grade : grade, ban, num),
+    };
+  }
+
+  function parseRosterValues(values, grade) {
+    grade = grade != null ? grade : GRADE;
+    if (!values || !values.length) return [];
     var header = values[0].map(coerceText);
-    var banIdx = header.findIndex(function (h) {
-      return /반/.test(h);
-    });
-    var numIdx = header.findIndex(function (h) {
-      return /번호/.test(h);
-    });
-    var nameIdx = header.findIndex(function (h) {
-      return /이름|성명/.test(h);
-    });
+    var sidIdx = findRosterColumnIndex(header, [/^학번$/i, /student.?id/i, /학생번호/]);
+    var banIdx = findRosterColumnIndex(header, [/반/]);
+    var numIdx = findRosterColumnIndex(header, [/번호/]);
+    var nameIdx = findRosterColumnIndex(header, [/이름|성명/i, /^name$/i]);
+
+    var startRow = 1;
+    if (sidIdx < 0 && banIdx < 0 && numIdx < 0 && values.length > 1) {
+      sidIdx = header.length >= 2 ? 1 : -1;
+      nameIdx = nameIdx >= 0 ? nameIdx : header.length >= 3 ? 2 : -1;
+      if (sidIdx >= 0 && /학번|student/i.test(header[sidIdx])) startRow = 1;
+      else if (sidIdx >= 0 && !isNaN(Number(coerceText(values[1][sidIdx])))) startRow = 0;
+    }
+
     var rows = [];
-    for (var r = 1; r < values.length; r++) {
-      var row = values[r];
-      var banRaw = banIdx >= 0 ? coerceText(row[banIdx]) : "";
-      var numRaw = numIdx >= 0 ? coerceText(row[numIdx]) : "";
-      var name = nameIdx >= 0 ? coerceText(row[nameIdx]) : "";
-      var banMatch = banRaw.match(/(\d+)/);
-      var ban = banMatch ? parseInt(banMatch[1], 10) : null;
-      var num = Number(numRaw);
+    for (var r = startRow; r < values.length; r++) {
+      var cells = values[r];
+      if (!cells || !cells.length) continue;
+      var sid = sidIdx >= 0 ? coerceText(cells[sidIdx]) : "";
+      var parsed = parseStudentId(sid);
+      var ban = parsed.반;
+      var num = parsed.번호;
+      var name = nameIdx >= 0 ? coerceText(cells[nameIdx]) : "";
+      if (banIdx >= 0) {
+        var banRaw = coerceText(cells[banIdx]);
+        var banMatch = banRaw.match(/(\d+)/);
+        if (banMatch) ban = parseInt(banMatch[1], 10);
+      }
+      if (numIdx >= 0) {
+        var numRaw = Number(coerceText(cells[numIdx]));
+        if (Number.isFinite(numRaw)) num = numRaw;
+      }
       if (!Number.isFinite(num)) continue;
-      rows.push({
-        반: ban,
-        번호: num,
-        이름: name,
-        학번: formatStudentId(GRADE, ban, num),
-      });
+      if (ban == null && parsed.grade === grade) ban = parsed.반;
+      var item = normalizeRosterStudent(
+        { 반: ban, 번호: num, 이름: name, 학번: sid || formatStudentId(grade, ban, num) },
+        grade
+      );
+      if (item) rows.push(item);
     }
     return rows;
+  }
+
+  function parseCsvLine(line) {
+    var out = [];
+    var cur = "";
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line.charAt(i);
+      if (ch === '"') {
+        if (inQuotes && line.charAt(i + 1) === '"') {
+          cur += '"';
+          i++;
+        } else inQuotes = !inQuotes;
+      } else if ((ch === "," || ch === "\t") && !inQuotes) {
+        out.push(cur);
+        cur = "";
+      } else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  }
+
+  function parseCsvText(text) {
+    var raw = String(text || "").replace(/^\uFEFF/, "");
+    return raw
+      .split(/\r?\n/)
+      .map(function (line) {
+        return line.trim();
+      })
+      .filter(Boolean)
+      .map(parseCsvLine);
+  }
+
+  function parseRosterFromCsv(text, grade) {
+    return parseRosterValues(parseCsvText(text), grade);
+  }
+
+  function summarizeRoster(roster) {
+    var classes = deriveClassOptions(roster);
+    return {
+      count: roster.length,
+      classes: classes.length,
+      classLabels: classes.map(function (c) {
+        return c.label;
+      }),
+    };
+  }
+
+  async function fetchRosterFromSpreadsheet(spreadsheetId, sheetName, grade) {
+    if (!spreadsheetId) throw new Error("스프레드시트 ID가 없습니다.");
+    var values = await fetchGvizValues(spreadsheetId, sheetName || undefined);
+    var rows = parseRosterValues(values, grade || GRADE);
+    if (!rows.length) throw new Error("명렬표에서 학생 정보를 찾지 못했습니다. (학번·반·번호·이름 열 확인)");
+    return rows;
+  }
+
+  async function fetchRosterForSurvey(entry) {
+    entry = entry || {};
+    var grade = entry.grade || GRADE;
+    if (entry.rosterStudents && entry.rosterStudents.length) {
+      return entry.rosterStudents
+        .map(function (s) {
+          return normalizeRosterStudent(s, grade);
+        })
+        .filter(Boolean);
+    }
+    if (entry.rosterSpreadsheetId) {
+      return fetchRosterFromSpreadsheet(
+        entry.rosterSpreadsheetId,
+        entry.rosterSheetName || null,
+        grade
+      );
+    }
+    try {
+      return await fetchRosterRows();
+    } catch (err) {
+      return [];
+    }
   }
 
   function deriveClassOptions(roster) {
@@ -1037,6 +1168,37 @@
     return buildFormAnalysisFromValues(entry, roster, values);
   }
 
+  function buildSurveyConfigJson(survey) {
+    return JSON.stringify({
+      questions: survey.questions || [],
+      description: survey.description || "",
+      rosterSpreadsheetId: survey.rosterSpreadsheetId || "",
+      rosterSheetName: survey.rosterSheetName || "",
+      rosterSource: survey.rosterSource || "",
+      rosterLabel: survey.rosterLabel || "",
+      rosterStudents: survey.rosterStudents || [],
+    });
+  }
+
+  function parseSurveyConfigJson(raw) {
+    if (!raw) return { questions: [] };
+    try {
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return { questions: parsed };
+      return {
+        questions: parsed.questions || [],
+        description: parsed.description || "",
+        rosterSpreadsheetId: parsed.rosterSpreadsheetId || "",
+        rosterSheetName: parsed.rosterSheetName || "",
+        rosterSource: parsed.rosterSource || "",
+        rosterLabel: parsed.rosterLabel || "",
+        rosterStudents: parsed.rosterStudents || [],
+      };
+    } catch (e) {
+      return { questions: [] };
+    }
+  }
+
   async function registerSurveyOnServer(entry) {
     if (!entry || !entry.webAppUrl) return { ok: false, skipped: true };
     var res = await fetch(entry.webAppUrl, {
@@ -1048,8 +1210,14 @@
           id: entry.id,
           label: entry.label,
           grade: entry.grade || GRADE,
+          description: entry.description || "",
           questions: entry.questions || [],
           categorySelectAll: !!entry.categorySelectAll,
+          rosterSpreadsheetId: entry.rosterSpreadsheetId || "",
+          rosterSheetName: entry.rosterSheetName || "",
+          rosterSource: entry.rosterSource || "",
+          rosterLabel: entry.rosterLabel || "",
+          rosterStudents: entry.rosterStudents || [],
         },
       }),
     });
@@ -1086,6 +1254,16 @@
     findSurvey: findSurvey,
     parseStudentId: parseStudentId,
     formatStudentId: formatStudentId,
+    parseSpreadsheetIdFromUrl: parseSpreadsheetIdFromUrl,
+    parseRosterValues: parseRosterValues,
+    parseRosterFromCsv: parseRosterFromCsv,
+    parseCsvText: parseCsvText,
+    summarizeRoster: summarizeRoster,
+    fetchRosterFromSpreadsheet: fetchRosterFromSpreadsheet,
+    fetchRosterForSurvey: fetchRosterForSurvey,
+    normalizeRosterStudent: normalizeRosterStudent,
+    buildSurveyConfigJson: buildSurveyConfigJson,
+    parseSurveyConfigJson: parseSurveyConfigJson,
     fetchRosterRows: fetchRosterRows,
     deriveClassOptions: deriveClassOptions,
     defaultClassOptions: defaultClassOptions,

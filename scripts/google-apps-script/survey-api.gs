@@ -60,6 +60,39 @@ function ensureSheets_() {
   return { config: config, responses: resp };
 }
 
+function buildSurveyConfigJson_(survey) {
+  return JSON.stringify({
+    questions: survey.questions || [],
+    description: survey.description || "",
+    rosterSpreadsheetId: survey.rosterSpreadsheetId || "",
+    rosterSheetName: survey.rosterSheetName || "",
+    rosterSource: survey.rosterSource || "",
+    rosterLabel: survey.rosterLabel || "",
+    rosterStudents: survey.rosterStudents || [],
+  });
+}
+
+function parseSurveyConfigJson_(raw) {
+  if (!raw) return { questions: [] };
+  try {
+    var parsed = JSON.parse(raw);
+    if (Object.prototype.toString.call(parsed) === "[object Array]") {
+      return { questions: parsed };
+    }
+    return {
+      questions: parsed.questions || [],
+      description: parsed.description || "",
+      rosterSpreadsheetId: parsed.rosterSpreadsheetId || "",
+      rosterSheetName: parsed.rosterSheetName || "",
+      rosterSource: parsed.rosterSource || "",
+      rosterLabel: parsed.rosterLabel || "",
+      rosterStudents: parsed.rosterStudents || [],
+    };
+  } catch (e) {
+    return { questions: [] };
+  }
+}
+
 function registerSurvey_(survey) {
   if (!survey || !survey.id) throw new Error("survey.id required");
   var sheets = ensureSheets_();
@@ -76,7 +109,7 @@ function registerSurvey_(survey) {
     survey.id,
     survey.label || "",
     survey.grade || 1,
-    JSON.stringify(survey.questions || []),
+    buildSurveyConfigJson_(survey),
     survey.categorySelectAll ? "Y" : "",
   ];
   if (row > 0) config.getRange(row, 1, 1, line.length).setValues([line]);
@@ -110,17 +143,20 @@ function getSurvey_(id) {
   var data = sheets.config.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]) !== String(id)) continue;
-    var questions = [];
-    try {
-      questions = JSON.parse(data[i][3] || "[]");
-    } catch (e) {}
+    var cfg = parseSurveyConfigJson_(data[i][3]);
     return {
       ok: true,
       survey: {
         id: data[i][0],
         label: data[i][1],
         grade: data[i][2],
-        questions: questions,
+        questions: cfg.questions,
+        description: cfg.description,
+        rosterSpreadsheetId: cfg.rosterSpreadsheetId,
+        rosterSheetName: cfg.rosterSheetName,
+        rosterSource: cfg.rosterSource,
+        rosterLabel: cfg.rosterLabel,
+        rosterStudents: cfg.rosterStudents,
         categorySelectAll: String(data[i][4]).toUpperCase() === "Y",
       },
     };

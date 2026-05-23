@@ -203,6 +203,34 @@
       margin-top: 10px;
     }
     label.inline-check input { width: auto; }
+    .roster-box {
+      margin: 16px 0;
+      padding: 14px;
+      border: 1px solid var(--theme-border);
+      border-radius: 10px;
+      background: rgba(74, 122, 176, 0.05);
+    }
+    .roster-box-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .roster-box-head strong { color: var(--theme-heading); }
+    .roster-panel { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--theme-border); }
+    .roster-preview {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border);
+      font-size: 0.85rem;
+    }
+    .roster-preview.ok { border-color: #047857; color: #047857; }
+    .roster-preview.err { border-color: #b91c1c; color: #b91c1c; }
+    input[type="file"] { padding: 8px 0; }
   </style>
 </head>
 <body>
@@ -230,6 +258,28 @@
 
       <label for="surveyDescription">설문 설명 (선택)</label>
       <textarea id="surveyDescription" class="q-desc-input" placeholder="설문 목적, 작성 안내, 소요 시간 등을 적어 주세요."></textarea>
+
+      <div class="roster-box">
+        <div class="roster-box-head">
+          <strong>학생 명렬표</strong>
+          <button type="button" class="btn btn-primary" id="btnToggleRoster">학생 명렬표 추가</button>
+        </div>
+        <p class="hint" id="rosterSummary">등록된 명렬표 없음 — 기본 학교 명렬표 또는 반·번호 목록을 사용합니다.</p>
+        <div id="rosterPanel" class="roster-panel" hidden>
+          <label for="rosterSheetUrl">구글 시트 주소 또는 스프레드시트 ID</label>
+          <input type="text" id="rosterSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/... 또는 ID" />
+          <label for="rosterSheetName">시트 탭 이름 (선택)</label>
+          <input type="text" id="rosterSheetName" placeholder="비우면 첫 번째 탭" />
+          <label for="rosterFile">또는 CSV / TSV 파일 업로드</label>
+          <input type="file" id="rosterFile" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" />
+          <p class="hint">학번(4자리) 열 또는 반·번호·이름 열을 인식합니다. B열=학번, C열=이름 형식도 지원합니다.</p>
+          <div class="actions" style="margin-top:10px">
+            <button type="button" class="btn btn-primary" id="btnLoadRoster">명렬표 불러오기</button>
+            <button type="button" class="btn" id="btnClearRoster">명렬표 제거</button>
+          </div>
+          <div id="rosterPreview" class="roster-preview" hidden></div>
+        </div>
+      </div>
 
       <label for="webAppUrl">Apps Script 웹 앱 URL (제출·등록용)</label>
       <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
@@ -285,12 +335,127 @@
   var editId = new URLSearchParams(location.search).get("edit");
   var questionList = document.getElementById("questionList");
   var statusMsg = document.getElementById("statusMsg");
+  var rosterState = {
+    source: "",
+    spreadsheetId: "",
+    sheetName: "",
+    label: "",
+    students: [],
+  };
 
   function showStatus(text, ok) {
     statusMsg.textContent = text;
     statusMsg.hidden = !text;
     statusMsg.className = "msg " + (ok ? "ok" : "err");
   }
+
+  function updateRosterSummary() {
+    var el = document.getElementById("rosterSummary");
+    if (!el) return;
+    if (!rosterState.source) {
+      el.textContent = "등록된 명렬표 없음 — 기본 학교 명렬표 또는 반·번호 목록을 사용합니다.";
+      return;
+    }
+    var sum = SurveyForm.summarizeRoster(rosterState.students);
+    el.textContent =
+      (rosterState.label || "명렬표") +
+      " · 학생 " +
+      sum.count +
+      "명 · " +
+      sum.classes +
+      "개 반 (" +
+      sum.classLabels.join(", ") +
+      ")";
+  }
+
+  function applyRosterState(data) {
+    rosterState = {
+      source: data.source || "",
+      spreadsheetId: data.spreadsheetId || "",
+      sheetName: data.sheetName || "",
+      label: data.label || "",
+      students: data.students || [],
+    };
+    if (rosterState.spreadsheetId) {
+      document.getElementById("rosterSheetUrl").value =
+        "https://docs.google.com/spreadsheets/d/" + rosterState.spreadsheetId + "/edit";
+    }
+    document.getElementById("rosterSheetName").value = rosterState.sheetName || "";
+    updateRosterSummary();
+  }
+
+  function showRosterPreview(text, ok) {
+    var box = document.getElementById("rosterPreview");
+    box.textContent = text;
+    box.hidden = !text;
+    box.className = "roster-preview" + (ok ? " ok" : text ? " err" : "");
+  }
+
+  async function loadRosterFromInputs() {
+    var urlInput = document.getElementById("rosterSheetUrl").value.trim();
+    var sheetName = document.getElementById("rosterSheetName").value.trim();
+    var fileInput = document.getElementById("rosterFile");
+    var file = fileInput.files && fileInput.files[0];
+    var grade = SurveyForm.GRADE;
+    try {
+      var students = [];
+      var label = "";
+      if (file) {
+        var text = await file.text();
+        students = SurveyForm.parseRosterFromCsv(text, grade);
+        label = file.name;
+        if (!students.length) throw new Error("파일에서 학생 정보를 찾지 못했습니다.");
+        applyRosterState({
+          source: "file",
+          spreadsheetId: "",
+          sheetName: "",
+          label: label,
+          students: students,
+        });
+      } else if (urlInput) {
+        var sheetId = SurveyForm.parseSpreadsheetIdFromUrl(urlInput);
+        students = await SurveyForm.fetchRosterFromSpreadsheet(sheetId, sheetName || null, grade);
+        label = "구글 시트";
+        applyRosterState({
+          source: "sheet",
+          spreadsheetId: sheetId,
+          sheetName: sheetName,
+          label: label,
+          students: students,
+        });
+      } else {
+        throw new Error("구글 시트 주소 또는 CSV 파일을 입력해 주세요.");
+      }
+      var sum = SurveyForm.summarizeRoster(rosterState.students);
+      showRosterPreview(
+        "인식 완료: " + sum.count + "명, " + sum.classes + "개 반 (" + sum.classLabels.join(", ") + ")",
+        true
+      );
+      showStatus("명렬표를 불러왔습니다.", true);
+    } catch (err) {
+      showRosterPreview(err.message || "명렬표 불러오기 실패", false);
+      showStatus(err.message || "명렬표 불러오기 실패", false);
+    }
+  }
+
+  document.getElementById("btnToggleRoster").addEventListener("click", function () {
+    var panel = document.getElementById("rosterPanel");
+    panel.hidden = !panel.hidden;
+    this.textContent = panel.hidden ? "학생 명렬표 추가" : "명렬표 입력 닫기";
+  });
+
+  document.getElementById("btnLoadRoster").addEventListener("click", function () {
+    loadRosterFromInputs();
+  });
+
+  document.getElementById("btnClearRoster").addEventListener("click", function () {
+    applyRosterState({ source: "", spreadsheetId: "", sheetName: "", label: "", students: [] });
+    document.getElementById("rosterSheetUrl").value = "";
+    document.getElementById("rosterSheetName").value = "";
+    document.getElementById("rosterFile").value = "";
+    showRosterPreview("", false);
+    showStatus("명렬표 설정을 제거했습니다.", true);
+  });
 
   function makeQuestionRow(q) {
     q = q || { id: "q" + Date.now(), label: "", type: "textarea", required: true };
@@ -445,7 +610,7 @@
     if (!qs.length) throw new Error("문항을 1개 이상 추가해 주세요.");
     var id = editId || SurveyForm.generateSurveyId();
     var sheetId = document.getElementById("responseSheetId").value.trim();
-    return {
+    var entry = {
       id: id,
       type: "form",
       label: label,
@@ -458,6 +623,17 @@
       responseSpreadsheetId: sheetId || undefined,
       responseTab: "Responses",
     };
+    if (rosterState.source) {
+      entry.rosterSource = rosterState.source;
+      entry.rosterLabel = rosterState.label;
+      if (rosterState.source === "sheet") {
+        entry.rosterSpreadsheetId = rosterState.spreadsheetId;
+        entry.rosterSheetName = rosterState.sheetName || undefined;
+      } else if (rosterState.source === "file") {
+        entry.rosterStudents = rosterState.students;
+      }
+    }
+    return entry;
   }
 
   function updateStudentLink(id) {
@@ -523,6 +699,34 @@
       document.getElementById("webAppUrl").value = existing.webAppUrl || "";
       document.getElementById("responseSheetId").value = existing.responseSpreadsheetId || "";
       document.getElementById("categorySelectAll").checked = !!existing.categorySelectAll;
+      if (existing.rosterSource || existing.rosterSpreadsheetId || (existing.rosterStudents && existing.rosterStudents.length)) {
+        applyRosterState({
+          source: existing.rosterSource || (existing.rosterStudents && existing.rosterStudents.length ? "file" : "sheet"),
+          spreadsheetId: existing.rosterSpreadsheetId || "",
+          sheetName: existing.rosterSheetName || "",
+          label: existing.rosterLabel || "",
+          students: existing.rosterStudents || [],
+        });
+        document.getElementById("rosterPanel").hidden = false;
+        document.getElementById("btnToggleRoster").textContent = "명렬표 입력 닫기";
+        if (
+          existing.rosterSpreadsheetId &&
+          (!existing.rosterStudents || !existing.rosterStudents.length)
+        ) {
+          SurveyForm.fetchRosterFromSpreadsheet(
+            existing.rosterSpreadsheetId,
+            existing.rosterSheetName || null,
+            existing.grade || SurveyForm.GRADE
+          )
+            .then(function (students) {
+              rosterState.students = students;
+              updateRosterSummary();
+            })
+            .catch(function () {
+              /* preview optional */
+            });
+        }
+      }
       (existing.questions || []).forEach(makeQuestionRow);
       updateStudentLink(existing.id);
     }
