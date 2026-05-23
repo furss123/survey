@@ -106,6 +106,49 @@
     .msg { margin-top: 10px; font-size: 0.875rem; }
     .msg.ok { color: #047857; }
     .msg.err { color: #b91c1c; }
+    .preview-panel {
+      margin: 0 0 20px;
+      padding: 16px;
+      border: 1px solid var(--theme-border);
+      border-radius: 10px;
+      background: rgba(74, 122, 176, 0.06);
+    }
+    .preview-panel h2 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+      color: var(--theme-heading);
+    }
+    .preview-step {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--theme-text-muted);
+      margin: 0 0 10px;
+    }
+    .class-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .class-btn {
+      padding: 10px 6px;
+      border: 2px solid var(--theme-border);
+      border-radius: 8px;
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .class-btn.active {
+      border-color: var(--theme-btn-bottom);
+      background: linear-gradient(180deg, var(--theme-btn-top), var(--theme-btn-bottom));
+      color: #fff;
+    }
+    #previewStudentPick:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -114,6 +157,17 @@
     <div class="panel">
       <h1>학생 설문 등록</h1>
       <p class="lead">명렬표에서 반·번호를 고른 뒤 설문에 응답합니다. 구글 폼 대신 사이트에서 직접 작성·저장합니다.</p>
+
+      <div class="preview-panel" id="rosterPreviewPanel">
+        <h2>학생 선택 (참여 화면과 동일)</h2>
+        <p class="preview-step">반 선택 → 번호·이름 선택</p>
+        <div class="class-grid" id="previewClassGrid" role="group" aria-label="반 선택"></div>
+        <label for="previewStudentPick">번호 · 이름</label>
+        <select id="previewStudentPick" disabled>
+          <option value="">명렬표 불러오는 중…</option>
+        </select>
+        <p class="hint" id="previewRosterHint"></p>
+      </div>
 
       <label for="surveyLabel">설문 이름</label>
       <input type="text" id="surveyLabel" placeholder="예: 1학기 상담 설문" />
@@ -272,6 +326,89 @@
     makeQuestionRow({ id: "q1", label: "상담 받고 싶은 주제", type: "textarea" });
     makeQuestionRow({ id: "q2", label: "전하고 싶은 말", type: "textarea" });
   }
+
+  var previewRoster = [];
+  var previewBan = null;
+  var previewClassGrid = document.getElementById("previewClassGrid");
+  var previewStudentPick = document.getElementById("previewStudentPick");
+  var previewRosterHint = document.getElementById("previewRosterHint");
+
+  function fillPreviewStudentDropdown() {
+    if (!previewStudentPick) return;
+    previewStudentPick.innerHTML = "";
+    if (!previewBan) {
+      previewStudentPick.disabled = true;
+      previewStudentPick.appendChild(new Option("먼저 반을 선택하세요", ""));
+      return;
+    }
+    var students = SurveyForm.studentsInClass(previewRoster, previewBan);
+    if (!students.length) {
+      previewStudentPick.disabled = true;
+      previewStudentPick.appendChild(new Option("이 반에 학생 없음", ""));
+      return;
+    }
+    previewStudentPick.disabled = false;
+    previewStudentPick.appendChild(new Option("번호 · 이름을 선택하세요", ""));
+    students.forEach(function (s) {
+      var label = (s.번호 != null ? s.번호 + "번" : "") + (s.이름 ? " " + s.이름 : "");
+      previewStudentPick.appendChild(new Option(label.trim(), String(s.번호)));
+    });
+  }
+
+  function renderPreviewClassGrid() {
+    if (!previewClassGrid) return;
+    var classes = SurveyForm.deriveClassOptions(previewRoster);
+    if (!classes.length) {
+      for (var i = 1; i <= 8; i++) classes.push({ 반: i, label: i + "반" });
+    }
+    previewClassGrid.innerHTML = classes
+      .map(function (c) {
+        return (
+          '<button type="button" class="class-btn" data-ban="' +
+          c.반 +
+          '">' +
+          SurveyForm.esc(c.label) +
+          "</button>"
+        );
+      })
+      .join("");
+    previewClassGrid.querySelectorAll(".class-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        previewBan = parseInt(btn.getAttribute("data-ban"), 10);
+        previewClassGrid.querySelectorAll(".class-btn").forEach(function (b) {
+          b.classList.toggle("active", b === btn);
+        });
+        fillPreviewStudentDropdown();
+      });
+    });
+  }
+
+  async function initRosterPreview() {
+    if (!previewRosterHint) return;
+    try {
+      previewRoster = await SurveyForm.fetchRosterRows();
+      previewRosterHint.textContent =
+        previewRoster.length
+          ? "명렬표 " + previewRoster.length + "명 연결됨 · 관리자 「명렬표 입력」에서 시트를 바꿀 수 있습니다."
+          : "명렬표가 비어 있습니다. admin.html에서 「명렬표 입력」을 먼저 해 주세요.";
+      renderPreviewClassGrid();
+      if (previewStudentPick) {
+        previewStudentPick.disabled = true;
+        previewStudentPick.innerHTML = "";
+        previewStudentPick.appendChild(new Option("먼저 반을 선택하세요", ""));
+      }
+    } catch (err) {
+      previewRosterHint.textContent =
+        err.message || "명렬표를 불러오지 못했습니다. 시트 공개·주소를 확인하세요.";
+      if (previewStudentPick) {
+        previewStudentPick.disabled = true;
+        previewStudentPick.innerHTML = "";
+        previewStudentPick.appendChild(new Option("명렬표 로드 실패", ""));
+      }
+    }
+  }
+
+  initRosterPreview();
 })();
   </script>
 </body>

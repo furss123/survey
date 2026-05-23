@@ -173,10 +173,10 @@
       <div id="stepIdentify">
         <p class="step-label">1단계 · 반과 번호 선택</p>
         <div class="class-grid" id="classGrid" role="group" aria-label="반 선택"></div>
-        <label class="field" for="studentNum">번호</label>
-        <input type="number" id="studentNum" min="1" max="45" placeholder="예: 12" />
-        <label class="field" for="studentName">이름 (명렬표에서 자동 표시)</label>
-        <input type="text" id="studentName" readonly placeholder="반·번호를 선택하세요" />
+        <label class="field" for="studentPick">번호 · 이름</label>
+        <select id="studentPick" disabled>
+          <option value="">먼저 반을 선택하세요</option>
+        </select>
         <div class="actions">
           <button type="button" class="btn btn-primary" id="btnToForm">설문 작성하기</button>
         </div>
@@ -213,8 +213,9 @@
   var elTitle = document.getElementById("surveyTitle");
   var elError = document.getElementById("errorBox");
   var elClassGrid = document.getElementById("classGrid");
-  var elNum = document.getElementById("studentNum");
-  var elName = document.getElementById("studentName");
+  var elStudentPick = document.getElementById("studentPick");
+  var selectedNum = null;
+  var selectedName = "";
   var elQuestions = document.getElementById("questionFields");
 
   function showError(msg) {
@@ -244,19 +245,49 @@
         elClassGrid.querySelectorAll(".class-btn").forEach(function (b) {
           b.classList.toggle("active", b === btn);
         });
-        syncNameFromRoster();
+        fillStudentDropdown();
       });
     });
   }
 
-  function syncNameFromRoster() {
-    var num = Number(elNum.value);
-    if (!selectedBan || !Number.isFinite(num)) {
-      elName.value = "";
+  function fillStudentDropdown() {
+    if (!elStudentPick) return;
+    elStudentPick.innerHTML = "";
+    selectedNum = null;
+    selectedName = "";
+    if (!selectedBan) {
+      elStudentPick.disabled = true;
+      elStudentPick.appendChild(new Option("먼저 반을 선택하세요", ""));
       return;
     }
-    var found = SurveyForm.lookupStudent(roster, selectedBan, num);
-    elName.value = found ? found.이름 : "";
+    var students = SurveyForm.studentsInClass(roster, selectedBan);
+    if (!students.length) {
+      elStudentPick.disabled = true;
+      elStudentPick.appendChild(new Option("이 반에 등록된 학생이 없습니다", ""));
+      return;
+    }
+    elStudentPick.disabled = false;
+    elStudentPick.appendChild(new Option("번호 · 이름을 선택하세요", ""));
+    students.forEach(function (s) {
+      var label = (s.번호 != null ? s.번호 + "번" : "") + (s.이름 ? " " + s.이름 : "");
+      var opt = new Option(label.trim() || String(s.번호), String(s.번호));
+      opt.dataset.name = s.이름 || "";
+      elStudentPick.appendChild(opt);
+    });
+  }
+
+  function onStudentPickChange() {
+    var val = elStudentPick.value;
+    if (!val) {
+      selectedNum = null;
+      selectedName = "";
+      return;
+    }
+    selectedNum = Number(val);
+    var opt = elStudentPick.options[elStudentPick.selectedIndex];
+    selectedName = (opt && opt.dataset.name) || "";
+    var found = SurveyForm.lookupStudent(roster, selectedBan, selectedNum);
+    if (found && found.이름) selectedName = found.이름;
   }
 
   function renderQuestions() {
@@ -317,13 +348,14 @@
   }
 
   document.getElementById("btnToForm").addEventListener("click", function () {
-    var num = Number(elNum.value);
+    onStudentPickChange();
+    var num = selectedNum;
     if (!selectedBan) {
       showError("반을 선택해 주세요.");
       return;
     }
     if (!Number.isFinite(num) || num < 1) {
-      showError("번호를 입력해 주세요.");
+      showError("번호·이름을 선택해 주세요.");
       return;
     }
     showError("");
@@ -337,17 +369,18 @@
     document.getElementById("stepIdentify").hidden = false;
   });
 
-  elNum.addEventListener("input", syncNameFromRoster);
+  if (elStudentPick) elStudentPick.addEventListener("change", onStudentPickChange);
 
   document.getElementById("btnSubmit").addEventListener("click", async function () {
     if (!validateAnswers()) return;
-    var num = Number(elNum.value);
+    onStudentPickChange();
+    var num = selectedNum;
     var 학번 = SurveyForm.formatStudentId(entry.grade || 1, selectedBan, num);
     var payload = {
       학번: 학번,
       반: selectedBan + "반",
       번호: num,
-      이름: elName.value || "",
+      이름: selectedName || "",
       answers: collectAnswers(),
       submittedAt: new Date().toISOString(),
     };

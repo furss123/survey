@@ -201,6 +201,16 @@
     );
   }
 
+  function studentsInClass(roster, ban) {
+    return roster
+      .filter(function (s) {
+        return s.반 === ban;
+      })
+      .sort(function (a, b) {
+        return (a.번호 || 0) - (b.번호 || 0);
+      });
+  }
+
   async function fetchSurveyConfig(entry) {
     if (!entry) return null;
     if (entry.webAppUrl) {
@@ -420,6 +430,7 @@
     fetchRosterRows: fetchRosterRows,
     deriveClassOptions: deriveClassOptions,
     lookupStudent: lookupStudent,
+    studentsInClass: studentsInClass,
     fetchSurveyConfig: fetchSurveyConfig,
     submitSurveyResponse: submitSurveyResponse,
     registerSurveyOnServer: registerSurveyOnServer,
