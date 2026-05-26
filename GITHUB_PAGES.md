@@ -7,7 +7,8 @@
 1. [survey 저장소 → Settings → Pages](https://github.com/furss123/survey/settings/pages)
 2. **Build and deployment**
    - Source: **Deploy from a branch**
-   - Branch: **`index`** (또는 `main`) / Folder: **`/ (root)`**
+   - Branch: **`index`** (필수 — `main`은 예전 코드) / Folder: **`/ (root)`**
+   - ⚠️ `main`으로 두면 관리자 화면·삭제 수정이 반영되지 않습니다.
 3. **Save**
 4. 1~10분 후 위 URL 접속
 
@@ -23,11 +24,11 @@
 cd survey
 git add index.html assets .nojekyll GITHUB_PAGES.md
 git commit -m "Pages: survey URL용 정적 배포 파일 동기화"
-git push origin main
-git push origin main:index
+git push origin index
 ```
 
-`main:index`는 원격 **`index`** 브랜치(기본 브랜치)를 최신 정적 파일로 맞춥니다.
+배포용 브랜치는 **`index`** 입니다. Pages 설정도 **`index`** / root 여야 합니다.
+`main`과 히스토리가 갈라져 있으면 `git push origin index:main`은 거절될 수 있습니다. 그때는 Pages 브랜치만 `index`로 바꾸세요.
 
 ## 확인
 
