@@ -1190,15 +1190,36 @@
       });
     });
     listEl.querySelectorAll("[data-delete-id]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", async function () {
         var id = btn.getAttribute("data-delete-id");
         if (!confirm("이 시트를 목록에서 삭제할까요?")) return;
         if (editingSheetId === id) cancelEditSheet();
-        var next = loadSheetRegistry().filter(function (item) {
+        var prev = loadSheetRegistry();
+        var entry = prev.find(function (item) {
+          return item.id === id;
+        });
+        var next = prev.filter(function (item) {
           return item.id !== id;
         });
         saveSheetRegistry(next);
         renderAdminRegistryList();
+        if (!entry || entry.type !== "form") return;
+        SurveyForm.markSurveyDeleted(id);
+        btn.disabled = true;
+        try {
+          var result = await SurveyForm.deleteSurveyOnServer(entry);
+          if (result && result.ok === false) {
+            throw new Error(result.error || "서버 삭제에 실패했습니다.");
+          }
+          SurveyForm.unmarkSurveyDeleted(id);
+        } catch (err) {
+          saveSheetRegistry(prev);
+          SurveyForm.unmarkSurveyDeleted(id);
+          renderAdminRegistryList();
+          alert((err && err.message) || "삭제에 실패했습니다.");
+        } finally {
+          btn.disabled = false;
+        }
       });
     });
   }

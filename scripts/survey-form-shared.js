@@ -2,6 +2,7 @@
   "use strict";
 
   var REGISTRY_KEY = "school-sheet-registry-v1";
+  var DELETED_SURVEYS_KEY = "school-sheet-deleted-surveys-v1";
   var ROSTER_STORAGE_KEY = "school-roster-sheet-v1";
   var ROSTER_SESSION_KEY = "school-roster-sheet-session-v1";
   var WEBAPP_STORAGE_KEY = "school-survey-webapp-v1";
@@ -171,6 +172,35 @@
     } catch (e) { /* ignore */ }
   }
 
+  function loadDeletedSurveyIds() {
+    try {
+      var raw = localStorage.getItem(DELETED_SURVEYS_KEY);
+      if (!raw) return {};
+      var parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function markSurveyDeleted(id) {
+    if (!id) return;
+    var map = loadDeletedSurveyIds();
+    map[id] = Date.now();
+    localStorage.setItem(DELETED_SURVEYS_KEY, JSON.stringify(map));
+  }
+
+  function unmarkSurveyDeleted(id) {
+    if (!id) return;
+    var map = loadDeletedSurveyIds();
+    delete map[id];
+    localStorage.setItem(DELETED_SURVEYS_KEY, JSON.stringify(map));
+  }
+
+  function isSurveyDeleted(id) {
+    return id ? !!loadDeletedSurveyIds()[id] : false;
+  }
+
   function isSurveyCompleted(entry) {
     if (!entry) return false;
     if (entry.surveyStatus === "completed") return true;
@@ -196,7 +226,7 @@
     saveRegistry(list);
     var entry = list[idx];
     if (entry && entry.type === "form" && resolveWebAppUrl(entry)) {
-      registerSurveyOnServer(entry).catch(function () { /* ignore */ });
+      registerSurveyOnServer(entry).catch(function () { /* 백그라운드 동기화 */ });
     }
     return entry;
   }
@@ -505,6 +535,7 @@
     });
     (remoteForms || []).forEach(function (remote) {
       if (!remote || !remote.id) return;
+      if (isSurveyDeleted(remote.id)) return;
       var local = byId[remote.id];
       if (local && local.type !== "form") return;
       if (local) {
@@ -527,6 +558,9 @@
   }
 
   async function syncRegistryFromConfigSheet(registry) {
+    registry = (registry || []).filter(function (entry) {
+      return entry && entry.id && !isSurveyDeleted(entry.id);
+    });
     var remote = await fetchAllSurveysFromConfigSheet();
     return mergeRegistryWithConfigSurveys(registry, remote);
   }
@@ -811,7 +845,102 @@
         },
       }),
     });
-    return readJsonResponse(res);
+    var data = await readJsonResponse(res);
+    if (!data || data.ok === false) {
+      return {
+        ok: false,
+        error: (data && data.error) || "서버 등록에 실패했습니다.",
+      };
+    }
+    return data;
+  }
+
+  async function verifySurveyRegistration(surveyId, entry) {
+    if (!surveyId) return false;
+    entry = entry || findSurvey(surveyId) || { id: surveyId };
+    for (var attempt = 0; attempt < 4; attempt++) {
+      if (attempt > 0) {
+        await new Promise(function (resolve) {
+          setTimeout(resolve, 400);
+        });
+      }
+      var webAppUrl = resolveWebAppUrl(entry);
+      if (webAppUrl) {
+        try {
+          var u =
+            webAppUrl +
+            (webAppUrl.indexOf("?") >= 0 ? "&" : "?") +
+            "action=get&id=" +
+            encodeURIComponent(surveyId);
+          var res = await fetch(u);
+          var data = await readJsonResponse(res);
+          if (data && data.ok && data.survey && String(data.survey.id) === String(surveyId)) {
+            return true;
+          }
+        } catch (e) { /* Config 시트로 재시도 */ }
+      }
+      var fromSheet = await fetchSurveyFromConfigSheet(
+        surveyId,
+        getResponseSpreadsheetId(entry)
+      );
+      if (fromSheet && String(fromSheet.id) === String(surveyId)) return true;
+    }
+    return false;
+  }
+
+  async function registerSurveyReliably(entry) {
+    if (!entry || !entry.id) throw new Error("설문 ID가 없습니다.");
+    var webAppUrl = resolveWebAppUrl(entry);
+    if (!webAppUrl) {
+      throw new Error(
+        "Apps Script 웹 앱 URL을 입력해 주세요. 학생 참여·서버 등록에 필요합니다."
+      );
+    }
+    var sync = await registerSurveyOnServer(entry);
+    if (sync && sync.skipped) {
+      throw new Error(
+        "Apps Script 웹 앱 URL을 입력해 주세요. 학생 참여·서버 등록에 필요합니다."
+      );
+    }
+    if (!sync || sync.ok === false) {
+      throw new Error((sync && sync.error) || "서버 등록에 실패했습니다.");
+    }
+    var verified = await verifySurveyRegistration(entry.id, entry);
+    if (!verified) {
+      throw new Error(
+        "서버에 등록되었는지 확인하지 못했습니다. Apps Script를 최신 survey-api.gs로 재배포한 뒤 다시 저장하세요."
+      );
+    }
+    return sync;
+  }
+
+  async function deleteSurveyOnServer(entryOrId) {
+    var id =
+      typeof entryOrId === "string"
+        ? entryOrId
+        : entryOrId && entryOrId.id
+          ? entryOrId.id
+          : "";
+    if (!id) return { ok: false, error: "surveyId required" };
+    var local =
+      typeof entryOrId === "object" && entryOrId
+        ? entryOrId
+        : findSurvey(id) || { id: id };
+    var webAppUrl = resolveWebAppUrl(local);
+    if (!webAppUrl) return { ok: true, skipped: true, reason: "no-webapp" };
+    var res = await fetch(webAppUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "delete", surveyId: id }),
+    });
+    var data = await readJsonResponse(res);
+    if (!data || data.ok === false) {
+      return {
+        ok: false,
+        error: (data && data.error) || "서버 삭제에 실패했습니다.",
+      };
+    }
+    return data;
   }
 
   global.SurveyForm = {
@@ -855,6 +984,12 @@
     fetchSurveyConfig: fetchSurveyConfig,
     submitSurveyResponse: submitSurveyResponse,
     registerSurveyOnServer: registerSurveyOnServer,
+    registerSurveyReliably: registerSurveyReliably,
+    verifySurveyRegistration: verifySurveyRegistration,
+    deleteSurveyOnServer: deleteSurveyOnServer,
+    markSurveyDeleted: markSurveyDeleted,
+    unmarkSurveyDeleted: unmarkSurveyDeleted,
+    isSurveyDeleted: isSurveyDeleted,
     generateSurveyId: generateSurveyId,
     questionCategories: questionCategories,
     fetchFormResponsesAnalysis: fetchFormResponsesAnalysis,

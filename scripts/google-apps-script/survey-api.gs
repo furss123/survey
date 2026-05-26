@@ -10,7 +10,7 @@ function doGet(e) {
   if (action === "get") {
     return jsonOut(getSurvey_(e.parameter.id));
   }
-  return jsonOut({ ok: true, hint: "POST register | submit" });
+  return jsonOut({ ok: true, hint: "POST register | submit | delete" });
 }
 
 function doPost(e) {
@@ -25,6 +25,9 @@ function doPost(e) {
     }
     if (action === "submit") {
       return jsonOut(submitResponse_(body));
+    }
+    if (action === "delete") {
+      return jsonOut(deleteSurvey_(body.surveyId || body.id));
     }
     return jsonOut({ ok: false, error: "unknown action" });
   } catch (err) {
@@ -126,6 +129,19 @@ function syncResponseHeaders_(survey) {
     });
   });
   resp.getRange(2, 1, 1 + newRows.length, merged.length).setValues(newRows);
+}
+
+function deleteSurvey_(surveyId) {
+  if (!surveyId) throw new Error("surveyId required");
+  var sheets = ensureSheets_();
+  var config = sheets.config;
+  var data = config.getDataRange().getValues();
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) !== String(surveyId)) continue;
+    config.deleteRow(i + 1);
+    return { ok: true };
+  }
+  return { ok: true, missing: true };
 }
 
 function getSurvey_(id) {
