@@ -1853,9 +1853,60 @@
       display: none;
     }
     @media print {
+      /* 화면이 다크모드여도 인쇄는 라이트 테마 */
+      html {
+        color-scheme: light !important;
+      }
+      html[data-theme="dark"] {
+        --theme-bg-page: #ffffff;
+        --theme-bg-panel: #ffffff;
+        --theme-bg-muted: #f8fafc;
+        --theme-text: #0f172a;
+        --theme-text-muted: #475569;
+        --theme-border: #c5d0de;
+        --theme-border-light: #dce4ee;
+        --theme-heading-strong: #0f2440;
+        --theme-heading: #1e3a5f;
+        --theme-heading-accent: #3d6b9e;
+        --theme-icon: #3d6b9e;
+        --theme-btn-top: #4a7ab0;
+        --theme-btn-bottom: #1e3a5f;
+        --theme-query-card-bg: #f8fafc;
+        --theme-query-card-hover: #eef4fb;
+        --theme-hover-bg: #eef4fb;
+        --theme-hover-surface: #f1f5f9;
+        --theme-logo-bg: #ffffff;
+        --theme-accent-soft: #faf6eb;
+        --bg-page: #ffffff;
+        --bg-surface: #ffffff;
+        --bg-muted: #f8fafc;
+        --bg-category: #eef2f7;
+        --bg-accent-soft: #f5f0e4;
+        --bg-accent-banner: #f5f0e4;
+        --border: #c5d0de;
+        --border-strong: #b8c5d6;
+        --border-accent: #3d6b9e;
+        --text: #0f172a;
+        --text-muted: #475569;
+        --text-subtle: #334155;
+        --text-accent: #1e3a5f;
+        --accent: #3d6b9e;
+        --accent-hover: #1e3a5f;
+        --chip-bg: #ffffff;
+        --chip-inactive-text: #334155;
+        --chip-active-text: #ffffff;
+        --badge-done-bg: #d1fae5;
+        --badge-done-text: #047857;
+        --badge-pending-bg: #e8edf4;
+        --badge-pending-text: #475569;
+        --danger-bg: #fef2f2;
+        --danger-text: #b91c1c;
+        --error-bg: #fef2f2;
+        --error-text: #b91c1c;
+      }
       .admin-setup-panel { display: none !important; }
       @page { size: A4; margin: 10mm; }
-      body { padding: 0 !important; background: #fff !important; }
+      body { padding: 0 !important; background: #fff !important; color: #0f172a !important; }
       body.is-printing-results * { visibility: hidden; }
       body.is-printing-results #results,
       body.is-printing-results #results * { visibility: visible; }
@@ -1870,6 +1921,71 @@
         box-shadow: none !important;
         padding: 0 !important;
         background: #fff !important;
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .class-section {
+        background: #fff !important;
+        border-color: #c5d0de !important;
+        box-shadow: none !important;
+      }
+      body.is-printing-results #results .class-section__head {
+        background: linear-gradient(135deg, #0f2440 0%, #1e3a5f 52%, #3d6b9e 100%) !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      body.is-printing-results #results .class-section__missing {
+        background: #f8fafc !important;
+        border-color: #c5d0de !important;
+        color: #475569 !important;
+      }
+      body.is-printing-results #results .class-section__missing strong {
+        color: #334155 !important;
+      }
+      body.is-printing-results #results .student-card {
+        background: #fff !important;
+        color: #0f172a !important;
+        border-color: #c5d0de !important;
+        border-left-color: #3d6b9e !important;
+        box-shadow: none !important;
+      }
+      body.is-printing-results #results .student-response-header {
+        border-bottom-color: #dce4ee !important;
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .student-num,
+      body.is-printing-results #results .student-name,
+      body.is-printing-results #results .student-id {
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .category-block {
+        background: linear-gradient(180deg, #eef2f7 0%, #fff 100%) !important;
+        border-color: #b8c5d6 !important;
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .category-block .cat-title {
+        color: #1e3a5f !important;
+      }
+      body.is-printing-results #results .category-block .cat-body,
+      body.is-printing-results #results .category-block .cat-field,
+      body.is-printing-results #results .preview {
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .category-block .cat-field span {
+        color: #334155 !important;
+      }
+      body.is-printing-results #results .muted,
+      body.is-printing-results #results .subject-empty,
+      body.is-printing-results #results .absent-note {
+        color: #475569 !important;
+      }
+      body.is-printing-results #results .student-card-divider {
+        border-top-color: #dce4ee !important;
+      }
+      body.is-printing-results #results .sheet-banner {
+        background: #f8fafc !important;
+        color: #1e3a5f !important;
+        border-color: #c5d0de !important;
       }
       body.is-printing-results .results-sticky-chrome,
       body.is-printing-results .class-picker-bar,
@@ -5754,10 +5870,18 @@
     list.style.setProperty("--teacher-print-cols", String(cols));
   }
 
+  function shouldPrintOneStudentPerPage() {
+    if (activeSubjectView === "teacher") return false;
+    if (!activeClassFilter) return false;
+    return (activeSubjectView || "all") === "all";
+  }
+
   function setPrintMode(enabled) {
     var isTeacher = activeSubjectView === "teacher";
+    var onePerPage = enabled && shouldPrintOneStudentPerPage();
     document.body.classList.toggle("is-printing-results", enabled);
     document.body.classList.toggle("print-teacher-mode", enabled && isTeacher);
+    document.body.classList.toggle("print-one-student-per-page", onePerPage);
     var results = document.getElementById("results");
     if (results) results.classList.toggle("results-print-teacher", enabled && isTeacher);
     if (enabled && isTeacher) applyTeacherPrintGrid();
