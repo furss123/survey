@@ -3559,6 +3559,24 @@
 
   function saveSheetRegistry(registry) {
     localStorage.setItem(SHEET_REGISTRY_KEY, JSON.stringify(registry));
+    try {
+      window.dispatchEvent(new CustomEvent("survey-registry-updated"));
+    } catch (err) { /* ignore */ }
+  }
+
+  var homeSurveyListRefreshToken = 0;
+
+  async function refreshHomeSurveyList() {
+    var token = ++homeSurveyListRefreshToken;
+    renderSheetButtonGrid();
+    try {
+      var merged = await SurveyForm.syncRegistryFromConfigSheet(loadSheetRegistry());
+      if (token !== homeSurveyListRefreshToken) return;
+      saveSheetRegistry(merged);
+      renderSheetButtonGrid();
+    } catch (err) {
+      if (token === homeSurveyListRefreshToken) renderSheetButtonGrid();
+    }
   }
 
   function findRegistryEntry(id) {
@@ -5703,6 +5721,7 @@
     teardownScrollStudentTracker();
     setFabStackVisible(false);
     replaceIndexPageUrl({});
+    refreshHomeSurveyList();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -5853,7 +5872,16 @@
   window.addEventListener("resize", scheduleHeaderTitleFit);
   window.addEventListener("load", scheduleHeaderTitleFit);
 
-  renderSheetButtonGrid();
+  refreshHomeSurveyList();
+  window.addEventListener("pageshow", function () {
+    refreshHomeSurveyList();
+  });
+  window.addEventListener("survey-registry-updated", function () {
+    refreshHomeSurveyList();
+  });
+  window.addEventListener("storage", function (e) {
+    if (e.key === SHEET_REGISTRY_KEY) refreshHomeSurveyList();
+  });
 
   document.getElementById("adminSetupConfirm").addEventListener("click", function () {
     confirmAdminSetup();

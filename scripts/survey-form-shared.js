@@ -166,6 +166,9 @@
 
   function saveRegistry(list) {
     localStorage.setItem(REGISTRY_KEY, JSON.stringify(list));
+    try {
+      window.dispatchEvent(new CustomEvent("survey-registry-updated"));
+    } catch (e) { /* ignore */ }
   }
 
   function isSurveyCompleted(entry) {
@@ -458,6 +461,74 @@
       .sort(function (a, b) {
         return (a.번호 || 0) - (b.번호 || 0);
       });
+  }
+
+  async function fetchAllSurveysFromConfigSheet(spreadsheetId) {
+    spreadsheetId = spreadsheetId || DEFAULT_RESPONSE_SPREADSHEET_ID;
+    var values;
+    try {
+      values = await fetchGvizValues(spreadsheetId, "Config");
+    } catch (e) {
+      return [];
+    }
+    if (!values || values.length < 2) return [];
+    var surveys = [];
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+      if (!row || !coerceText(row[0])) continue;
+      var questions = [];
+      try {
+        questions = JSON.parse(row[3] || "[]");
+      } catch (e) {
+        questions = [];
+      }
+      surveys.push(
+        normalizeFormEntry({
+          id: row[0],
+          label: row[1],
+          grade: row[2] || GRADE,
+          questions: questions,
+          categorySelectAll: String(row[4]).toUpperCase() === "Y",
+          surveyStatus:
+            String(row[5] || "active") === "completed" ? "completed" : "active",
+          responseSpreadsheetId: spreadsheetId,
+        })
+      );
+    }
+    return surveys;
+  }
+
+  function mergeRegistryWithConfigSurveys(registry, remoteForms) {
+    var byId = {};
+    (registry || []).forEach(function (entry) {
+      if (entry && entry.id) byId[entry.id] = entry;
+    });
+    (remoteForms || []).forEach(function (remote) {
+      if (!remote || !remote.id) return;
+      var local = byId[remote.id];
+      if (local && local.type !== "form") return;
+      if (local) {
+        byId[remote.id] = Object.assign({}, local, remote, {
+          type: "form",
+          surveyStatus: remote.surveyStatus || local.surveyStatus,
+          label: remote.label || local.label,
+          questions:
+            remote.questions && remote.questions.length
+              ? remote.questions
+              : local.questions,
+        });
+      } else {
+        byId[remote.id] = remote;
+      }
+    });
+    return Object.keys(byId).map(function (id) {
+      return byId[id];
+    });
+  }
+
+  async function syncRegistryFromConfigSheet(registry) {
+    var remote = await fetchAllSurveysFromConfigSheet();
+    return mergeRegistryWithConfigSurveys(registry, remote);
   }
 
   async function fetchSurveyFromConfigSheet(surveyId, spreadsheetId) {
@@ -758,6 +829,9 @@
     buildStudentRespondUrl: buildStudentRespondUrl,
     loadSurveyForRespond: loadSurveyForRespond,
     fetchSurveyFromConfigSheet: fetchSurveyFromConfigSheet,
+    fetchAllSurveysFromConfigSheet: fetchAllSurveysFromConfigSheet,
+    mergeRegistryWithConfigSurveys: mergeRegistryWithConfigSurveys,
+    syncRegistryFromConfigSheet: syncRegistryFromConfigSheet,
     getActiveRosterConfig: getActiveRosterConfig,
     loadRosterConfig: loadRosterConfig,
     loadSessionRosterConfig: loadSessionRosterConfig,

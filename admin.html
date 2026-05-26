@@ -802,6 +802,9 @@
 
   function saveSheetRegistry(registry) {
     localStorage.setItem(SHEET_REGISTRY_KEY, JSON.stringify(registry));
+    try {
+      window.dispatchEvent(new CustomEvent("survey-registry-updated"));
+    } catch (err) { /* ignore */ }
   }
 
   function findRegistryEntry(id) {
