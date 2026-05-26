@@ -16,8 +16,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  sync-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: index
+          fetch-depth: 1
+      - name: Force-push main from index
+        run: git push origin HEAD:refs/heads/main --force
+
   deploy:
     runs-on: ubuntu-latest
+    needs: sync-main
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
