@@ -3549,6 +3549,7 @@
         var parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           var cleaned = stripDefaultClassButtons(parsed);
+          cleaned = SurveyForm.dedupeRegistryEntries(cleaned);
           if (cleaned.length !== parsed.length) saveSheetRegistry(cleaned);
           return cleaned;
         }

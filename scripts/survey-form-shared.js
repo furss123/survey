@@ -177,12 +177,24 @@
     return v == null ? "" : String(v).trim();
   }
 
+  function dedupeRegistryEntries(list) {
+    var byId = {};
+    (list || []).forEach(function (entry) {
+      if (!entry || !entry.id) return;
+      if (isSurveyDeleted(entry.id)) return;
+      byId[entry.id] = entry;
+    });
+    return Object.keys(byId).map(function (id) {
+      return byId[id];
+    });
+  }
+
   function loadRegistry() {
     try {
       var raw = localStorage.getItem(REGISTRY_KEY);
       if (!raw) return [];
       var parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? dedupeRegistryEntries(parsed) : [];
     } catch (e) {
       return [];
     }
@@ -966,6 +978,42 @@
     return data;
   }
 
+  async function purgeSurveyFromServer(entryOrId) {
+    var id =
+      typeof entryOrId === "string"
+        ? entryOrId
+        : entryOrId && entryOrId.id
+          ? entryOrId.id
+          : "";
+    if (!id) return { ok: false, localOnly: true, warnings: ["설문 ID 없음"] };
+    markSurveyDeleted(id);
+    var result = await deleteSurveyOnServer(entryOrId);
+    var warnings = [];
+    if (result && result.skipped) {
+      warnings.push(
+        "웹 앱 URL이 없어 Config 시트에서는 삭제되지 않았습니다. 관리자에서 URL을 저장한 뒤 다시 삭제하거나, Config 시트에서 해당 행을 직접 지워 주세요."
+      );
+    } else if (result && result.ok === false) {
+      warnings.push(
+        (result.error || "서버 삭제 실패") +
+          " — Apps Script를 최신 survey-api.gs로 재배포했는지 확인하세요."
+      );
+    } else {
+      var still = await fetchSurveyFromConfigSheet(
+        id,
+        getResponseSpreadsheetId(
+          typeof entryOrId === "object" && entryOrId ? entryOrId : { id: id }
+        )
+      );
+      if (still) {
+        warnings.push(
+          "Config 시트에 설문 행이 남아 있습니다. 시트에서 직접 삭제하거나 웹 앱을 재배포한 뒤 다시 시도하세요."
+        );
+      }
+    }
+    return { ok: true, warnings: warnings };
+  }
+
   global.SurveyForm = {
     REGISTRY_KEY: REGISTRY_KEY,
     ROSTER_STORAGE_KEY: ROSTER_STORAGE_KEY,
@@ -1012,6 +1060,8 @@
     registerSurveyReliably: registerSurveyReliably,
     verifySurveyRegistration: verifySurveyRegistration,
     deleteSurveyOnServer: deleteSurveyOnServer,
+    purgeSurveyFromServer: purgeSurveyFromServer,
+    dedupeRegistryEntries: dedupeRegistryEntries,
     markSurveyDeleted: markSurveyDeleted,
     unmarkSurveyDeleted: unmarkSurveyDeleted,
     isSurveyDeleted: isSurveyDeleted,

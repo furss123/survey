@@ -855,7 +855,9 @@
       var raw = localStorage.getItem(SHEET_REGISTRY_KEY);
       if (raw) {
         var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return SurveyForm.dedupeRegistryEntries(parsed);
+        }
       }
     } catch (err) { /* ignore */ }
     return [];
@@ -1161,36 +1163,36 @@
     var next = prev.filter(function (item) {
       return ids.indexOf(item.id) < 0;
     });
+
+    toDelete.forEach(function (entry) {
+      if (entry.type === "form") SurveyForm.markSurveyDeleted(entry.id);
+    });
     saveSheetRegistry(next);
+    SurveyForm.saveRegistry(next);
     renderAdminRegistryList();
 
     var formEntries = toDelete.filter(function (entry) {
       return entry.type === "form";
     });
-    if (!formEntries.length) return;
-
-    formEntries.forEach(function (entry) {
-      SurveyForm.markSurveyDeleted(entry.id);
-    });
     var bulkBtn = document.getElementById("adminRegistryBulkDelete");
     if (bulkBtn) bulkBtn.disabled = true;
+    var warnings = [];
     try {
       for (var i = 0; i < formEntries.length; i++) {
-        var result = await SurveyForm.deleteSurveyOnServer(formEntries[i]);
-        if (result && result.ok === false) {
-          throw new Error(result.error || "서버 삭제에 실패했습니다.");
+        var purge = await SurveyForm.purgeSurveyFromServer(formEntries[i]);
+        if (purge && purge.warnings && purge.warnings.length) {
+          warnings = warnings.concat(purge.warnings);
         }
-        SurveyForm.unmarkSurveyDeleted(formEntries[i].id);
       }
-    } catch (err) {
-      saveSheetRegistry(prev);
-      formEntries.forEach(function (entry) {
-        SurveyForm.unmarkSurveyDeleted(entry.id);
-      });
-      renderAdminRegistryList();
-      alert((err && err.message) || "삭제에 실패했습니다.");
     } finally {
+      if (bulkBtn) bulkBtn.disabled = false;
       updateBulkDeleteUi();
+    }
+    if (warnings.length) {
+      alert(
+        "목록에서는 삭제했습니다.\n\n다음 항목을 확인해 주세요:\n• " +
+          warnings.join("\n• ")
+      );
     }
   }
 
