@@ -540,6 +540,52 @@
       color: var(--theme-text-muted);
       font-style: italic;
     }
+    .registry-bulk-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 14px;
+      margin-top: var(--space-4);
+      padding: 10px 12px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-md);
+      background: var(--theme-bg-panel);
+      font-size: var(--text-sm);
+    }
+    .registry-bulk-bar[hidden] { display: none !important; }
+    .registry-bulk-bar label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--theme-text);
+    }
+    .registry-bulk-bar input[type="checkbox"] {
+      width: 1.05rem;
+      height: 1.05rem;
+      margin: 0;
+      flex-shrink: 0;
+      cursor: pointer;
+      accent-color: var(--border-accent);
+    }
+    .registry-bulk-count {
+      color: var(--theme-text-muted);
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+    .registry-select {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+      margin: 0;
+      cursor: pointer;
+    }
+    .admin-registry-list li.is-removing {
+      opacity: 0.35;
+      pointer-events: none;
+    }
     .admin-registry-list {
       margin: var(--space-4) 0 0;
       padding: 0;
@@ -774,6 +820,21 @@
             <p class="admin-registry-status" id="adminRegistryStatus" role="status" aria-live="polite"></p>
           </div>
           <div id="adminRegistryGroups">
+            <div class="registry-bulk-bar" id="adminRegistryBulkBar" hidden>
+              <label>
+                <input type="checkbox" id="adminRegistrySelectAll" />
+                <span>전체 선택</span>
+              </label>
+              <button
+                type="button"
+                class="admin-btn admin-btn-danger"
+                id="adminRegistryBulkDelete"
+                disabled
+              >
+                선택 삭제
+              </button>
+              <span class="registry-bulk-count" id="adminRegistryBulkCount" aria-live="polite"></span>
+            </div>
             <h3 class="registry-section-title">진행중인 설문</h3>
             <ul id="adminRegistryListActive" class="admin-registry-list" aria-label="진행중인 설문"></ul>
             <p id="adminRegistryActiveEmpty" class="registry-section-empty" hidden>진행중인 설문이 없습니다.</p>
@@ -1122,10 +1183,44 @@
     });
     if (idx < 0) throw new Error("수정할 시트를 찾을 수 없습니다.");
     registry[idx] = Object.assign({}, registry[idx], { label: label, url: url });
+    registry = normalizeSheetRegistry(registry);
     saveSheetRegistry(registry);
+    SurveyForm.saveRegistry(registry);
   }
 
   var adminRegistryRefreshToken = 0;
+  var registryDeleteInFlight = false;
+
+  function getSelectedRegistryIds() {
+    var ids = [];
+    document.querySelectorAll(".registry-select-cb:checked").forEach(function (cb) {
+      var id = cb.getAttribute("data-select-id");
+      if (id) ids.push(id);
+    });
+    return ids;
+  }
+
+  function updateBulkDeleteUi() {
+    var bulkBar = document.getElementById("adminRegistryBulkBar");
+    var btn = document.getElementById("adminRegistryBulkDelete");
+    var countEl = document.getElementById("adminRegistryBulkCount");
+    var selectAll = document.getElementById("adminRegistrySelectAll");
+    var allCbs = document.querySelectorAll(".registry-select-cb");
+    var ids = getSelectedRegistryIds();
+    if (bulkBar) bulkBar.hidden = !allCbs.length;
+    if (btn) {
+      btn.disabled = ids.length === 0 || registryDeleteInFlight;
+      btn.textContent =
+        ids.length > 0 ? "선택 삭제 (" + ids.length + ")" : "선택 삭제";
+    }
+    if (countEl) {
+      countEl.textContent = ids.length ? ids.length + "개 선택됨" : "";
+    }
+    if (selectAll) {
+      selectAll.checked = allCbs.length > 0 && ids.length === allCbs.length;
+      selectAll.indeterminate = ids.length > 0 && ids.length < allCbs.length;
+    }
+  }
 
   function setAdminRegistryStatus(text, kind) {
     var el = document.getElementById("adminRegistryStatus");
@@ -1195,56 +1290,85 @@
     }
   }
 
-  async function deleteRegistryEntry(id) {
-    if (!id) return;
-    if (!confirm("이 항목을 목록에서 삭제할까요?")) return;
-    if (editingSheetId === id) cancelEditSheet();
+  async function deleteRegistryEntries(ids) {
+    if (!ids || !ids.length) {
+      setAdminRegistryStatus("삭제할 항목을 선택해 주세요.", "is-warn");
+      return;
+    }
+    if (registryDeleteInFlight) return;
+    var label =
+      ids.length === 1 ? "이 항목" : "선택한 " + ids.length + "개 항목";
+    if (!confirm(label + "을(를) 목록에서 삭제할까요?")) return;
+    if (editingSheetId && ids.indexOf(editingSheetId) >= 0) cancelEditSheet();
+
+    registryDeleteInFlight = true;
+    updateBulkDeleteUi();
 
     var prev = loadSheetRegistry();
-    var entry = prev.find(function (item) {
-      return item.id === id;
+    var toDelete = prev.filter(function (item) {
+      return ids.indexOf(item.id) >= 0;
     });
     var next = prev.filter(function (item) {
-      return item.id !== id;
+      return ids.indexOf(item.id) < 0;
     });
 
-    SurveyForm.markSurveyDeleted(id);
+    ids.forEach(function (id) {
+      SurveyForm.markSurveyDeleted(id);
+    });
     next = normalizeSheetRegistry(next);
     saveSheetRegistry(next);
     SurveyForm.saveRegistry(next);
 
-    await refreshAdminRegistryList({
-      sync: false,
-      loadingMessage: "삭제 반영 중…",
-      message: "목록에서 삭제했습니다.",
-    });
+    renderAdminRegistryList();
+    updateBulkDeleteUi();
+    flashAdminRegistryGroups();
+    setAdminRegistryStatus(
+      toDelete.length + "개를 목록에서 삭제했습니다.",
+      "is-ok"
+    );
 
     var warnings = [];
-    if (entry) {
-      try {
-        var purge = await SurveyForm.purgeSurveyFromServer(entry);
+    try {
+      for (var i = 0; i < toDelete.length; i++) {
+        var purge = await SurveyForm.purgeSurveyFromServer(toDelete[i]);
         if (purge && purge.warnings && purge.warnings.length) {
-          warnings = purge.warnings;
+          warnings = warnings.concat(purge.warnings);
         }
-      } catch (err) {
-        warnings.push((err && err.message) || "서버 삭제 요청에 실패했습니다.");
       }
+      await refreshAdminRegistryList({
+        sync: true,
+        message:
+          warnings.length > 0
+            ? "삭제 반영 완료. " + warnings[0]
+            : "삭제를 반영하고 목록을 맞췄습니다.",
+        kind: warnings.length > 0 ? "is-warn" : "is-ok",
+      });
+    } catch (err) {
+      setAdminRegistryStatus(
+        (err && err.message) || "서버 동기화 중 오류가 발생했습니다.",
+        "is-warn"
+      );
+      renderAdminRegistryList();
+      updateBulkDeleteUi();
+    } finally {
+      registryDeleteInFlight = false;
+      updateBulkDeleteUi();
     }
+  }
 
-    await refreshAdminRegistryList({
-      sync: true,
-      message:
-        warnings.length > 0
-          ? "삭제했습니다. " + warnings[0]
-          : "삭제를 반영하고 목록을 맞췄습니다.",
-      kind: warnings.length > 0 ? "is-warn" : "is-ok",
-    });
+  function deleteRegistryEntry(id) {
+    if (!id) return;
+    deleteRegistryEntries([id]);
   }
 
   function buildRegistryItemHtml(item) {
     var isCompleted = SurveyForm.isSurveyCompleted(item);
     return (
-      "<li><div class=\"registry-meta\"><strong>" +
+      "<li><label class=\"registry-select\"><input type=\"checkbox\" class=\"registry-select-cb\" data-select-id=\"" +
+      esc(item.id) +
+      "\" /><span class=\"visually-hidden\">" +
+      esc(item.label || "설문") +
+      " 선택</span></label><div class=\"registry-meta\"><strong>" +
       esc(item.label) +
       (isCompleted ? " <span style=\"font-size:0.75em;opacity:0.85\">(완료)</span>" : "") +
       "</strong><span>" +
@@ -1339,7 +1463,36 @@
     var parts = SurveyForm.partitionRegistryByStatus(registry);
     renderRegistrySection(activeList, activeEmpty, parts.active);
     renderRegistrySection(completedList, completedEmpty, parts.completed);
+    updateBulkDeleteUi();
   }
+
+  (function initRegistryBulkActions() {
+    var selectAll = document.getElementById("adminRegistrySelectAll");
+    var bulkDelete = document.getElementById("adminRegistryBulkDelete");
+    var groups = document.getElementById("adminRegistryGroups");
+    if (groups && !groups.dataset.bulkBound) {
+      groups.dataset.bulkBound = "1";
+      groups.addEventListener("change", function (e) {
+        if (e.target && e.target.classList.contains("registry-select-cb")) {
+          updateBulkDeleteUi();
+        }
+      });
+    }
+    if (selectAll) {
+      selectAll.addEventListener("change", function () {
+        var checked = selectAll.checked;
+        document.querySelectorAll(".registry-select-cb").forEach(function (cb) {
+          cb.checked = checked;
+        });
+        updateBulkDeleteUi();
+      });
+    }
+    if (bulkDelete) {
+      bulkDelete.addEventListener("click", function () {
+        deleteRegistryEntries(getSelectedRegistryIds());
+      });
+    }
+  })();
 
   (function initRegistryLiveRefresh() {
     var refreshBtn = document.getElementById("adminRegistryRefreshBtn");
@@ -1517,15 +1670,26 @@
       return;
     }
     if (editingSheetId) {
+      var submitBtn = document.getElementById("adminSheetSubmitBtn");
+      if (submitBtn) submitBtn.disabled = true;
+      setAdminRegistryStatus("시트 정보 저장 중…", "is-busy");
       try {
         updateRegistryEntry(editingSheetId, label, url);
       } catch (err) {
-        alert(err.message || "시트 수정에 실패했습니다.");
+        setAdminRegistryStatus(err.message || "시트 수정에 실패했습니다.", "is-warn");
+        if (submitBtn) submitBtn.disabled = false;
         return;
       }
       cancelEditSheet();
       renderAdminRegistryList();
-      alert("시트 정보가 수정되었습니다.");
+      flashAdminRegistryGroups();
+      refreshAdminRegistryList({
+        sync: false,
+        message: "시트 정보를 수정했습니다.",
+        kind: "is-ok",
+      }).finally(function () {
+        if (submitBtn) submitBtn.disabled = false;
+      });
       return;
     }
   });

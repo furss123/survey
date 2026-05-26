@@ -1903,6 +1903,23 @@
         max-width: 100%;
         margin-bottom: 10px;
       }
+      /* 특정 반 + 전체과목: 학생 1명당 1페이지 */
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section {
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 0;
+        min-height: 0;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
       /* 담임선생님께!: 반 전원 한 페이지 압축 그리드 */
       body.is-printing-results.print-teacher-mode .student-cards-list {
         display: grid !important;
