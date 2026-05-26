@@ -1,28 +1,29 @@
 ---
-description: GitHub Pages 배포를 위해 survey 저장소 변경 후 자동 push
-globs: "**/*"
+description: survey 저장소 변경 후 자동 커밋·푸시 (별도 요청 불필요)
 alwaysApply: true
 ---
 
-# 자동 푸시 (survey → GitHub Pages)
+# 자동 커밋·푸시 (survey)
 
-이 프로젝트(`furss123/survey`)에서 코드·HTML·스크립트를 수정한 뒤 **사용자가 별도로 말하지 않아도** 다음을 수행한다.
+이 프로젝트에서 코드·HTML·스크립트를 수정한 뒤 작업을 마치면:
 
 1. `git status` / `git diff`로 변경 범위 확인
-2. 의미 있는 단위로 `git add` 후 **commit** (메시지는 변경 목적 중심, 한국어 또는 영어)
-3. `git push origin main` 으로 **origin/main** 에 push
+2. 관련 파일만 `git add` (`.env`, 비밀·자격증명 제외)
+3. 변경 목적이 드러나는 한국어 커밋 메시지로 `git commit`
+4. `git push origin main` (또는 현재 브랜치)까지 수행
 
-## 예외 (push 하지 않음)
+## 예외
 
 - 사용자가 「커밋만」「push 하지 마」 등으로 명시한 경우
-- `.env`, 비밀번호, API 키 등 민감 파일만 변경된 경우
 - 변경 없음 (working tree clean)
+- `.env`, API 키, 비밀번호 등 민감 파일
 
 ## 배포
 
 - GitHub Pages: https://furss123.github.io/survey/
 - push 후 1~3분 정도면 반영될 수 있음
+- 배포 확인: `.\scripts\verify-deploy.ps1` (「학생 설문 만들기」 버튼 없음)
 
 ## Apps Script
 
-- `scripts/google-apps-script/` 변경 시 push만으로는 스프레드시트에 반영되지 않음 → 사용자에게 Apps Script 재배포 필요를 간단히 안내
+- `scripts/google-apps-script/` 변경 시 push만으로는 스프레드시트에 반영되지 않음 → Apps Script 재배포 안내

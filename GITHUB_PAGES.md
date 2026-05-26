@@ -1,42 +1,39 @@
 # GitHub Pages 배포 (`/survey/`)
 
-공개 URL: **https://furss123.github.io/survey/**
+공개 URL: **https://furss123.github.io/survey/**  
+→ 저장소 루트의 **`index.html`** 이 메인 화면입니다.
 
-## 한 번만 설정 (GitHub 웹)
+## 한 번만 설정
 
-1. [survey 저장소 → Settings → Pages](https://github.com/furss123/survey/settings/pages)
-2. **Build and deployment**
-   - Source: **Deploy from a branch**
-   - Branch: **`index`** (또는 `main`) / Folder: **`/ (root)`**
-3. **Save**
-4. 1~10분 후 위 URL 접속
+1. [Settings → Pages](https://github.com/furss123/survey/settings/pages)
+2. **Source** — 아래 **A(권장)** 또는 B 중 하나만 선택
+   - **A. Deploy from a branch** (가장 안정적)  
+     Branch: **`index`**, Folder: **`/ (root)`** → Save  
+     → `index`에 push할 때마다 `pages build and deployment`가 자동 실행됩니다.
+   - **B. GitHub Actions** — `index` push 시 [Deploy GitHub Pages](https://github.com/furss123/survey/actions/workflows/deploy-pages.yml) 실행  
+     → 첫 배포 전 **Actions 탭 → Deploy GitHub Pages → Run workflow** (브랜치 `index`)를 한 번 눌러야 할 수 있습니다.  
+     → `github-pages` 환경 승인(Approve) 요청이 뜨면 승인합니다.
+3. **Save** 후 3~10분 대기, 브라우저에서 **Ctrl+Shift+R** 새로고침
 
-배포에 포함되는 파일(브랜치 루트):
+### 배포가 안 바뀔 때
 
-- `index.html` — 설문 결과 앱
-- `assets/` — 로고 등
-- `.nojekyll` — Jekyll 없이 정적 파일 그대로 제공
+- Live가 `ui-version: 20260522` / 「학생 설문은 참여」이면 **구버전**입니다.
+- **Actions만** 켜 두고 `Deploy GitHub Pages` 실행이 **0회**이면, 소스를 **A(브랜치 index)** 로 바꾸거나 위 **Run workflow**를 실행하세요.
+- `gh-pages`만 push해도, Pages 소스가 **GitHub Actions**이면 사이트는 갱신되지 않습니다.
 
-## 코드 반영 후
+## push 후 자동 동기화
 
-```bash
-cd survey
-git add index.html assets .nojekyll GITHUB_PAGES.md
-git commit -m "Pages: survey URL용 정적 배포 파일 동기화"
-git push origin main
-git push origin main:index
-```
+- `index` 브랜치에 push
+- `main` · `gh-pages` 브랜치로 자동 동기화 (스크립트·Actions)
+- 배포 확인: `.\scripts\verify-deploy.ps1`
 
-`main:index`는 원격 **`index`** 브랜치(기본 브랜치)를 최신 정적 파일로 맞춥니다.
+## 배포에 포함되는 파일
+
+- `index.html` — 메인
+- `admin.html`, `admin-login.html` — 관리자
+- `assets/`, `scripts/`, `.nojekyll`
 
 ## 확인
 
-- Settings → Pages에 초록색 “Your site is live at …” 표시
-- https://furss123.github.io/survey/ 에서 설문 화면 로드
-- 로고: `assets/namak-logo.png` (404면 `assets` 폴더 push 여부 확인)
-
-## 참고
-
-- `client/`, `server/`는 로컬 개발용이며 Pages에서 Node 서버는 동작하지 않습니다.
-- 예전 주소 `/froms/`, `/school/`는 이 사이트와 별개입니다. 정본 URL은 `/survey/` 입니다.
-33333
+- 메인에 「구글 시트로 연결된 설문」 문구가 보이면 최신 배포
+- 「학생 설문 만들기」 버튼이 **없어야** 함

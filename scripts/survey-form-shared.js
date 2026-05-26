@@ -2,13 +2,136 @@
   "use strict";
 
   var REGISTRY_KEY = "school-sheet-registry-v1";
-  var ROSTER_CONFIG_KEY = "school-roster-config-v1";
-  var ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  var DELETED_SURVEYS_KEY = "school-sheet-deleted-surveys-v1";
+  var ROSTER_STORAGE_KEY = "school-roster-sheet-v1";
+  var ROSTER_SESSION_KEY = "school-roster-sheet-session-v1";
+  var WEBAPP_STORAGE_KEY = "school-survey-webapp-v1";
+  var WEBAPP_SESSION_KEY = "school-survey-webapp-session-v1";
+  var DEFAULT_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  var DEFAULT_RESPONSE_SPREADSHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
+  var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
   var GRADE = 1;
-  var GITHUB_OWNER = "furss123";
-  var GITHUB_REPO = "survey";
-  var GITHUB_BRANCH = "main";
-  var DEFAULT_RESPONSE_SHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
+
+  function parseSpreadsheetId(url) {
+    var trimmed = coerceText(url);
+    var match = trimmed.match(SPREADSHEET_ID_PATTERN);
+    if (match && match[1]) return match[1];
+    if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) return trimmed;
+    throw new Error("스프레드시트 ID를 URL에서 찾을 수 없습니다.");
+  }
+
+  function loadRosterConfig() {
+    try {
+      var raw = localStorage.getItem(ROSTER_STORAGE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.id && parsed.remember !== false) return parsed;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function loadSessionRosterConfig() {
+    try {
+      var raw = sessionStorage.getItem(ROSTER_SESSION_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.id) return parsed;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function getActiveRosterConfig() {
+    return loadSessionRosterConfig() || loadRosterConfig();
+  }
+
+  function saveRosterConfig(config, remember) {
+    var payload = Object.assign({}, config, {
+      remember: !!remember,
+      savedAt: Date.now(),
+    });
+    sessionStorage.setItem(ROSTER_SESSION_KEY, JSON.stringify(payload));
+    if (remember) {
+      localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(payload));
+    } else {
+      try {
+        localStorage.removeItem(ROSTER_STORAGE_KEY);
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  function getRosterSpreadsheetId() {
+    var cfg = getActiveRosterConfig();
+    return (cfg && cfg.id) || DEFAULT_ROSTER_SPREADSHEET_ID;
+  }
+
+  function loadWebAppUrl() {
+    try {
+      return coerceText(localStorage.getItem(WEBAPP_STORAGE_KEY));
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function saveWebAppUrl(url) {
+    var trimmed = coerceText(url);
+    if (trimmed) localStorage.setItem(WEBAPP_STORAGE_KEY, trimmed);
+    else localStorage.removeItem(WEBAPP_STORAGE_KEY);
+  }
+
+  function loadWebAppUrlSession() {
+    try {
+      return coerceText(sessionStorage.getItem(WEBAPP_SESSION_KEY));
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function saveWebAppUrlSession(url) {
+    var trimmed = coerceText(url);
+    if (trimmed && isValidWebAppUrl(trimmed)) {
+      sessionStorage.setItem(WEBAPP_SESSION_KEY, trimmed);
+    }
+  }
+
+  function isValidWebAppUrl(url) {
+    url = coerceText(url);
+    return (
+      url.indexOf("script.google.com") >= 0 &&
+      /\/exec\/?(\?|$)/i.test(url)
+    );
+  }
+
+  function resolveWebAppUrl(entry) {
+    var fromEntry = entry && coerceText(entry.webAppUrl);
+    var fromSession = loadWebAppUrlSession();
+    var global = loadWebAppUrl();
+    if (fromEntry && isValidWebAppUrl(fromEntry)) return fromEntry;
+    if (fromSession && isValidWebAppUrl(fromSession)) return fromSession;
+    if (global && isValidWebAppUrl(global)) return global;
+    return "";
+  }
+
+  function getResponseSpreadsheetId(entry) {
+    return (
+      (entry && entry.responseSpreadsheetId) ||
+      DEFAULT_RESPONSE_SPREADSHEET_ID
+    );
+  }
+
+  async function readJsonResponse(res) {
+    var text = await res.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      if (/^\s*<!DOCTYPE/i.test(text) || /^\s*<html/i.test(text)) {
+        throw new Error(
+          "서버가 HTML을 반환했습니다. Apps Script 웹 앱 URL(/exec)이 맞는지 확인하세요."
+        );
+      }
+      throw new Error("서버 응답을 JSON으로 읽을 수 없습니다.");
+    }
+  }
 
   function esc(s) {
     var d = document.createElement("div");
@@ -20,12 +143,33 @@
     return v == null ? "" : String(v).trim();
   }
 
+  function isSheetRegistryEntry(entry) {
+    return entry && entry.type !== "form";
+  }
+
+  function filterSheetEntriesOnly(list) {
+    return (list || []).filter(isSheetRegistryEntry);
+  }
+
+  function dedupeRegistryEntries(list) {
+    var byId = {};
+    (list || []).forEach(function (entry) {
+      if (!entry || !entry.id) return;
+      if (!isSheetRegistryEntry(entry)) return;
+      if (isSurveyDeleted(entry.id)) return;
+      byId[entry.id] = entry;
+    });
+    return Object.keys(byId).map(function (id) {
+      return byId[id];
+    });
+  }
+
   function loadRegistry() {
     try {
       var raw = localStorage.getItem(REGISTRY_KEY);
       if (!raw) return [];
       var parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? dedupeRegistryEntries(parsed) : [];
     } catch (e) {
       return [];
     }
@@ -33,6 +177,84 @@
 
   function saveRegistry(list) {
     localStorage.setItem(REGISTRY_KEY, JSON.stringify(list));
+    try {
+      window.dispatchEvent(new CustomEvent("survey-registry-updated"));
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadDeletedSurveyIds() {
+    try {
+      var raw = localStorage.getItem(DELETED_SURVEYS_KEY);
+      if (!raw) return {};
+      var parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function markSurveyDeleted(id) {
+    if (!id) return;
+    var map = loadDeletedSurveyIds();
+    map[id] = Date.now();
+    localStorage.setItem(DELETED_SURVEYS_KEY, JSON.stringify(map));
+  }
+
+  function unmarkSurveyDeleted(id) {
+    if (!id) return;
+    var map = loadDeletedSurveyIds();
+    delete map[id];
+    localStorage.setItem(DELETED_SURVEYS_KEY, JSON.stringify(map));
+  }
+
+  function isSurveyDeleted(id) {
+    return id ? !!loadDeletedSurveyIds()[id] : false;
+  }
+
+  function isSurveyCompleted(entry) {
+    if (!entry) return false;
+    if (entry.surveyStatus === "completed") return true;
+    if (entry.surveyStatus === "active") return false;
+    return false;
+  }
+
+  function defaultSurveyStatus() {
+    return "active";
+  }
+
+  function setSurveyStatus(id, status) {
+    var list = loadRegistry();
+    var idx = list.findIndex(function (item) {
+      return item && item.id === id;
+    });
+    if (idx < 0) throw new Error("설문을 찾을 수 없습니다.");
+    var completed = status === "completed";
+    list[idx] = Object.assign({}, list[idx], {
+      surveyStatus: completed ? "completed" : "active",
+      completedAt: completed ? Date.now() : null,
+    });
+    saveRegistry(list);
+    return list[idx];
+  }
+
+  async function setSurveyStatusAsync(id, status) {
+    return setSurveyStatus(id, status);
+  }
+
+  async function refreshRegistryFromServer() {
+    var merged = await syncRegistryFromConfigSheet(loadRegistry());
+    saveRegistry(merged);
+    return merged;
+  }
+
+  function partitionRegistryByStatus(registry) {
+    var active = [];
+    var completed = [];
+    (registry || []).forEach(function (entry) {
+      if (isSurveyCompleted(entry)) completed.push(entry);
+      else active.push(entry);
+    });
+    return { active: active, completed: completed };
   }
 
   function findSurvey(id) {
@@ -81,1027 +303,221 @@
   }
 
   function parseGvizJson(text) {
+    if (/^\s*<!DOCTYPE/i.test(text) || /^\s*<html/i.test(text)) {
+      throw new Error(
+        "시트를 불러올 수 없습니다. 공유 설정(링크가 있는 사용자 → 보기)을 확인하세요."
+      );
+    }
     var start = text.indexOf("{");
     var end = text.lastIndexOf("}");
     if (start < 0 || end <= start) throw new Error("응답 파싱 실패");
-    return JSON.parse(text.slice(start, end + 1));
+    try {
+      return JSON.parse(text.slice(start, end + 1));
+    } catch (e) {
+      throw new Error("시트 응답을 읽을 수 없습니다.");
+    }
   }
 
-  async function fetchRosterRows() {
-    return fetchRosterFromSpreadsheet(ROSTER_SPREADSHEET_ID, null, GRADE);
+  function normalizeBan(value) {
+    if (value == null || value === "") return null;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      var n = Math.floor(value);
+      return n >= 1 ? n : null;
+    }
+    var m = coerceText(value).match(/(\d+)/);
+    if (!m) return null;
+    var ban = parseInt(m[1], 10);
+    return ban >= 1 ? ban : null;
   }
 
-  function parseSpreadsheetIdFromUrl(url) {
-    var trimmed = coerceText(url);
-    if (!trimmed) return "";
-    var match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    if (match && match[1]) return match[1];
-    if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) return trimmed;
-    throw new Error("스프레드시트 ID를 URL에서 찾을 수 없습니다.");
+  function bansMatch(a, b) {
+    var na = normalizeBan(a);
+    var nb = normalizeBan(b);
+    return na != null && nb != null && na === nb;
   }
 
-  function findRosterColumnIndex(header, patterns) {
-    for (var i = 0; i < header.length; i++) {
-      var h = coerceText(header[i]).toLowerCase();
-      for (var p = 0; p < patterns.length; p++) {
-        var pat = patterns[p];
-        if (typeof pat === "string") {
-          if (h === pat.toLowerCase()) return i;
-        } else if (pat.test(h)) return i;
+  function coerceNumber(value) {
+    var s = coerceText(value).replace(/,/g, "");
+    var n = Number(s);
+    if (Number.isFinite(n) && n === Math.floor(n) && n >= 0) return Math.floor(n);
+    var m = s.match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+
+  function findColumnIndex(headers, aliases) {
+    for (var i = 0; i < headers.length; i++) {
+      var h = coerceText(headers[i]).toLowerCase();
+      for (var j = 0; j < aliases.length; j++) {
+        if (h.indexOf(String(aliases[j]).toLowerCase()) >= 0) return i;
       }
     }
     return -1;
   }
 
-  function normalizeRosterStudent(s, grade) {
-    grade = grade != null ? grade : GRADE;
-    var ban = s.반;
-    var num = s.번호;
-    var name = coerceText(s.이름);
-    var sid = coerceText(s.학번);
-    var parsed = sid ? parseStudentId(sid) : { grade: null, 반: null, 번호: null, 학번: "" };
-    if (sid) {
-      if (parsed.반 != null) ban = parsed.반;
-      if (parsed.번호 != null) num = parsed.번호;
+  function findColumnIndexExact(headers, aliases) {
+    for (var i = 0; i < headers.length; i++) {
+      var h = coerceText(headers[i]).toLowerCase();
+      for (var j = 0; j < aliases.length; j++) {
+        if (h === String(aliases[j]).toLowerCase()) return i;
+      }
     }
-    if (!Number.isFinite(num)) return null;
-    return {
-      반: ban != null ? ban : null,
-      번호: num,
-      이름: name,
-      학번: sid || formatStudentId(parsed && parsed.grade != null ? parsed.grade : grade, ban, num),
-    };
+    return -1;
   }
 
-  function parseRosterValues(values, grade) {
-    grade = grade != null ? grade : GRADE;
-    if (!values || !values.length) return [];
-    var header = values[0].map(coerceText);
-    var sidIdx = findRosterColumnIndex(header, [/^학번$/i, /student.?id/i, /학생번호/]);
-    var banIdx = findRosterColumnIndex(header, [/반/]);
-    var numIdx = findRosterColumnIndex(header, [/번호/]);
-    var nameIdx = findRosterColumnIndex(header, [/이름|성명/i, /^name$/i]);
+  function isMatrixClassRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return false;
+    var headerRow = rawValues[0].map(coerceText);
+    var classCols = 0;
+    headerRow.forEach(function (h) {
+      if (/^\d+\s*반$/.test(String(h || "").trim())) classCols += 1;
+    });
+    return classCols >= 2;
+  }
 
-    var startRow = 1;
-    if (sidIdx < 0 && banIdx < 0 && numIdx < 0 && values.length > 1) {
-      sidIdx = header.length >= 2 ? 1 : -1;
-      nameIdx = nameIdx >= 0 ? nameIdx : header.length >= 3 ? 2 : -1;
-      if (sidIdx >= 0 && /학번|student/i.test(header[sidIdx])) startRow = 1;
-      else if (sidIdx >= 0 && !isNaN(Number(coerceText(values[1][sidIdx])))) startRow = 0;
-    }
+  function parseMatrixClassRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return [];
+    var headerRow = rawValues[0].map(coerceText);
+    var dataRows = rawValues.slice(1).filter(function (row) {
+      return row && row.some(function (cell) {
+        return coerceText(cell) !== "";
+      });
+    });
+    var numberIdx = findColumnIndexExact(headerRow, ["번호", "number", "no", "no."]);
+    if (numberIdx < 0) numberIdx = findColumnIndex(headerRow, ["번호", "number", "no"]);
+    if (numberIdx < 0) numberIdx = 0;
+
+    var classColumns = [];
+    headerRow.forEach(function (h, idx) {
+      if (idx === numberIdx) return;
+      var m = String(h || "").trim().match(/^(\d+)\s*반$/);
+      if (m) classColumns.push({ idx: idx, ban: parseInt(m[1], 10) });
+    });
+    if (!classColumns.length) return [];
+
+    var roster = [];
+    dataRows.forEach(function (raw, rowIndex) {
+      var numberVal = numberIdx >= 0 ? coerceNumber(raw[numberIdx]) : null;
+      if (numberVal == null) numberVal = rowIndex + 1;
+      classColumns.forEach(function (col) {
+        var nameVal = coerceText(raw[col.idx]);
+        if (!nameVal) return;
+        roster.push({
+          반: col.ban,
+          번호: numberVal,
+          이름: nameVal,
+          학번: formatStudentId(GRADE, col.ban, numberVal),
+        });
+      });
+    });
+    return roster;
+  }
+
+  function parseListRoster(rawValues) {
+    if (!rawValues || !rawValues.length) return [];
+    if (isMatrixClassRoster(rawValues)) return parseMatrixClassRoster(rawValues);
+
+    var header = rawValues[0].map(coerceText);
+    var dataRows = rawValues.slice(1).filter(function (row) {
+      return row && row.some(function (cell) {
+        return coerceText(cell) !== "";
+      });
+    });
+
+    var banIdx = findColumnIndexExact(header, ["반", "class", "학급"]);
+    if (banIdx < 0) banIdx = findColumnIndex(header, ["반", "class", "학급", "반명"]);
+    var numIdx = findColumnIndexExact(header, ["번호", "number", "no"]);
+    if (numIdx < 0) numIdx = findColumnIndex(header, ["번호", "number", "no"]);
+    var nameIdx = findColumnIndexExact(header, ["이름", "name", "성명", "성함"]);
+    if (nameIdx < 0) nameIdx = findColumnIndex(header, ["이름", "name", "성명", "성함"]);
+    var sidIdx = findColumnIndexExact(header, ["학번", "student_id", "학생번호"]);
+    if (sidIdx < 0) sidIdx = findColumnIndex(header, ["학번", "student_id"]);
 
     var rows = [];
-    for (var r = startRow; r < values.length; r++) {
-      var cells = values[r];
-      if (!cells || !cells.length) continue;
-      var sid = sidIdx >= 0 ? coerceText(cells[sidIdx]) : "";
-      var parsed = parseStudentId(sid);
-      var ban = parsed.반;
-      var num = parsed.번호;
-      var name = nameIdx >= 0 ? coerceText(cells[nameIdx]) : "";
-      if (banIdx >= 0) {
-        var banRaw = coerceText(cells[banIdx]);
-        var banMatch = banRaw.match(/(\d+)/);
-        if (banMatch) ban = parseInt(banMatch[1], 10);
+    dataRows.forEach(function (row, rowIndex) {
+      var banRaw = banIdx >= 0 ? coerceText(row[banIdx]) : "";
+      var numRaw = numIdx >= 0 ? coerceText(row[numIdx]) : "";
+      var name = nameIdx >= 0 ? coerceText(row[nameIdx]) : "";
+      var sidRaw = sidIdx >= 0 ? coerceText(row[sidIdx]) : "";
+      var ban = normalizeBan(banRaw);
+      var num = coerceNumber(numRaw);
+      var parsedId = parseStudentId(sidRaw);
+      if (ban == null && parsedId.반 != null) ban = parsedId.반;
+      if (num == null && parsedId.번호 != null) num = parsedId.번호;
+      if (num == null && !name && !sidRaw) return;
+      if (num == null) num = rowIndex + 1;
+      var 학번 = sidRaw || formatStudentId(GRADE, ban, num);
+      if (ban == null) {
+        var from학번 = parseStudentId(학번);
+        if (from학번.반 != null) ban = from학번.반;
       }
-      if (numIdx >= 0) {
-        var numRaw = Number(coerceText(cells[numIdx]));
-        if (Number.isFinite(numRaw)) num = numRaw;
-      }
-      if (!Number.isFinite(num)) continue;
-      if (ban == null && parsed.grade === grade) ban = parsed.반;
-      var item = normalizeRosterStudent(
-        { 반: ban, 번호: num, 이름: name, 학번: sid || formatStudentId(grade, ban, num) },
-        grade
-      );
-      if (item) rows.push(item);
-    }
-    return rows;
-  }
-
-  function parseCsvLine(line) {
-    var out = [];
-    var cur = "";
-    var inQuotes = false;
-    for (var i = 0; i < line.length; i++) {
-      var ch = line.charAt(i);
-      if (ch === '"') {
-        if (inQuotes && line.charAt(i + 1) === '"') {
-          cur += '"';
-          i++;
-        } else inQuotes = !inQuotes;
-      } else if ((ch === "," || ch === "\t") && !inQuotes) {
-        out.push(cur);
-        cur = "";
-      } else cur += ch;
-    }
-    out.push(cur);
-    return out;
-  }
-
-  function parseCsvText(text) {
-    var raw = String(text || "").replace(/^\uFEFF/, "");
-    return raw
-      .split(/\r?\n/)
-      .map(function (line) {
-        return line.trim();
-      })
-      .filter(Boolean)
-      .map(parseCsvLine);
-  }
-
-  function parseRosterFromCsv(text, grade) {
-    return parseRosterValues(parseCsvText(text), grade);
-  }
-
-  function summarizeRoster(roster) {
-    var classes = deriveClassOptions(roster);
-    return {
-      count: roster.length,
-      classes: classes.length,
-      classLabels: classes.map(function (c) {
-        return c.label;
-      }),
-    };
-  }
-
-  async function fetchRosterFromSpreadsheet(spreadsheetId, sheetName, grade) {
-    if (!spreadsheetId) throw new Error("스프레드시트 ID가 없습니다.");
-    var values = await fetchGvizValues(spreadsheetId, sheetName || undefined);
-    var rows = parseRosterValues(values, grade || GRADE);
-    if (!rows.length) throw new Error("명렬표에서 학생 정보를 찾지 못했습니다. (학번·반·번호·이름 열 확인)");
-    return rows;
-  }
-
-  async function fetchRosterForSurvey(entry) {
-    entry = entry || {};
-    var grade = entry.grade || GRADE;
-    if (entry.rosterStudents && entry.rosterStudents.length) {
-      return entry.rosterStudents
-        .map(function (s) {
-          return normalizeRosterStudent(s, grade);
-        })
-        .filter(Boolean);
-    }
-    if (entry.rosterSpreadsheetId) {
-      return fetchRosterFromSpreadsheet(
-        entry.rosterSpreadsheetId,
-        entry.rosterSheetName || null,
-        grade
-      );
-    }
-    var globalCfg = loadGlobalRosterConfig();
-    if (globalCfg && globalCfg.rosterSource) {
-      if (globalCfg.rosterStudents && globalCfg.rosterStudents.length) {
-        return globalCfg.rosterStudents
-          .map(function (s) {
-            return normalizeRosterStudent(s, grade);
-          })
-          .filter(Boolean);
-      }
-      if (globalCfg.rosterSpreadsheetId) {
-        return fetchRosterFromSpreadsheet(
-          globalCfg.rosterSpreadsheetId,
-          globalCfg.rosterSheetName || null,
-          grade
-        );
-      }
-    }
-    try {
-      return await fetchRosterRows();
-    } catch (err) {
-      return [];
-    }
-  }
-
-  function loadGlobalRosterConfig() {
-    try {
-      var raw = localStorage.getItem(ROSTER_CONFIG_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function saveGlobalRosterConfig(cfg) {
-    localStorage.setItem(ROSTER_CONFIG_KEY, JSON.stringify(cfg || {}));
-  }
-
-  function clearGlobalRosterConfig() {
-    localStorage.removeItem(ROSTER_CONFIG_KEY);
-  }
-
-  function mergeRosterIntoEntry(entry) {
-    entry = entry || {};
-    if (entry.rosterSource || entry.rosterSpreadsheetId || (entry.rosterStudents && entry.rosterStudents.length)) {
-      return entry;
-    }
-    var globalCfg = loadGlobalRosterConfig();
-    if (!globalCfg || !globalCfg.rosterSource) return entry;
-    return Object.assign({}, entry, {
-      rosterSource: globalCfg.rosterSource,
-      rosterSpreadsheetId: globalCfg.rosterSpreadsheetId || "",
-      rosterSheetName: globalCfg.rosterSheetName || "",
-      rosterLabel: globalCfg.rosterLabel || "",
-      rosterStudents: globalCfg.rosterStudents || [],
+      rows.push({
+        반: ban,
+        번호: num,
+        이름: name,
+        학번: 학번,
+      });
     });
+    return rows;
+  }
+
+  async function fetchRosterRows(overrideSpreadsheetId) {
+    var spreadsheetId = overrideSpreadsheetId || getRosterSpreadsheetId();
+    var probes = ["1반", "명단", "명렬표", "list", ""];
+    for (var i = 0; i < probes.length; i++) {
+      try {
+        var values = await fetchGvizValues(spreadsheetId, probes[i] || undefined);
+        var roster = parseListRoster(values);
+        if (roster.length) return roster;
+      } catch (err) { /* try next sheet */ }
+    }
+    return [];
   }
 
   function deriveClassOptions(roster) {
     var map = {};
     roster.forEach(function (s) {
-      if (s.반 == null) return;
-      var key = String(s.반);
-      if (!map[key]) map[key] = { 반: s.반, label: s.반 + "반", count: 0 };
+      var ban = normalizeBan(s.반);
+      if (ban == null || ban < 1) return;
+      var key = String(ban);
+      if (!map[key]) map[key] = { 반: ban, label: ban + "반", count: 0 };
       map[key].count += 1;
     });
-    var list = Object.keys(map)
+    return Object.keys(map)
       .sort(function (a, b) {
         return Number(a) - Number(b);
       })
       .map(function (k) {
         return map[k];
       });
-    if (list.length) return list;
-    return defaultClassOptions();
-  }
-
-  function defaultClassOptions() {
-    var out = [];
-    for (var i = 1; i <= 8; i++) out.push({ 반: i, label: i + "반", count: 0 });
-    return out;
-  }
-
-  function deriveNumberOptions(roster, ban) {
-    var banNum = Number(ban);
-    if (!Number.isFinite(banNum)) return [];
-    var seen = {};
-    var nums = [];
-    roster.forEach(function (s) {
-      if (s.반 !== banNum || !Number.isFinite(s.번호)) return;
-      var key = String(s.번호);
-      if (seen[key]) return;
-      seen[key] = true;
-      nums.push(s.번호);
-    });
-    nums.sort(function (a, b) {
-      return a - b;
-    });
-    if (nums.length) return nums;
-    for (var i = 1; i <= 45; i++) nums.push(i);
-    return nums;
   }
 
   function lookupStudent(roster, ban, num) {
     return (
       roster.find(function (s) {
-        return s.반 === ban && s.번호 === num;
+        return bansMatch(s.반, ban) && s.번호 === num;
       }) || null
     );
   }
 
-  async function fetchSurveyConfig(entry) {
-    if (!entry) return null;
-    if (entry.webAppUrl) {
-      var u =
-        entry.webAppUrl +
-        (entry.webAppUrl.indexOf("?") >= 0 ? "&" : "?") +
-        "action=get&id=" +
-        encodeURIComponent(entry.id);
-      var res = await fetch(u);
-      var data = await res.json();
-      if (data && data.ok && data.survey) return data.survey;
-      throw new Error((data && data.error) || "설문 정보를 불러오지 못했습니다.");
-    }
-    if (entry.type === "form" && entry.questions) return entry;
-    return null;
-  }
-
-  async function submitSurveyResponse(entry, payload) {
-    if (!entry || !entry.webAppUrl) {
-      throw new Error(
-        "제출 주소가 없습니다. 관리자에게 Apps Script 배포 URL을 등록해 달라고 요청하세요."
-      );
-    }
-    var res = await fetch(entry.webAppUrl, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(
-        Object.assign({ action: "submit", surveyId: entry.id }, payload)
-      ),
-    });
-    var text = await res.text();
-    var data = null;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      data = { ok: res.ok };
-    }
-    if (data && data.ok === false) {
-      throw new Error(data.error || "제출에 실패했습니다.");
-    }
-    if (!res.ok && !(data && data.ok)) {
-      throw new Error("제출에 실패했습니다. (" + res.status + ")");
-    }
-    return data;
-  }
-
-  function generateSurveyId() {
-    return "form-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
-  }
-
-  var QUESTION_TYPE_GROUPS = [
-    {
-      label: "텍스트",
-      types: [
-        { value: "text", label: "단답형" },
-        { value: "textarea", label: "장문형" },
-        { value: "number", label: "숫자" },
-        { value: "email", label: "이메일" },
-      ],
-    },
-    {
-      label: "선택",
-      types: [
-        { value: "radio", label: "객관식 (단일 선택)" },
-        { value: "checkbox", label: "체크박스 (복수 선택)" },
-        { value: "dropdown", label: "드롭다운" },
-        { value: "rank", label: "순위형" },
-      ],
-    },
-    {
-      label: "척도·등급",
-      types: [
-        { value: "likert", label: "선형 배율 (리커트)" },
-        { value: "rating", label: "별점 등급" },
-      ],
-    },
-    {
-      label: "표 (그리드)",
-      types: [
-        { value: "radio_grid", label: "객관식 그리드" },
-        { value: "checkbox_grid", label: "체크박스 그리드" },
-      ],
-    },
-    {
-      label: "날짜·시간",
-      types: [
-        { value: "date", label: "날짜" },
-        { value: "time", label: "시간" },
-      ],
-    },
-    {
-      label: "구성",
-      types: [{ value: "section", label: "섹션 (구분·안내)" }],
-    },
-  ];
-
-  var QUESTION_TYPES = [];
-  QUESTION_TYPE_GROUPS.forEach(function (g) {
-    QUESTION_TYPES = QUESTION_TYPES.concat(g.types);
-  });
-
-  function isSectionQuestion(q) {
-    return q && q.type === "section";
-  }
-
-  function isAnswerableQuestion(q) {
-    return q && !isSectionQuestion(q);
-  }
-
-  function answerableQuestions(questions) {
-    return (questions || []).filter(isAnswerableQuestion);
-  }
-
-  function questionNeedsOptions(type) {
-    return type === "radio" || type === "dropdown" || type === "checkbox" || type === "rank";
-  }
-
-  function questionNeedsGrid(type) {
-    return type === "radio_grid" || type === "checkbox_grid";
-  }
-
-  function normalizeGridRows(q) {
-    if (q && q.gridRows && q.gridRows.length) {
-      return normalizeOptions(q.gridRows);
-    }
-    return normalizeOptions(q && q.options);
-  }
-
-  function normalizeGridColumns(q) {
-    if (q && q.gridColumns && q.gridColumns.length) {
-      return normalizeOptions(q.gridColumns);
-    }
-    return [];
-  }
-
-  function defaultRatingConfig() {
-    return { ratingMax: 5 };
-  }
-
-  function questionTypeLabel(type) {
-    var found = QUESTION_TYPES.find(function (t) {
-      return t.value === type;
-    });
-    return found ? found.label : type || "문항";
-  }
-
-  function renderQuestionTypeOptions(selected) {
-    return QUESTION_TYPE_GROUPS.map(function (group) {
-      return (
-        '<optgroup label="' +
-        esc(group.label) +
-        '">' +
-        group.types
-          .map(function (t) {
-            return (
-              '<option value="' +
-              t.value +
-              '"' +
-              (selected === t.value ? " selected" : "") +
-              ">" +
-              esc(t.label) +
-              "</option>"
-            );
-          })
-          .join("") +
-        "</optgroup>"
-      );
-    }).join("");
-  }
-
-  function parseGridAnswer(saved) {
-    var out = {};
-    if (!saved) return out;
-    saved.split("|").forEach(function (part) {
-      var idx = part.indexOf(":");
-      if (idx < 0) return;
-      var row = part.slice(0, idx).trim();
-      var val = part.slice(idx + 1).trim();
-      if (row) out[row] = val;
-    });
-    return out;
-  }
-
-  function formatGridAnswer(map) {
-    return Object.keys(map)
-      .filter(function (k) {
-        return map[k];
+  function studentsInClass(roster, ban) {
+    return roster
+      .filter(function (s) {
+        return bansMatch(s.반, ban);
       })
-      .map(function (k) {
-        return k + ": " + map[k];
-      })
-      .join(" | ");
+      .sort(function (a, b) {
+        return (a.번호 || 0) - (b.번호 || 0);
+      });
   }
 
-  function parseCheckboxGridAnswer(saved) {
-    var out = {};
-    if (!saved) return out;
-    saved.split("|").forEach(function (part) {
-      var idx = part.indexOf(":");
-      if (idx < 0) return;
-      var row = part.slice(0, idx).trim();
-      var val = part.slice(idx + 1).trim();
-      if (row) out[row] = val;
+  function mergeRegistryWithConfigSurveys(registry) {
+    return dedupeRegistryEntries(filterSheetEntriesOnly(registry));
+  }
+
+  async function syncRegistryFromConfigSheet(registry) {
+    registry = filterSheetEntriesOnly(registry || []).filter(function (entry) {
+      return entry && entry.id && !isSurveyDeleted(entry.id);
     });
-    return out;
-  }
-
-  function normalizeOptions(raw) {
-    if (!raw) return [];
-    if (Array.isArray(raw)) {
-      return raw.map(coerceText).filter(Boolean);
-    }
-    return String(raw)
-      .split(/\r?\n/)
-      .map(coerceText)
-      .filter(Boolean);
-  }
-
-  function defaultLikertConfig() {
-    return {
-      likertMin: 1,
-      likertMax: 5,
-      likertMinLabel: "전혀 그렇지 않다",
-      likertMaxLabel: "매우 그렇다",
-    };
-  }
-
-  function likertPoints(q) {
-    var cfg = Object.assign(defaultLikertConfig(), q || {});
-    var min = Number(cfg.likertMin);
-    var max = Number(cfg.likertMax);
-    if (!Number.isFinite(min)) min = 1;
-    if (!Number.isFinite(max)) max = 5;
-    if (max < min) max = min;
-    var points = [];
-    for (var i = min; i <= max; i++) points.push(i);
-    return points;
-  }
-
-  function collectAnswerFromElement(q, root) {
-    root = root || document;
-    if (!q || isSectionQuestion(q)) return "";
-    var type = q.type || "textarea";
-    if (type === "checkbox") {
-      var boxes = root.querySelectorAll('[data-qid="' + q.id + '"]:checked');
-      var vals = [];
-      Array.prototype.forEach.call(boxes, function (el) {
-        if (el.value !== "__other__") vals.push(el.value);
-      });
-      var otherEl = root.querySelector('[data-other-for="' + q.id + '"]');
-      if (otherEl && otherEl.value.trim()) vals.push("기타: " + otherEl.value.trim());
-      return vals.join(", ");
-    }
-    if (type === "radio" || type === "likert" || type === "rating") {
-      var picked = root.querySelector('[name="' + q.id + '"]:checked');
-      if (!picked) return "";
-      if (picked.value === "__other__") {
-        var other = root.querySelector('[data-other-for="' + q.id + '"]');
-        return other && other.value.trim() ? "기타: " + other.value.trim() : "";
-      }
-      return coerceText(picked.value);
-    }
-    if (type === "radio_grid") {
-      var rows = normalizeGridRows(q);
-      var cols = normalizeGridColumns(q);
-      var map = {};
-      rows.forEach(function (row, ri) {
-        var sel = root.querySelector('[name="' + q.id + "_row_" + ri + '"]:checked');
-        if (sel) map[row] = sel.value;
-      });
-      if (!cols.length) return "";
-      return formatGridAnswer(map);
-    }
-    if (type === "checkbox_grid") {
-      var gridRows = normalizeGridRows(q);
-      var map2 = {};
-      gridRows.forEach(function (row, ri) {
-        var checked = root.querySelectorAll('[data-grid-row="' + q.id + "_" + ri + '"]:checked');
-        var parts = Array.prototype.map.call(checked, function (el) {
-          return el.value;
-        });
-        if (parts.length) map2[row] = parts.join(", ");
-      });
-      return formatGridAnswer(map2);
-    }
-    if (type === "rank") {
-      var items = root.querySelectorAll('[data-rank-item="' + q.id + '"]');
-      var ordered = Array.prototype.map.call(items, function (el) {
-        return { label: el.getAttribute("data-label") || "", order: Number(el.getAttribute("data-order")) || 0 };
-      });
-      ordered.sort(function (a, b) {
-        return a.order - b.order;
-      });
-      return ordered
-        .map(function (x) {
-          return x.label;
-        })
-        .filter(Boolean)
-        .join(" > ");
-    }
-    var el = root.querySelector('[name="' + q.id + '"]');
-    return el ? coerceText(el.value) : "";
-  }
-
-  function isQuestionAnswered(q, root) {
-    if (!q) return true;
-    if (q.required === false || isSectionQuestion(q)) return true;
-    var type = q.type || "textarea";
-    if (type === "checkbox") {
-      if (root.querySelector('[data-qid="' + q.id + '"]:checked')) return true;
-      var otherOnly = root.querySelector('[data-other-for="' + q.id + '"]');
-      return !!(otherOnly && otherOnly.value.trim());
-    }
-    if (type === "radio" || type === "likert" || type === "rating") {
-      var picked = root.querySelector('[name="' + q.id + '"]:checked');
-      if (!picked) return false;
-      if (picked.value === "__other__") {
-        var other = root.querySelector('[data-other-for="' + q.id + '"]');
-        return !!(other && other.value.trim());
-      }
-      return true;
-    }
-    if (type === "radio_grid") {
-      var rows = normalizeGridRows(q);
-      if (!rows.length) return true;
-      for (var i = 0; i < rows.length; i++) {
-        if (!root.querySelector('[name="' + q.id + "_row_" + i + '"]:checked')) return false;
-      }
-      return true;
-    }
-    if (type === "checkbox_grid") {
-      var gridRows = normalizeGridRows(q);
-      if (!gridRows.length) return true;
-      for (var j = 0; j < gridRows.length; j++) {
-        if (!root.querySelector('[data-grid-row="' + q.id + "_" + j + '"]:checked')) return false;
-      }
-      return true;
-    }
-    if (type === "rank") {
-      var options = normalizeOptions(q.options);
-      if (!options.length) return true;
-      var items = root.querySelectorAll('[data-rank-item="' + q.id + '"]');
-      return items.length === options.length;
-    }
-    if (type === "email") {
-      var emailVal = collectAnswerFromElement(q, root);
-      return !!emailVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
-    }
-    if (type === "number") {
-      var numVal = collectAnswerFromElement(q, root);
-      if (!numVal) return false;
-      var n = Number(numVal);
-      if (!Number.isFinite(n)) return false;
-      if (q.numberMin != null && n < Number(q.numberMin)) return false;
-      if (q.numberMax != null && n > Number(q.numberMax)) return false;
-      return true;
-    }
-    var value = collectAnswerFromElement(q, root);
-    return !!value;
-  }
-
-  function isAnswerValueValid(q, value) {
-    if (!q || q.required === false || isSectionQuestion(q)) return true;
-    value = coerceText(value);
-    if (!value) return false;
-    if (q.type === "email") return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-    if (q.type === "number") {
-      var n = Number(value);
-      if (!Number.isFinite(n)) return false;
-      if (q.numberMin != null && n < Number(q.numberMin)) return false;
-      if (q.numberMax != null && n > Number(q.numberMax)) return false;
-      return true;
-    }
-    if (q.type === "radio_grid" || q.type === "checkbox_grid") {
-      var rows = normalizeGridRows(q);
-      if (!rows.length) return true;
-      return value.split("|").filter(Boolean).length >= rows.length;
-    }
-    if (q.type === "rank") {
-      var options = normalizeOptions(q.options);
-      if (!options.length) return true;
-      return value.split(" > ").filter(Boolean).length >= options.length;
-    }
-    return true;
-  }
-    if (!q || !q.description) return "";
-    return '<p class="q-desc">' + esc(q.description) + "</p>";
-  }
-
-  function renderRankListHtml(q, saved) {
-    var options = normalizeOptions(q.options);
-    var order = [];
-    if (saved && saved.indexOf(" > ") >= 0) {
-      order = saved.split(" > ").map(function (s) {
-        return s.trim();
-      }).filter(Boolean);
-    }
-    options.forEach(function (opt) {
-      if (order.indexOf(opt) < 0) order.push(opt);
-    });
-    return (
-      '<div class="rank-list" data-rank-group="' +
-      esc(q.id) +
-      '">' +
-      order
-        .map(function (opt, idx) {
-          return (
-            '<div class="rank-item" data-rank-item="' +
-            esc(q.id) +
-            '" data-label="' +
-            esc(opt) +
-            '" data-order="' +
-            idx +
-            '"><span class="rank-badge">' +
-            (idx + 1) +
-            '</span><span class="rank-label">' +
-            esc(opt) +
-            '</span><div class="rank-actions"><button type="button" data-rank-up aria-label="위로">↑</button><button type="button" data-rank-down aria-label="아래로">↓</button></div></div>'
-          );
-        })
-        .join("") +
-      '</div><p class="rank-hint">↑ ↓ 버튼으로 순위를 바꿀 수 있습니다.</p>'
-    );
-  }
-
-  function renderQuestionFieldHtml(q, saved) {
-    saved = saved == null ? "" : String(saved);
-    if (isSectionQuestion(q)) {
-      return (
-        '<div class="section-block">' +
-        '<p class="section-title">' +
-        esc(q.label || "섹션") +
-        "</p>" +
-        (q.description ? '<p class="section-desc">' + esc(q.description) + "</p>" : "") +
-        "</div>"
-      );
-    }
-    var type = q.type || "textarea";
-    var options = normalizeOptions(q.options);
-    var html = renderQuestionDescription(q);
-
-    if (type === "textarea" || !type) {
-      return html + '<textarea id="q_' + esc(q.id) + '" name="' + esc(q.id) + '" rows="4">' + esc(saved) + "</textarea>";
-    }
-    if (type === "text") {
-      return html + '<input type="text" id="q_' + esc(q.id) + '" name="' + esc(q.id) + '" value="' + esc(saved) + '" />';
-    }
-    if (type === "number") {
-      var minAttr = q.numberMin != null ? ' min="' + esc(q.numberMin) + '"' : "";
-      var maxAttr = q.numberMax != null ? ' max="' + esc(q.numberMax) + '"' : "";
-      return html + '<input type="number" id="q_' + esc(q.id) + '" name="' + esc(q.id) + '" value="' + esc(saved) + '"' + minAttr + maxAttr + " />";
-    }
-    if (type === "email") {
-      return html + '<input type="email" id="q_' + esc(q.id) + '" name="' + esc(q.id) + '" value="' + esc(saved) + '" placeholder="example@email.com" />';
-    }
-    if (type === "date") {
-      return html + '<input type="date" id="q_' + esc(q.id) + '" name="' + esc(q.id) + '" value="' + esc(saved) + '" />';
-    }
-    if (type === "time") {
-      return html + '<input type="time" id="q_' + esc(q.id) + '" name="' + esc(q.id) + '" value="' + esc(saved) + '" />';
-    }
-    if (type === "dropdown") {
-      var dopts =
-        '<option value="">선택하세요</option>' +
-        options
-          .map(function (opt) {
-            return '<option value="' + esc(opt) + '"' + (saved === opt ? " selected" : "") + ">" + esc(opt) + "</option>";
-          })
-          .join("");
-      if (q.allowOther) dopts += '<option value="__other__"' + (saved.indexOf("기타:") === 0 ? " selected" : "") + ">기타</option>";
-      var otherVal = saved.indexOf("기타:") === 0 ? saved.replace(/^기타:\s*/, "") : "";
-      return (
-        html +
-        '<select id="q_' +
-        esc(q.id) +
-        '" name="' +
-        esc(q.id) +
-        '" data-has-other="' +
-        (q.allowOther ? "1" : "0") +
-        '">' +
-        dopts +
-        '</select><input type="text" class="other-input" data-other-for="' +
-        esc(q.id) +
-        '" placeholder="기타 내용 입력" value="' +
-        esc(otherVal) +
-        '" hidden />'
-      );
-    }
-    if (type === "radio") {
-      var picked = saved.indexOf("기타:") === 0 ? "__other__" : saved;
-      var otherText = saved.indexOf("기타:") === 0 ? saved.replace(/^기타:\s*/, "") : "";
-      html += '<div class="choice-list">';
-      html += options
-        .map(function (opt, idx) {
-          var inputId = "q_" + q.id + "_" + idx;
-          return (
-            '<label class="choice-item" for="' +
-            inputId +
-            '"><input type="radio" id="' +
-            inputId +
-            '" name="' +
-            esc(q.id) +
-            '" value="' +
-            esc(opt) +
-            '"' +
-            (saved === opt ? " checked" : "") +
-            " />" +
-            esc(opt) +
-            "</label>"
-          );
-        })
-        .join("");
-      if (q.allowOther) {
-        html +=
-          '<label class="choice-item"><input type="radio" name="' +
-          esc(q.id) +
-          '" value="__other__"' +
-          (picked === "__other__" ? " checked" : "") +
-          ' />기타</label><input type="text" class="other-input" data-other-for="' +
-          esc(q.id) +
-          '" placeholder="기타 내용" value="' +
-          esc(otherText) +
-          '" />';
-      }
-      return html + "</div>";
-    }
-    if (type === "checkbox") {
-      var pickedList = saved ? saved.split(",").map(function (s) { return s.trim(); }) : [];
-      html += '<div class="choice-list">';
-      html += options
-        .map(function (opt, idx) {
-          var inputId = "q_" + q.id + "_" + idx;
-          return (
-            '<label class="choice-item" for="' +
-            inputId +
-            '"><input type="checkbox" id="' +
-            inputId +
-            '" data-qid="' +
-            esc(q.id) +
-            '" value="' +
-            esc(opt) +
-            '"' +
-            (pickedList.indexOf(opt) >= 0 ? " checked" : "") +
-            " />" +
-            esc(opt) +
-            "</label>"
-          );
-        })
-        .join("");
-      if (q.allowOther) {
-        var otherChecked = pickedList.some(function (v) { return v.indexOf("기타:") === 0; });
-        var otherVal2 = otherChecked ? pickedList.find(function (v) { return v.indexOf("기타:") === 0; }).replace(/^기타:\s*/, "") : "";
-        html +=
-          '<label class="choice-item"><input type="checkbox" data-qid="' +
-          esc(q.id) +
-          '" value="__other__"' +
-          (otherChecked ? " checked" : "") +
-          ' data-other-toggle="' +
-          esc(q.id) +
-          '" />기타</label><input type="text" class="other-input" data-other-for="' +
-          esc(q.id) +
-          '" value="' +
-          esc(otherVal2) +
-          '" />';
-      }
-      return html + "</div>";
-    }
-    if (type === "likert") {
-      var points = likertPoints(q);
-      var cfg = Object.assign(defaultLikertConfig(), q);
-      html +=
-        '<div class="likert-wrap"><div class="likert-labels"><span>' +
-        esc(cfg.likertMinLabel) +
-        "</span><span>" +
-        esc(cfg.likertMaxLabel) +
-        '</span></div><div class="likert-scale">' +
-        points
-          .map(function (pt, idx) {
-            var inputId = "q_" + q.id + "_" + idx;
-            return (
-              '<div class="likert-option"><label for="' +
-              inputId +
-              '"><input type="radio" id="' +
-              inputId +
-              '" name="' +
-              esc(q.id) +
-              '" value="' +
-              pt +
-              '"' +
-              (String(saved) === String(pt) ? " checked" : "") +
-              " />" +
-              pt +
-              "</label></div>"
-            );
-          })
-          .join("") +
-        "</div></div>";
-      return html;
-    }
-    if (type === "rating") {
-      var max = Number(q.ratingMax) || 5;
-      if (max < 3) max = 3;
-      if (max > 10) max = 10;
-      html += '<div class="rating-wrap" data-rating-max="' + max + '">';
-      for (var s = 1; s <= max; s++) {
-        var sid = "q_" + q.id + "_s" + s;
-        html +=
-          '<label class="rating-star" for="' +
-          sid +
-          '"><input type="radio" id="' +
-          sid +
-          '" name="' +
-          esc(q.id) +
-          '" value="' +
-          s +
-          '"' +
-          (String(saved) === String(s) ? " checked" : "") +
-          ' /><span aria-hidden="true">★</span><span class="rating-num">' +
-          s +
-          "</span></label>";
-      }
-      return html + "</div>";
-    }
-    if (type === "rank") {
-      return html + renderRankListHtml(q, saved);
-    }
-    if (type === "radio_grid") {
-      var grow = normalizeGridRows(q);
-      var gcol = normalizeGridColumns(q);
-      var gmap = parseGridAnswer(saved);
-      html += '<div class="grid-wrap"><div class="grid-scroll"><table class="grid-table"><thead><tr><th></th>';
-      html += gcol.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("");
-      html += "</tr></thead><tbody>";
-      html += grow
-        .map(function (row, ri) {
-          var rowVal = gmap[row] || "";
-          return (
-            "<tr><th scope=\"row\">" +
-            esc(row) +
-            "</th>" +
-            gcol
-              .map(function (col, ci) {
-                var rid = "q_" + q.id + "_r" + ri + "_c" + ci;
-                return (
-                  '<td><label class="grid-cell" for="' +
-                  rid +
-                  '"><input type="radio" id="' +
-                  rid +
-                  '" name="' +
-                  esc(q.id + "_row_" + ri) +
-                  '" value="' +
-                  esc(col) +
-                  '"' +
-                  (rowVal === col ? " checked" : "") +
-                  " /></label></td>"
-                );
-              })
-              .join("") +
-            "</tr>"
-          );
-        })
-        .join("");
-      return html + "</tbody></table></div></div>";
-    }
-    if (type === "checkbox_grid") {
-      var grow2 = normalizeGridRows(q);
-      var gcol2 = normalizeGridColumns(q);
-      var gmap2 = parseCheckboxGridAnswer(saved);
-      html += '<div class="grid-wrap"><div class="grid-scroll"><table class="grid-table"><thead><tr><th></th>';
-      html += gcol2.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("");
-      html += "</tr></thead><tbody>";
-      html += grow2
-        .map(function (row, ri) {
-          var rowParts = (gmap2[row] || "").split(",").map(function (s) { return s.trim(); });
-          return (
-            "<tr><th scope=\"row\">" +
-            esc(row) +
-            "</th>" +
-            gcol2
-              .map(function (col, ci) {
-                var cid = "q_" + q.id + "_r" + ri + "_c" + ci;
-                return (
-                  '<td><label class="grid-cell" for="' +
-                  cid +
-                  '"><input type="checkbox" id="' +
-                  cid +
-                  '" data-grid-row="' +
-                  esc(q.id + "_" + ri) +
-                  '" value="' +
-                  esc(col) +
-                  '"' +
-                  (rowParts.indexOf(col) >= 0 ? " checked" : "") +
-                  " /></label></td>"
-                );
-              })
-              .join("") +
-            "</tr>"
-          );
-        })
-        .join("");
-      return html + "</tbody></table></div></div>";
-    }
-    return html + '<input type="text" name="' + esc(q.id) + '" value="' + esc(saved) + '" />';
-  }
-
-  function bindQuestionFieldControls(q, root) {
-    root = root || document;
-    if (!q) return;
-    if (q.type === "dropdown" && q.allowOther) {
-      var sel = root.querySelector('[name="' + q.id + '"]');
-      var other = root.querySelector('[data-other-for="' + q.id + '"]');
-      if (sel && other) {
-        function syncOther() {
-          other.hidden = sel.value !== "__other__";
-        }
-        sel.addEventListener("change", syncOther);
-        syncOther();
-      }
-    }
-    if ((q.type === "radio" || q.type === "checkbox") && q.allowOther) {
-      var otherInput = root.querySelector('[data-other-for="' + q.id + '"]');
-      if (otherInput) {
-        root.querySelectorAll('[name="' + q.id + '"], [data-other-toggle="' + q.id + '"]').forEach(function (el) {
-          el.addEventListener("change", function () {
-            var show =
-              !!root.querySelector('[name="' + q.id + '"][value="__other__"]:checked') ||
-              !!root.querySelector('[data-other-toggle="' + q.id + '"]:checked');
-            otherInput.hidden = !show;
-          });
-        });
-      }
-    }
-  }
-
-  function questionCategories(entry) {
-    var qs = answerableQuestions((entry && entry.questions) || []);
-    return [{ id: "all", label: "모든 문항", enabled: true }].concat(
-      qs.map(function (q) {
-        return { id: q.id, label: q.label || q.id, enabled: true };
-      })
-    );
+    return dedupeRegistryEntries(registry);
   }
 
   async function fetchGvizValues(spreadsheetId, sheetName) {
@@ -1115,339 +531,133 @@
     return gvizTableToValues(parseGvizJson(await res.text()));
   }
 
-  function buildFormAnalysisFromValues(entry, roster, values) {
-    if (!values || !values.length) {
-      return {
-        sheets: [
-          {
-            sheetName: "전체",
-            rows: [],
-            participation: { missingStudents: roster.slice() },
-            meta: { format: "form", surveyId: entry.id },
-            summary: { 총응답: 0 },
-          },
-        ],
-      };
-    }
-    var header = values[0].map(coerceText);
-    var sidIdx = header.findIndex(function (h) {
-      return /설문\s*id|surveyid/i.test(h);
-    });
-    var idIdx = sidIdx >= 0 ? sidIdx : header.findIndex(function (h) {
-      return h === "설문ID";
-    });
-    var 학번Idx = header.findIndex(function (h) {
-      return /학번/.test(h);
-    });
-    var 반Idx = header.findIndex(function (h) {
-      return /^반$/.test(h);
-    });
-    var 번호Idx = header.findIndex(function (h) {
-      return /번호/.test(h);
-    });
-    var 이름Idx = header.findIndex(function (h) {
-      return /이름|성명/.test(h);
-    });
-    var questions = answerableQuestions(entry.questions || []);
-    var qColMap = {};
-    questions.forEach(function (q) {
-      var idx = header.findIndex(function (h) {
-        return h === q.label || h === q.id;
-      });
-      if (idx >= 0) qColMap[q.id] = idx;
-    });
-    header.forEach(function (h, i) {
-      if (qColMap[h]) return;
-      questions.forEach(function (q) {
-        if (!qColMap[q.id] && (h === q.label || h === q.id)) qColMap[q.id] = i;
-      });
-    });
-
-    var respondedKeys = {};
-    var rows = [];
-    for (var r = 1; r < values.length; r++) {
-      var cells = values[r];
-      var surveyCell = idIdx >= 0 ? coerceText(cells[idIdx]) : "";
-      if (idIdx >= 0 && surveyCell && surveyCell !== entry.id) continue;
-      var 학번 = 학번Idx >= 0 ? coerceText(cells[학번Idx]) : "";
-      var parsed = parseStudentId(학번);
-      var banRaw = 반Idx >= 0 ? coerceText(cells[반Idx]) : "";
-      var banMatch = banRaw.match(/(\d+)/);
-      var 반 = banMatch ? banMatch[1] + "반" : parsed.반 ? parsed.반 + "반" : "";
-      var 번호 = 번호Idx >= 0 ? Number(coerceText(cells[번호Idx])) : parsed.번호;
-      var 이름 = 이름Idx >= 0 ? coerceText(cells[이름Idx]) : "";
-      var sections = questions
-        .map(function (q) {
-          var ci = qColMap[q.id];
-          var body = ci >= 0 ? coerceText(cells[ci]) : "";
-          if (!body) return null;
-          return { title: q.label || q.id, body: body, fields: [] };
-        })
-        .filter(Boolean);
-      if (!sections.length) continue;
-      var key = 학번 || 반 + "-" + 번호;
-      respondedKeys[key] = true;
-      rows.push({
-        학번: 학번 || formatStudentId(entry.grade || GRADE, parsed.반, 번호),
-        반: 반,
-        번호: Number.isFinite(번호) ? 번호 : null,
-        이름: 이름,
-        sections: sections,
-        _raw: {},
-      });
-    }
-
-    var missingStudents = roster.filter(function (s) {
-      var k = s.학번 || (s.반 != null ? s.반 + "반-" + s.번호 : "");
-      return !respondedKeys[k] && !respondedKeys[s.학번];
-    });
-
-    return {
-      sheets: [
-        {
-          sheetName: "전체",
-          rows: rows,
-          participation: { missingStudents: missingStudents },
-          meta: { format: "form", surveyId: entry.id, sheetName: "전체" },
-          summary: { 총응답: rows.length },
-        },
-      ],
-    };
-  }
-
-  function usesGithubResponseStorage(entry) {
-    if (!entry) return true;
-    if (entry.responseStorage === "sheet") return false;
-    if (entry.responseStorage === "github") return true;
-    return !entry.responseSpreadsheetId;
-  }
-
-  function getGithubResponsesUrl(entry) {
-    var surveyId = entry && entry.id;
-    if (!surveyId) return "";
-    return (
-      "https://raw.githubusercontent.com/" +
-      GITHUB_OWNER +
-      "/" +
-      GITHUB_REPO +
-      "/" +
-      GITHUB_BRANCH +
-      "/responses/" +
-      encodeURIComponent(surveyId) +
-      "/data.json"
-    );
-  }
-
-  async function fetchGithubResponses(entry) {
-    var url = getGithubResponsesUrl(entry);
-    if (!url) throw new Error("설문 ID가 없습니다.");
-    var res = await fetch(url + "?t=" + Date.now());
-    if (res.status === 404) return [];
-    if (!res.ok) throw new Error("GitHub 응답 파일을 불러오지 못했습니다. (" + res.status + ")");
-    var data = await res.json();
-    return Array.isArray(data) ? data : [];
-  }
-
-  function buildFormAnalysisFromGithubRecords(entry, roster, records) {
-    var questions = answerableQuestions(entry.questions || []);
-    var respondedKeys = {};
-    var rows = [];
-    (records || []).forEach(function (rec) {
-      if (!rec) return;
-      if (rec.surveyId && rec.surveyId !== entry.id) return;
-      var answers = rec.answers || {};
-      var sections = questions
-        .map(function (q) {
-          var body = answers[q.id];
-          body = body == null ? "" : String(body).trim();
-          if (!body) return null;
-          return { title: q.label || q.id, body: body, fields: [] };
-        })
-        .filter(Boolean);
-      if (!sections.length) return;
-      var 학번 = coerceText(rec.학번);
-      var parsed = parseStudentId(학번);
-      var banRaw = coerceText(rec.반);
-      var banMatch = banRaw.match(/(\d+)/);
-      var 반 = banMatch ? banMatch[1] + "반" : parsed.반 ? parsed.반 + "반" : "";
-      var 번호 = rec.번호 != null && rec.번호 !== "" ? Number(rec.번호) : parsed.번호;
-      var key = 학번 || 반 + "-" + 번호;
-      respondedKeys[key] = true;
-      rows.push({
-        학번: 학번 || formatStudentId(entry.grade || GRADE, parsed.반, 번호),
-        반: 반,
-        번호: Number.isFinite(번호) ? 번호 : null,
-        이름: coerceText(rec.이름),
-        sections: sections,
-        _raw: {},
-      });
-    });
-
-    var missingStudents = roster.filter(function (s) {
-      var k = s.학번 || (s.반 != null ? s.반 + "반-" + s.번호 : "");
-      return !respondedKeys[k] && !respondedKeys[s.학번];
-    });
-
-    return {
-      sheets: [
-        {
-          sheetName: "전체",
-          rows: rows,
-          participation: { missingStudents: missingStudents },
-          meta: {
-            format: "form",
-            surveyId: entry.id,
-            storage: "github",
-            githubPath: "responses/" + entry.id + "/data.json",
-          },
-          summary: { 총응답: rows.length },
-        },
-      ],
-    };
-  }
-
-  async function fetchFormResponsesAnalysis(entry, roster) {
-    if (usesGithubResponseStorage(entry)) {
-      try {
-        var records = await fetchGithubResponses(entry);
-        return buildFormAnalysisFromGithubRecords(entry, roster, records);
-      } catch (err) {
-        if (entry.responseStorage === "github") throw err;
-      }
-    }
-    var sheetId =
-      (entry && entry.responseSpreadsheetId) || DEFAULT_RESPONSE_SHEET_ID;
-    var tab = (entry && entry.responseTab) || "Responses";
-    var values = await fetchGvizValues(sheetId, tab);
-    return buildFormAnalysisFromValues(entry, roster, values);
-  }
-
-  function buildSurveyConfigJson(survey) {
-    return JSON.stringify({
-      questions: survey.questions || [],
-      description: survey.description || "",
-      rosterSpreadsheetId: survey.rosterSpreadsheetId || "",
-      rosterSheetName: survey.rosterSheetName || "",
-      rosterSource: survey.rosterSource || "",
-      rosterLabel: survey.rosterLabel || "",
-      rosterStudents: survey.rosterStudents || [],
-      responseStorage: survey.responseStorage || "github",
-      responseSpreadsheetId: survey.responseSpreadsheetId || "",
-    });
-  }
-
-  function parseSurveyConfigJson(raw) {
-    if (!raw) return { questions: [] };
+  async function fetchSurveyFromConfigSheet(surveyId, spreadsheetId) {
+    if (!surveyId) return null;
+    spreadsheetId = spreadsheetId || DEFAULT_RESPONSE_SPREADSHEET_ID;
     try {
-      var parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return { questions: parsed };
-      return {
-        questions: parsed.questions || [],
-        description: parsed.description || "",
-        rosterSpreadsheetId: parsed.rosterSpreadsheetId || "",
-        rosterSheetName: parsed.rosterSheetName || "",
-        rosterSource: parsed.rosterSource || "",
-        rosterLabel: parsed.rosterLabel || "",
-        rosterStudents: parsed.rosterStudents || [],
-        responseStorage: parsed.responseStorage || "github",
-        responseSpreadsheetId: parsed.responseSpreadsheetId || "",
-      };
-    } catch (e) {
-      return { questions: [] };
-    }
+      var values = await fetchGvizValues(spreadsheetId, "Config");
+      if (!values || values.length < 2) return null;
+      for (var i = 1; i < values.length; i++) {
+        if (String(values[i][0]) === String(surveyId)) {
+          return { id: values[i][0], responseSpreadsheetId: spreadsheetId };
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return null;
   }
 
-  async function registerSurveyOnServer(entry) {
-    if (!entry || !entry.webAppUrl) return { ok: false, skipped: true };
-    var res = await fetch(entry.webAppUrl, {
+  async function deleteSurveyOnServer(entryOrId) {
+    var id =
+      typeof entryOrId === "string"
+        ? entryOrId
+        : entryOrId && entryOrId.id
+          ? entryOrId.id
+          : "";
+    if (!id) return { ok: false, error: "surveyId required" };
+    var local =
+      typeof entryOrId === "object" && entryOrId
+        ? entryOrId
+        : findSurvey(id) || { id: id };
+    var webAppUrl = resolveWebAppUrl(local);
+    if (!webAppUrl) return { ok: true, skipped: true, reason: "no-webapp" };
+    var res = await fetch(webAppUrl, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        action: "register",
-        survey: {
-          id: entry.id,
-          label: entry.label,
-          grade: entry.grade || GRADE,
-          description: entry.description || "",
-          questions: entry.questions || [],
-          categorySelectAll: !!entry.categorySelectAll,
-          rosterSpreadsheetId: entry.rosterSpreadsheetId || "",
-          rosterSheetName: entry.rosterSheetName || "",
-          rosterSource: entry.rosterSource || "",
-          rosterLabel: entry.rosterLabel || "",
-          rosterStudents: entry.rosterStudents || [],
-          responseStorage: entry.responseStorage || "github",
-          responseSpreadsheetId: entry.responseSpreadsheetId || "",
-        },
-      }),
+      body: JSON.stringify({ action: "delete", surveyId: id }),
     });
-    return res.json();
+    var data = await readJsonResponse(res);
+    if (!data || data.ok === false) {
+      return {
+        ok: false,
+        error: (data && data.error) || "서버 삭제에 실패했습니다.",
+      };
+    }
+    return data;
+  }
+
+  async function purgeSurveyFromServer(entryOrId) {
+    var id =
+      typeof entryOrId === "string"
+        ? entryOrId
+        : entryOrId && entryOrId.id
+          ? entryOrId.id
+          : "";
+    if (!id) return { ok: false, localOnly: true, warnings: ["설문 ID 없음"] };
+    markSurveyDeleted(id);
+    var result = await deleteSurveyOnServer(entryOrId);
+    var warnings = [];
+    if (result && result.skipped) {
+      warnings.push(
+        "웹 앱 URL이 없어 Config 시트에서는 삭제되지 않았습니다. 관리자에서 URL을 저장한 뒤 다시 삭제하거나, Config 시트에서 해당 행을 직접 지워 주세요."
+      );
+    } else if (result && result.ok === false) {
+      warnings.push(
+        (result.error || "서버 삭제 실패") +
+          " — Apps Script를 최신 survey-api.gs로 재배포했는지 확인하세요."
+      );
+    } else {
+      var still = await fetchSurveyFromConfigSheet(
+        id,
+        getResponseSpreadsheetId(
+          typeof entryOrId === "object" && entryOrId ? entryOrId : { id: id }
+        )
+      );
+      if (still) {
+        warnings.push(
+          "Config 시트에 설문 행이 남아 있습니다. 시트에서 직접 삭제하거나 웹 앱을 재배포한 뒤 다시 시도하세요."
+        );
+      }
+    }
+    return { ok: true, warnings: warnings };
   }
 
   global.SurveyForm = {
     REGISTRY_KEY: REGISTRY_KEY,
-    GITHUB_OWNER: GITHUB_OWNER,
-    GITHUB_REPO: GITHUB_REPO,
-    GITHUB_BRANCH: GITHUB_BRANCH,
-    ROSTER_CONFIG_KEY: ROSTER_CONFIG_KEY,
-    ROSTER_SPREADSHEET_ID: ROSTER_SPREADSHEET_ID,
+    ROSTER_STORAGE_KEY: ROSTER_STORAGE_KEY,
+    ROSTER_SESSION_KEY: ROSTER_SESSION_KEY,
+    DEFAULT_ROSTER_SPREADSHEET_ID: DEFAULT_ROSTER_SPREADSHEET_ID,
+    DEFAULT_RESPONSE_SPREADSHEET_ID: DEFAULT_RESPONSE_SPREADSHEET_ID,
+    WEBAPP_STORAGE_KEY: WEBAPP_STORAGE_KEY,
+    getRosterSpreadsheetId: getRosterSpreadsheetId,
+    loadWebAppUrl: loadWebAppUrl,
+    saveWebAppUrl: saveWebAppUrl,
+    resolveWebAppUrl: resolveWebAppUrl,
+    getResponseSpreadsheetId: getResponseSpreadsheetId,
+    isValidWebAppUrl: isValidWebAppUrl,
+    saveWebAppUrlSession: saveWebAppUrlSession,
+    fetchSurveyFromConfigSheet: fetchSurveyFromConfigSheet,
+    mergeRegistryWithConfigSurveys: mergeRegistryWithConfigSurveys,
+    syncRegistryFromConfigSheet: syncRegistryFromConfigSheet,
+    getActiveRosterConfig: getActiveRosterConfig,
+    loadRosterConfig: loadRosterConfig,
+    loadSessionRosterConfig: loadSessionRosterConfig,
+    saveRosterConfig: saveRosterConfig,
+    parseSpreadsheetId: parseSpreadsheetId,
     GRADE: GRADE,
-    QUESTION_TYPES: QUESTION_TYPES,
-    QUESTION_TYPE_GROUPS: QUESTION_TYPE_GROUPS,
-    isSectionQuestion: isSectionQuestion,
-    isAnswerableQuestion: isAnswerableQuestion,
-    answerableQuestions: answerableQuestions,
-    questionNeedsOptions: questionNeedsOptions,
-    questionNeedsGrid: questionNeedsGrid,
-    normalizeOptions: normalizeOptions,
-    normalizeGridRows: normalizeGridRows,
-    normalizeGridColumns: normalizeGridColumns,
-    defaultLikertConfig: defaultLikertConfig,
-    defaultRatingConfig: defaultRatingConfig,
-    likertPoints: likertPoints,
-    questionTypeLabel: questionTypeLabel,
-    renderQuestionTypeOptions: renderQuestionTypeOptions,
-    collectAnswerFromElement: collectAnswerFromElement,
-    isQuestionAnswered: isQuestionAnswered,
-    isAnswerValueValid: isAnswerValueValid,
-    renderQuestionFieldHtml: renderQuestionFieldHtml,
-    bindQuestionFieldControls: bindQuestionFieldControls,
     esc: esc,
     loadRegistry: loadRegistry,
     saveRegistry: saveRegistry,
+    isSurveyCompleted: isSurveyCompleted,
+    defaultSurveyStatus: defaultSurveyStatus,
+    setSurveyStatus: setSurveyStatus,
+    setSurveyStatusAsync: setSurveyStatusAsync,
+    refreshRegistryFromServer: refreshRegistryFromServer,
+    partitionRegistryByStatus: partitionRegistryByStatus,
     findSurvey: findSurvey,
     parseStudentId: parseStudentId,
     formatStudentId: formatStudentId,
-    parseSpreadsheetIdFromUrl: parseSpreadsheetIdFromUrl,
-    parseRosterValues: parseRosterValues,
-    parseRosterFromCsv: parseRosterFromCsv,
-    parseCsvText: parseCsvText,
-    summarizeRoster: summarizeRoster,
-    fetchRosterFromSpreadsheet: fetchRosterFromSpreadsheet,
-    fetchRosterForSurvey: fetchRosterForSurvey,
-    loadGlobalRosterConfig: loadGlobalRosterConfig,
-    saveGlobalRosterConfig: saveGlobalRosterConfig,
-    clearGlobalRosterConfig: clearGlobalRosterConfig,
-    mergeRosterIntoEntry: mergeRosterIntoEntry,
-    normalizeRosterStudent: normalizeRosterStudent,
-    buildSurveyConfigJson: buildSurveyConfigJson,
-    parseSurveyConfigJson: parseSurveyConfigJson,
     fetchRosterRows: fetchRosterRows,
     deriveClassOptions: deriveClassOptions,
-    defaultClassOptions: defaultClassOptions,
-    deriveNumberOptions: deriveNumberOptions,
     lookupStudent: lookupStudent,
-    fetchSurveyConfig: fetchSurveyConfig,
-    submitSurveyResponse: submitSurveyResponse,
-    registerSurveyOnServer: registerSurveyOnServer,
-    generateSurveyId: generateSurveyId,
-    questionCategories: questionCategories,
-    fetchFormResponsesAnalysis: fetchFormResponsesAnalysis,
-    buildFormAnalysisFromValues: buildFormAnalysisFromValues,
-    buildFormAnalysisFromGithubRecords: buildFormAnalysisFromGithubRecords,
-    usesGithubResponseStorage: usesGithubResponseStorage,
-    getGithubResponsesUrl: getGithubResponsesUrl,
-    fetchGithubResponses: fetchGithubResponses,
+    studentsInClass: studentsInClass,
+    deleteSurveyOnServer: deleteSurveyOnServer,
+    purgeSurveyFromServer: purgeSurveyFromServer,
+    dedupeRegistryEntries: dedupeRegistryEntries,
+    filterSheetEntriesOnly: filterSheetEntriesOnly,
+    isSheetRegistryEntry: isSheetRegistryEntry,
+    markSurveyDeleted: markSurveyDeleted,
+    unmarkSurveyDeleted: unmarkSurveyDeleted,
+    isSurveyDeleted: isSurveyDeleted,
     fetchGvizValues: fetchGvizValues,
   };
 })(typeof window !== "undefined" ? window : this);

@@ -1,0 +1,52 @@
+# index push / 수동 실행 시 GitHub Pages 배포 (루트 index.html = 메인)
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [index]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: index
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site (index.html at root)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  sync-main:
+    runs-on: ubuntu-latest
+    needs: deploy
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: index
+          fetch-depth: 1
+      - name: Sync main branch
+        run: git push origin HEAD:refs/heads/main --force

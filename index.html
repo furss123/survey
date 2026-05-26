@@ -14,7 +14,7 @@
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>2026 남악고등학교 1학년 설문조사 결과 조회</title>
-  <!-- ui-version: 20260522-theme-visibility -->
+  <!-- ui-version: 20260526-sheet-only build:gha-deploy -->
   <link rel="canonical" href="https://furss123.github.io/survey/" />
   <link rel="icon" href="assets/namak-logo.png" type="image/png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
@@ -70,7 +70,10 @@
       --theme-btn-top: #4a7ab0;
       --theme-btn-bottom: var(--school-navy);
       --theme-query-card-bg: #f8fafc;
-      --theme-query-card-hover: #ffffff;
+      --theme-query-card-hover: #eef4fb;
+      --theme-hover-bg: #eef4fb;
+      --theme-hover-surface: #f1f5f9;
+      --theme-logo-bg: #ffffff;
       --theme-accent-soft: var(--school-accent-soft);
       --theme-toggle-bg: rgba(255, 255, 255, 0.92);
       --theme-toggle-border: rgba(30, 58, 95, 0.28);
@@ -123,7 +126,10 @@
       --theme-btn-top: #5b8fc9;
       --theme-btn-bottom: #2d5580;
       --theme-query-card-bg: #243044;
-      --theme-query-card-hover: #2f3d52;
+      --theme-query-card-hover: #33465c;
+      --theme-hover-bg: #33465c;
+      --theme-hover-surface: #2f3d52;
+      --theme-logo-bg: #243044;
       --theme-accent-soft: rgba(212, 176, 72, 0.22);
       --theme-toggle-bg: #2a3649;
       --theme-toggle-border: #7b8da8;
@@ -203,9 +209,9 @@
       height: 80px;
       border-radius: 50%;
       object-fit: contain;
-      background: #fff;
+      background: var(--theme-logo-bg);
       flex-shrink: 0;
-      border: 1px solid var(--school-border-light);
+      border: 1px solid var(--theme-border-light);
       box-shadow: var(--shadow-xs);
     }
     .site-header-text {
@@ -467,6 +473,113 @@
       text-align: center;
     }
     .home-empty-hint[hidden] { display: none !important; }
+    .survey-list-group {
+      margin-bottom: var(--space-5);
+    }
+    .survey-list-group:last-child {
+      margin-bottom: 0;
+    }
+    .survey-list-heading {
+      margin: 0 0 var(--space-3);
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border-accent);
+      font-size: var(--text-sm);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: var(--theme-heading);
+    }
+    .survey-list-heading--done {
+      border-bottom-color: var(--theme-border);
+      color: var(--theme-text-muted);
+    }
+    .home-section-empty {
+      margin: 0;
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-sm);
+      background: var(--theme-bg-muted);
+      border: 1px dashed var(--theme-border);
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+      text-align: center;
+    }
+    .home-section-empty[hidden] { display: none !important; }
+    .home-list-status {
+      margin: 8px 0 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--theme-text-muted);
+    }
+    .home-list-status.is-ok { color: #047857; }
+    .home-list-status.is-busy { color: var(--theme-heading); }
+    #surveyListGroups.is-refreshing {
+      opacity: 0.55;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    #surveyListGroups.is-flash {
+      animation: home-list-flash 0.55s ease;
+    }
+    @keyframes home-list-flash {
+      0% { box-shadow: 0 0 0 0 rgba(74, 122, 176, 0.45); }
+      100% { box-shadow: 0 0 0 10px rgba(74, 122, 176, 0); }
+    }
+    .home-refresh-btn {
+      margin-left: auto;
+      margin-right: 8px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid var(--theme-border);
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease);
+    }
+    .home-refresh-btn:hover:not(:disabled) {
+      border-color: var(--border-accent);
+      background: var(--theme-hover-bg);
+      color: var(--theme-heading);
+    }
+    .survey-list-hint {
+      margin: -4px 0 10px;
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+      line-height: 1.45;
+    }
+    .active-survey-panel {
+      padding: var(--space-5);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .active-survey-panel h2 {
+      margin: 0 0 12px;
+      color: var(--theme-heading);
+      font-size: var(--text-lg);
+    }
+    .active-survey-panel p { margin: 0 0 12px; color: var(--theme-text-muted); }
+    .active-survey-url {
+      word-break: break-all;
+      padding: 12px;
+      background: var(--theme-bg-muted);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+    }
+    .active-survey-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .sheet-launch-btn--completed {
+      border-left-color: var(--theme-border);
+      opacity: 0.92;
+    }
+    .sheet-launch-btn--completed .sheet-launch-btn__tag--done {
+      background: rgba(100, 116, 139, 0.15);
+      color: var(--theme-text-muted);
+    }
     .home-admin-gate {
       width: 100%;
       padding: 20px 16px;
@@ -526,6 +639,7 @@
     .admin-entry-btn:hover {
       border-color: var(--border-accent);
       color: var(--theme-heading);
+      background: var(--theme-hover-bg);
     }
     .admin-entry-btn.is-active {
       border-color: var(--border-accent);
@@ -595,6 +709,11 @@
     .admin-btn-primary:hover {
       filter: brightness(1.05);
       transform: translateY(-1px);
+    }
+    html[data-theme="dark"] .admin-btn-primary:hover,
+    html[data-theme="dark"] .page-action-btn:hover {
+      filter: none;
+      background: linear-gradient(180deg, #6ba3e0 0%, #3d6b9e 100%);
     }
     .admin-btn-danger {
       border-color: var(--danger-text);
@@ -739,6 +858,10 @@
       margin: 0 0 16px;
       padding-bottom: 2px;
       background: var(--theme-bg-panel);
+    }
+    .results-sticky-chrome .survey-view-head {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
     }
     .results-sticky-chrome .class-picker-bar {
       margin: 0;
@@ -964,6 +1087,7 @@
     .class-section .student-card:hover {
       box-shadow: var(--shadow-sm);
       border-left-color: var(--school-accent);
+      background: var(--theme-hover-surface);
     }
     .student-card--absent {
       border-left-color: var(--school-danger);
@@ -1474,6 +1598,9 @@
       filter: brightness(1.06);
       transform: translateY(-1px);
     }
+    html[data-theme="dark"] .site-footer {
+      box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.35);
+    }
     .site-footer {
       width: 100%;
       margin-top: auto;
@@ -1681,7 +1808,6 @@
       display: none !important;
     }
     html[data-theme="dark"] .school-logo {
-      background: #ffffff;
       border-color: var(--border-strong);
     }
     html[data-theme="dark"] .search-container,
@@ -1727,9 +1853,60 @@
       display: none;
     }
     @media print {
+      /* 화면이 다크모드여도 인쇄는 라이트 테마 */
+      html {
+        color-scheme: light !important;
+      }
+      html[data-theme="dark"] {
+        --theme-bg-page: #ffffff;
+        --theme-bg-panel: #ffffff;
+        --theme-bg-muted: #f8fafc;
+        --theme-text: #0f172a;
+        --theme-text-muted: #475569;
+        --theme-border: #c5d0de;
+        --theme-border-light: #dce4ee;
+        --theme-heading-strong: #0f2440;
+        --theme-heading: #1e3a5f;
+        --theme-heading-accent: #3d6b9e;
+        --theme-icon: #3d6b9e;
+        --theme-btn-top: #4a7ab0;
+        --theme-btn-bottom: #1e3a5f;
+        --theme-query-card-bg: #f8fafc;
+        --theme-query-card-hover: #eef4fb;
+        --theme-hover-bg: #eef4fb;
+        --theme-hover-surface: #f1f5f9;
+        --theme-logo-bg: #ffffff;
+        --theme-accent-soft: #faf6eb;
+        --bg-page: #ffffff;
+        --bg-surface: #ffffff;
+        --bg-muted: #f8fafc;
+        --bg-category: #eef2f7;
+        --bg-accent-soft: #f5f0e4;
+        --bg-accent-banner: #f5f0e4;
+        --border: #c5d0de;
+        --border-strong: #b8c5d6;
+        --border-accent: #3d6b9e;
+        --text: #0f172a;
+        --text-muted: #475569;
+        --text-subtle: #334155;
+        --text-accent: #1e3a5f;
+        --accent: #3d6b9e;
+        --accent-hover: #1e3a5f;
+        --chip-bg: #ffffff;
+        --chip-inactive-text: #334155;
+        --chip-active-text: #ffffff;
+        --badge-done-bg: #d1fae5;
+        --badge-done-text: #047857;
+        --badge-pending-bg: #e8edf4;
+        --badge-pending-text: #475569;
+        --danger-bg: #fef2f2;
+        --danger-text: #b91c1c;
+        --error-bg: #fef2f2;
+        --error-text: #b91c1c;
+      }
       .admin-setup-panel { display: none !important; }
       @page { size: A4; margin: 10mm; }
-      body { padding: 0 !important; background: #fff !important; }
+      body { padding: 0 !important; background: #fff !important; color: #0f172a !important; }
       body.is-printing-results * { visibility: hidden; }
       body.is-printing-results #results,
       body.is-printing-results #results * { visibility: visible; }
@@ -1744,6 +1921,71 @@
         box-shadow: none !important;
         padding: 0 !important;
         background: #fff !important;
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .class-section {
+        background: #fff !important;
+        border-color: #c5d0de !important;
+        box-shadow: none !important;
+      }
+      body.is-printing-results #results .class-section__head {
+        background: linear-gradient(135deg, #0f2440 0%, #1e3a5f 52%, #3d6b9e 100%) !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      body.is-printing-results #results .class-section__missing {
+        background: #f8fafc !important;
+        border-color: #c5d0de !important;
+        color: #475569 !important;
+      }
+      body.is-printing-results #results .class-section__missing strong {
+        color: #334155 !important;
+      }
+      body.is-printing-results #results .student-card {
+        background: #fff !important;
+        color: #0f172a !important;
+        border-color: #c5d0de !important;
+        border-left-color: #3d6b9e !important;
+        box-shadow: none !important;
+      }
+      body.is-printing-results #results .student-response-header {
+        border-bottom-color: #dce4ee !important;
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .student-num,
+      body.is-printing-results #results .student-name,
+      body.is-printing-results #results .student-id {
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .category-block {
+        background: linear-gradient(180deg, #eef2f7 0%, #fff 100%) !important;
+        border-color: #b8c5d6 !important;
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .category-block .cat-title {
+        color: #1e3a5f !important;
+      }
+      body.is-printing-results #results .category-block .cat-body,
+      body.is-printing-results #results .category-block .cat-field,
+      body.is-printing-results #results .preview {
+        color: #0f172a !important;
+      }
+      body.is-printing-results #results .category-block .cat-field span {
+        color: #334155 !important;
+      }
+      body.is-printing-results #results .muted,
+      body.is-printing-results #results .subject-empty,
+      body.is-printing-results #results .absent-note {
+        color: #475569 !important;
+      }
+      body.is-printing-results #results .student-card-divider {
+        border-top-color: #dce4ee !important;
+      }
+      body.is-printing-results #results .sheet-banner {
+        background: #f8fafc !important;
+        color: #1e3a5f !important;
+        border-color: #c5d0de !important;
       }
       body.is-printing-results .results-sticky-chrome,
       body.is-printing-results .class-picker-bar,
@@ -1776,6 +2018,25 @@
         break-inside: avoid;
         max-width: 100%;
         margin-bottom: 10px;
+        background: #fff !important;
+        color: #0f172a !important;
+      }
+      /* 특정 반 + 전체과목: 학생 1명당 1페이지 */
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section {
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 0;
+        min-height: 0;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card:last-child {
+        page-break-after: auto;
+        break-after: auto;
       }
       /* 담임선생님께!: 반 전원 한 페이지 압축 그리드 */
       body.is-printing-results.print-teacher-mode .student-cards-list {
@@ -1901,9 +2162,24 @@
         <section class="panel-section">
           <div class="section-head-row">
             <div class="section-label section-label--inline">설문 목록</div>
+            <button type="button" class="home-refresh-btn" id="homeListRefreshBtn">목록 새로고침</button>
             <a href="admin-login.html" class="admin-entry-btn admin-entry-link">관리자</a>
           </div>
-          <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="1학년 설문 결과 목록"></div>
+          <p id="homeListStatus" class="home-list-status" role="status" aria-live="polite"></p>
+          <div id="surveyListGroups">
+            <section class="survey-list-group" aria-labelledby="activeSurveyHeading">
+              <h3 class="survey-list-heading" id="activeSurveyHeading">진행중인 설문</h3>
+              <p class="survey-list-hint">구글 시트로 연결된 설문입니다. 버튼을 누르면 결과를 조회합니다.</p>
+              <div id="activeSurveyGrid" class="sheet-btn-grid" role="group" aria-label="진행중인 설문"></div>
+              <p id="activeEmptyHint" class="home-section-empty" hidden>진행중인 설문이 없습니다.</p>
+            </section>
+            <section class="survey-list-group" aria-labelledby="completedSurveyHeading">
+              <h3 class="survey-list-heading survey-list-heading--done" id="completedSurveyHeading">완료된 설문</h3>
+              <p class="survey-list-hint">버튼을 누르면 반별 분석 결과를 표시합니다.</p>
+              <div id="completedSurveyGrid" class="sheet-btn-grid" role="group" aria-label="완료된 설문"></div>
+              <p id="completedEmptyHint" class="home-section-empty" hidden>완료된 설문이 없습니다.</p>
+            </section>
+          </div>
           <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 시트가 없습니다. 관리자 페이지에서 시트를 추가해 주세요.</p>
           <p id="error" class="error" hidden></p>
         </section>
@@ -1988,7 +2264,9 @@
   "use strict";
 
   const SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
-  const CLASS_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  function getClassRosterSpreadsheetId() {
+    return SurveyForm.getRosterSpreadsheetId();
+  }
   const DEFAULT_RESPONSE_SHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
   const SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
   const ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
@@ -3148,14 +3426,14 @@
     var probeTitles = ["1반", "명단", "list"];
     for (var i = 0; i < probeTitles.length; i++) {
       try {
-        var values = await fetchSheetValuesGviz(CLASS_ROSTER_SPREADSHEET_ID, { title: probeTitles[i] });
+        var values = await fetchSheetValuesGviz(getClassRosterSpreadsheetId(), { title: probeTitles[i] });
         if (isMatrixClassRoster(values)) return parseMatrixClassRoster(values);
       } catch (err) { /* try next tab */ }
     }
     try {
-      var tabs = await fetchSpreadsheetTabs(CLASS_ROSTER_SPREADSHEET_ID);
+      var tabs = await fetchSpreadsheetTabs(getClassRosterSpreadsheetId());
       if (tabs.length) {
-        var values = await fetchSheetValuesGviz(CLASS_ROSTER_SPREADSHEET_ID, tabs[0]);
+        var values = await fetchSheetValuesGviz(getClassRosterSpreadsheetId(), tabs[0]);
         if (isMatrixClassRoster(values)) return parseMatrixClassRoster(values);
       }
     } catch (err) { /* master roster unavailable */ }
@@ -3441,7 +3719,7 @@
 
   /** 메인 화면: 설문 이름만 (이과·문과 등), 반별 분리 없음 */
   function getHomeSurveyEntries() {
-    return loadSheetRegistry();
+    return SurveyForm.filterSheetEntriesOnly(loadSheetRegistry());
   }
 
   function getSheetLaunchEntries() {
@@ -3461,7 +3739,10 @@
       if (raw) {
         var parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          var cleaned = stripDefaultClassButtons(parsed);
+          var cleaned = SurveyForm.filterSheetEntriesOnly(
+            stripDefaultClassButtons(parsed)
+          );
+          cleaned = SurveyForm.dedupeRegistryEntries(cleaned);
           if (cleaned.length !== parsed.length) saveSheetRegistry(cleaned);
           return cleaned;
         }
@@ -3472,15 +3753,87 @@
 
   function saveSheetRegistry(registry) {
     localStorage.setItem(SHEET_REGISTRY_KEY, JSON.stringify(registry));
+    try {
+      window.dispatchEvent(new CustomEvent("survey-registry-updated"));
+    } catch (err) { /* ignore */ }
   }
 
-  function registryIdsMatch(a, b) {
-    return String(a == null ? "" : a) === String(b == null ? "" : b);
+  var homeSurveyListRefreshToken = 0;
+
+  function setHomeListStatus(text, kind) {
+    var el = document.getElementById("homeListStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.remove("is-ok", "is-busy");
+    if (kind) el.classList.add(kind);
+  }
+
+  function flashHomeSurveyList() {
+    var groups = document.getElementById("surveyListGroups");
+    if (!groups) return;
+    groups.classList.remove("is-flash");
+    void groups.offsetWidth;
+    groups.classList.add("is-flash");
+    window.setTimeout(function () {
+      groups.classList.remove("is-flash");
+    }, 600);
+  }
+
+  async function refreshHomeSurveyList(options) {
+    options = options || {};
+    var token = ++homeSurveyListRefreshToken;
+    var groups = document.getElementById("surveyListGroups");
+    var refreshBtn = document.getElementById("homeListRefreshBtn");
+    if (groups) groups.classList.add("is-refreshing");
+    if (refreshBtn) refreshBtn.disabled = true;
+    setHomeListStatus(options.loadingMessage || "목록 새로고침 중…", "is-busy");
+    renderSheetButtonGrid();
+    try {
+      var merged =
+        options.sync === false
+          ? loadSheetRegistry()
+          : await SurveyForm.refreshRegistryFromServer();
+      if (token !== homeSurveyListRefreshToken) return;
+      merged = SurveyForm.filterSheetEntriesOnly(merged);
+      saveSheetRegistry(merged);
+      SurveyForm.saveRegistry(merged);
+      renderSheetButtonGrid();
+      var parts = SurveyForm.partitionRegistryByStatus(merged);
+      var time = new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      setHomeListStatus(
+        options.message ||
+          "반영 완료 · 진행 " +
+            parts.active.length +
+            " / 완료 " +
+            parts.completed.length +
+            " · " +
+            time,
+        "is-ok"
+      );
+      flashHomeSurveyList();
+    } catch (err) {
+      if (token === homeSurveyListRefreshToken) {
+        renderSheetButtonGrid();
+        setHomeListStatus(
+          (err && err.message) || "목록을 불러오지 못했습니다.",
+          ""
+        );
+      }
+    } finally {
+      if (token === homeSurveyListRefreshToken) {
+        if (groups) groups.classList.remove("is-refreshing");
+        if (refreshBtn) refreshBtn.disabled = false;
+      }
+    }
   }
 
   function findRegistryEntry(id) {
     return loadSheetRegistry().find(function (item) {
-      return registryIdsMatch(item && item.id, id);
+      return item.id === id;
     });
   }
 
@@ -3490,7 +3843,7 @@
     if (String(id).indexOf("::") >= 0) {
       var parts = String(id).split("::");
       var base = registry.find(function (item) {
-        return registryIdsMatch(item && item.id, parts[0]);
+        return item.id === parts[0];
       });
       if (!base) return null;
       var cls = (base.classes || []).find(function (c) {
@@ -3509,7 +3862,7 @@
     }
     return (
       registry.find(function (item) {
-        return registryIdsMatch(item && item.id, id);
+        return item.id === id;
       }) || null
     );
   }
@@ -3539,45 +3892,78 @@
     return sheets[0].sheetName;
   }
 
-  function renderSheetButtonGrid() {
-    var grid = document.getElementById("sheetButtonGrid");
-    var hint = document.getElementById("homeEmptyHint");
-    if (!grid) return;
-    var entries = getHomeSurveyEntries();
+  function buildSurveyLaunchButtonHtml(entry, isCompleted) {
+    var tag = "";
+    if (isCompleted) {
+      tag += '<span class="sheet-launch-btn__tag sheet-launch-btn__tag--done">완료</span>';
+    }
+    var cls =
+      "sheet-launch-btn sheet-launch-btn--survey" +
+      (isCompleted ? " sheet-launch-btn--completed" : "");
+    return (
+      '<button type="button" class="' +
+      cls +
+      '" data-sheet-id="' +
+      esc(entry.id) +
+      '"><span class="sheet-launch-btn__label">' +
+      esc(entry.label || "설문") +
+      "</span>" +
+      tag +
+      "</button>"
+    );
+  }
+
+  function bindSheetLaunchButtons(container, listMode) {
+    if (!container) return;
+    container.querySelectorAll(".sheet-launch-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-sheet-id");
+        var entry = findRegistryEntry(id);
+        if (!entry) return;
+        launchSheetAnalysis(entry, btn);
+      });
+    });
+  }
+
+  function renderSurveyGridSection(grid, hint, entries, isCompleted) {
+    if (!grid) return false;
     if (!entries.length) {
       grid.innerHTML = "";
       grid.hidden = true;
       grid.setAttribute("aria-hidden", "true");
       if (hint) hint.hidden = false;
-      return;
+      return false;
     }
     if (hint) hint.hidden = true;
     grid.hidden = false;
     grid.removeAttribute("aria-hidden");
     grid.innerHTML = entries
       .map(function (entry) {
-        var tag =
-          entry.type === "form"
-            ? '<span class="sheet-launch-btn__tag">설문</span>'
-            : "";
-        return (
-          '<button type="button" class="sheet-launch-btn sheet-launch-btn--survey" data-sheet-id="' +
-          esc(entry.id) +
-          '"><span class="sheet-launch-btn__label">' +
-          esc(entry.label || "설문") +
-          "</span>" +
-          tag +
-          "</button>"
-        );
+        return buildSurveyLaunchButtonHtml(entry, isCompleted);
       })
       .join("");
-    grid.querySelectorAll(".sheet-launch-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var id = btn.getAttribute("data-sheet-id");
-        var entry = findRegistryEntry(id);
-        if (entry) launchSheetAnalysis(entry, btn);
-      });
-    });
+    bindSheetLaunchButtons(grid, isCompleted ? "completed" : "active");
+    return true;
+  }
+
+  function renderSheetButtonGrid() {
+    var groups = document.getElementById("surveyListGroups");
+    var activeGrid = document.getElementById("activeSurveyGrid");
+    var completedGrid = document.getElementById("completedSurveyGrid");
+    var activeHint = document.getElementById("activeEmptyHint");
+    var completedHint = document.getElementById("completedEmptyHint");
+    var hint = document.getElementById("homeEmptyHint");
+    var entries = getHomeSurveyEntries();
+    if (!entries.length) {
+      if (groups) groups.hidden = true;
+      if (hint) hint.hidden = false;
+      return;
+    }
+    if (groups) groups.hidden = false;
+    if (hint) hint.hidden = true;
+    var parts = SurveyForm.partitionRegistryByStatus(entries);
+    renderSurveyGridSection(activeGrid, activeHint, parts.active, false);
+    renderSurveyGridSection(completedGrid, completedHint, parts.completed, true);
   }
 
   function setSheetButtonsDisabled(disabled) {
@@ -3587,84 +3973,8 @@
     });
   }
 
-  async function launchFormSurveyAnalysis(entry, triggerBtn, restoreView) {
-    if (analysisInFlight) return;
-    if (!entry || entry.type !== "form") return launchSheetAnalysis(entry, triggerBtn, restoreView);
-    adminSetupMode = false;
-    adminSetupClasses = [];
-    document.body.classList.remove("admin-setup-mode");
-    setSiteHeaderAdminMode(false);
-    var setupPanelLaunch = document.getElementById("adminSetupPanel");
-    if (setupPanelLaunch) setupPanelLaunch.hidden = true;
-    currentLaunchEntry = entry;
-    var errorEl = document.getElementById("error");
-    if (errorEl) errorEl.hidden = true;
-    document.getElementById("results").classList.remove("visible");
-    document.getElementById("results").innerHTML = "";
-    teardownScrollStudentTracker();
-    setFabStackVisible(false);
-    analysisInFlight = true;
-    setSheetButtonsDisabled(true);
-    var prevLabel = triggerBtn ? triggerBtn.textContent : "";
-    if (triggerBtn) triggerBtn.textContent = "불러오는 중…";
-    try {
-      var masterRoster = await fetchClassRosterFromMaster();
-      var roster = (masterRoster || []).map(function (s) {
-        var banMatch = String(s.반 || "").match(/(\d+)/);
-        return {
-          반: banMatch ? parseInt(banMatch[1], 10) : null,
-          번호: s.번호,
-          이름: s.이름,
-          학번: s.학번 || "",
-        };
-      });
-      lastMultiResult = await SurveyForm.fetchFormResponsesAnalysis(entry, roster);
-      if (!entry.categories || !entry.categories.length) {
-        entry.categories = SurveyForm.questionCategories(entry);
-      }
-      activeSubjectView = "all";
-      activeClassFilter = null;
-      var launchSheets = lastMultiResult.sheets.filter(function (s) {
-        return !isListSheetTab(s.sheetName);
-      });
-      activeSheetView = launchSheets.length ? launchSheets[0].sheetName : "전체";
-      applyInitialClassView(entry, getClassTabsConfig());
-      ensureClassSelectionForResults();
-      applyRestoreView(
-        Object.assign({}, restoreView || {}, {
-          classFilter:
-            restoreView && restoreView.classFilter
-              ? restoreView.classFilter
-              : restoreView && restoreView.class
-                ? restoreView.class
-                : activeClassFilter,
-        })
-      );
-      var sheetId = SurveyForm.usesGithubResponseStorage(entry)
-        ? null
-        : entry.responseSpreadsheetId || DEFAULT_RESPONSE_SHEET_ID;
-      renderResults(getActiveAnalysis(), sheetId, lastMultiResult);
-      syncViewUrl();
-      document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
-    } catch (err) {
-      showHomeView();
-      if (errorEl) {
-        errorEl.textContent = err.message || "응답을 불러오지 못했습니다.";
-        errorEl.hidden = false;
-      }
-      setFabStackVisible(false);
-    } finally {
-      analysisInFlight = false;
-      setSheetButtonsDisabled(false);
-      if (triggerBtn) triggerBtn.textContent = prevLabel || entry.label;
-    }
-  }
-
   async function launchSheetAnalysis(entry, triggerBtn, restoreView) {
     if (analysisInFlight) return;
-    if (entry && entry.type === "form") {
-      return launchFormSurveyAnalysis(entry, triggerBtn, restoreView);
-    }
     adminSetupMode = false;
     adminSetupClasses = [];
     document.body.classList.remove("admin-setup-mode");
@@ -4607,7 +4917,7 @@
     };
     if (adminSetupEditId) {
       var idx = registry.findIndex(function (item) {
-        return registryIdsMatch(item && item.id, adminSetupEditId);
+        return item.id === adminSetupEditId;
       });
       if (idx < 0) {
         alert("수정할 시트를 찾을 수 없습니다.");
@@ -5541,6 +5851,7 @@
     teardownScrollStudentTracker();
     setFabStackVisible(false);
     replaceIndexPageUrl({});
+    refreshHomeSurveyList();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -5561,10 +5872,18 @@
     list.style.setProperty("--teacher-print-cols", String(cols));
   }
 
+  function shouldPrintOneStudentPerPage() {
+    if (activeSubjectView === "teacher") return false;
+    if (!activeClassFilter) return false;
+    return (activeSubjectView || "all") === "all";
+  }
+
   function setPrintMode(enabled) {
     var isTeacher = activeSubjectView === "teacher";
+    var onePerPage = enabled && shouldPrintOneStudentPerPage();
     document.body.classList.toggle("is-printing-results", enabled);
     document.body.classList.toggle("print-teacher-mode", enabled && isTeacher);
+    document.body.classList.toggle("print-one-student-per-page", onePerPage);
     var results = document.getElementById("results");
     if (results) results.classList.toggle("results-print-teacher", enabled && isTeacher);
     if (enabled && isTeacher) applyTeacherPrintGrid();
@@ -5574,19 +5893,23 @@
     }
   }
 
-  function wrapResultsHtml(pickerHtml, bodyHtml) {
-    var picker = pickerHtml || "";
+  function wrapResultsHtml(chromeHtml, bodyHtml) {
+    var chrome = chromeHtml || "";
     var body = bodyHtml || "";
-    if (!picker) return body;
+    if (!chrome) return body;
     return (
       '<div class="results-layout">' +
       '<div class="results-sticky-chrome no-print">' +
-      picker +
+      chrome +
       "</div>" +
       '<div class="results-main">' +
       body +
       "</div></div>"
     );
+  }
+
+  function renderResultsChrome() {
+    return renderSurveyViewHeader() + renderClassPickerBar();
   }
 
   function renderResults(data, spreadsheetId, multi) {
@@ -5598,12 +5921,11 @@
     setFabStackVisible(true);
     ensureActiveSubjectViewValid();
 
-    var pickerHtml = renderClassPickerBar();
-    var bodyHtml = renderSurveyViewHeader();
-    bodyHtml += renderCategoryPickerBar();
+    var chromeHtml = renderResultsChrome();
+    var bodyHtml = renderCategoryPickerBar();
     if (!sheet) {
       bodyHtml += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
-      el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
+      el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
       el.classList.add("visible");
       syncResultsPrintState(el);
       teardownScrollStudentTracker();
@@ -5614,7 +5936,7 @@
     var s = sheet.summary;
     if (!s.총응답 && !(sheet.participation && sheet.participation.missingCount)) {
       bodyHtml += '<p class="student-cards-empty">이 설문에 분석할 데이터가 없습니다.</p>';
-      el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
+      el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
       el.classList.add("visible");
       syncResultsPrintState(el);
       teardownScrollStudentTracker();
@@ -5624,7 +5946,7 @@
 
     bodyHtml += renderClassStudentList(analysis);
 
-    el.innerHTML = wrapResultsHtml(pickerHtml, bodyHtml);
+    el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
     el.classList.add("visible");
     syncResultsPrintState(el);
 
@@ -5688,7 +6010,27 @@
   window.addEventListener("resize", scheduleHeaderTitleFit);
   window.addEventListener("load", scheduleHeaderTitleFit);
 
-  renderSheetButtonGrid();
+  refreshHomeSurveyList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
+  var homeListRefreshBtn = document.getElementById("homeListRefreshBtn");
+  if (homeListRefreshBtn) {
+    homeListRefreshBtn.addEventListener("click", function () {
+      refreshHomeSurveyList({ sync: true });
+    });
+  }
+  window.addEventListener("pageshow", function () {
+    refreshHomeSurveyList({ sync: true });
+  });
+  window.addEventListener("focus", function () {
+    refreshHomeSurveyList({ sync: true });
+  });
+  window.addEventListener("survey-registry-updated", function () {
+    refreshHomeSurveyList({ sync: true });
+  });
+  window.addEventListener("storage", function (e) {
+    if (e.key === SHEET_REGISTRY_KEY || e.key === SurveyForm.REGISTRY_KEY) {
+      refreshHomeSurveyList({ sync: true });
+    }
+  });
 
   document.getElementById("adminSetupConfirm").addEventListener("click", function () {
     confirmAdminSetup();
