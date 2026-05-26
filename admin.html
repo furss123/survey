@@ -14,7 +14,7 @@
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>설문 관리자 · 남악고</title>
-  <!-- build: d629044 -->
+  <!-- build: purge-active-btn -->
   <link rel="icon" href="assets/namak-logo.png" type="image/png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
@@ -818,6 +818,14 @@
           </form>
           <div class="admin-registry-toolbar">
             <button type="button" class="admin-btn" id="adminRegistryRefreshBtn">목록 새로고침</button>
+            <button
+              type="button"
+              class="admin-btn admin-btn-danger"
+              id="adminDeleteAllActiveBtn"
+              title="진행중인 설문만 모두 목록에서 삭제합니다"
+            >
+              진행중 전체 삭제
+            </button>
             <p class="admin-registry-status" id="adminRegistryStatus" role="status" aria-live="polite"></p>
           </div>
           <div id="adminRegistryGroups">
@@ -1291,15 +1299,18 @@
     }
   }
 
-  async function deleteRegistryEntries(ids) {
+  async function deleteRegistryEntries(ids, options) {
+    options = options || {};
     if (!ids || !ids.length) {
       setAdminRegistryStatus("삭제할 항목을 선택해 주세요.", "is-warn");
       return;
     }
     if (registryDeleteInFlight) return;
-    var label =
-      ids.length === 1 ? "이 항목" : "선택한 " + ids.length + "개 항목";
-    if (!confirm(label + "을(를) 목록에서 삭제할까요?")) return;
+    if (!options.skipConfirm) {
+      var label =
+        ids.length === 1 ? "이 항목" : "선택한 " + ids.length + "개 항목";
+      if (!confirm(label + "을(를) 목록에서 삭제할까요?")) return;
+    }
     if (editingSheetId && ids.indexOf(editingSheetId) >= 0) cancelEditSheet();
 
     registryDeleteInFlight = true;
@@ -1360,6 +1371,51 @@
   function deleteRegistryEntry(id) {
     if (!id) return;
     deleteRegistryEntries([id]);
+  }
+
+  function getActiveRegistryIds() {
+    var registry = normalizeSheetRegistry(loadSheetRegistry());
+    var parts = SurveyForm.partitionRegistryByStatus(registry);
+    return parts.active
+      .map(function (item) {
+        return item.id;
+      })
+      .filter(Boolean);
+  }
+
+  function deleteAllActiveRegistryEntries() {
+    var ids = getActiveRegistryIds();
+    if (!ids.length) {
+      setAdminRegistryStatus("진행중인 설문이 없습니다.", "is-ok");
+      return;
+    }
+    if (
+      !confirm(
+        "진행중인 설문 " +
+          ids.length +
+          "개를 모두 목록에서 삭제할까요?\n(완료된 설문은 유지됩니다.)"
+      )
+    ) {
+      return;
+    }
+    deleteRegistryEntries(ids, { skipConfirm: true });
+  }
+
+  function maybePurgeActiveFromQuery() {
+    if (!/[?&]purgeActive=1(?:&|$)/.test(location.search)) return;
+    try {
+      var url = new URL(location.href);
+      url.searchParams.delete("purgeActive");
+      history.replaceState(null, "", url.pathname + url.search + url.hash);
+    } catch (err) {
+      /* ignore */
+    }
+    var ids = getActiveRegistryIds();
+    if (!ids.length) {
+      setAdminRegistryStatus("진행중인 설문이 없습니다.", "is-ok");
+      return;
+    }
+    deleteRegistryEntries(ids);
   }
 
   function buildRegistryItemHtml(item) {
@@ -1493,6 +1549,10 @@
         deleteRegistryEntries(getSelectedRegistryIds());
       });
     }
+    var deleteAllActive = document.getElementById("adminDeleteAllActiveBtn");
+    if (deleteAllActive) {
+      deleteAllActive.addEventListener("click", deleteAllActiveRegistryEntries);
+    }
   })();
 
   (function initRegistryLiveRefresh() {
@@ -1612,7 +1672,11 @@
   if (!AdminSession.require()) return;
 
   initRosterModal();
-  refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
+  refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" }).then(
+    function () {
+      maybePurgeActiveFromQuery();
+    }
+  );
   bindSurveyNameField();
 
   document.getElementById("adminLogoutBtn").addEventListener("click", function () {
