@@ -828,13 +828,26 @@
     throw new Error("스프레드시트 ID를 URL에서 찾을 수 없습니다.");
   }
 
+  function normalizeSheetRegistry(registry) {
+    return SurveyForm.dedupeRegistryEntries(
+      SurveyForm.filterSheetEntriesOnly(registry || []).filter(function (entry) {
+        return entry && entry.id && !SurveyForm.isSurveyDeleted(entry.id);
+      })
+    );
+  }
+
   function loadSheetRegistry() {
     try {
       var raw = localStorage.getItem(SHEET_REGISTRY_KEY);
       if (raw) {
         var parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          return SurveyForm.dedupeRegistryEntries(parsed);
+          var cleaned = normalizeSheetRegistry(parsed);
+          if (cleaned.length !== parsed.length) {
+            saveSheetRegistry(cleaned);
+            SurveyForm.saveRegistry(cleaned);
+          }
+          return cleaned;
         }
       }
     } catch (err) { /* ignore */ }
@@ -1132,7 +1145,7 @@
     );
     try {
       if (options.sync !== false) {
-        var merged = SurveyForm.filterSheetEntriesOnly(
+        var merged = normalizeSheetRegistry(
           await SurveyForm.refreshRegistryFromServer()
         );
         saveSheetRegistry(merged);
@@ -1170,16 +1183,47 @@
 
   async function deleteRegistryEntry(id) {
     if (!id) return;
-    if (!confirm("이 시트를 목록에서 삭제할까요?")) return;
+    if (!confirm("이 항목을 목록에서 삭제할까요?")) return;
     if (editingSheetId === id) cancelEditSheet();
-    var next = loadSheetRegistry().filter(function (item) {
+
+    var prev = loadSheetRegistry();
+    var entry = prev.find(function (item) {
+      return item.id === id;
+    });
+    var next = prev.filter(function (item) {
       return item.id !== id;
     });
+
+    SurveyForm.markSurveyDeleted(id);
+    next = normalizeSheetRegistry(next);
     saveSheetRegistry(next);
     SurveyForm.saveRegistry(next);
+
+    await refreshAdminRegistryList({
+      sync: false,
+      loadingMessage: "삭제 반영 중…",
+      message: "목록에서 삭제했습니다.",
+    });
+
+    var warnings = [];
+    if (entry) {
+      try {
+        var purge = await SurveyForm.purgeSurveyFromServer(entry);
+        if (purge && purge.warnings && purge.warnings.length) {
+          warnings = purge.warnings;
+        }
+      } catch (err) {
+        warnings.push((err && err.message) || "서버 삭제 요청에 실패했습니다.");
+      }
+    }
+
     await refreshAdminRegistryList({
       sync: true,
-      message: "시트를 삭제하고 목록을 새로고침했습니다.",
+      message:
+        warnings.length > 0
+          ? "삭제했습니다. " + warnings[0]
+          : "삭제를 반영하고 목록을 맞췄습니다.",
+      kind: warnings.length > 0 ? "is-warn" : "is-ok",
     });
   }
 
@@ -1272,7 +1316,7 @@
     var completedList = document.getElementById("adminRegistryListCompleted");
     var activeEmpty = document.getElementById("adminRegistryActiveEmpty");
     var completedEmpty = document.getElementById("adminRegistryCompletedEmpty");
-    var registry = loadSheetRegistry();
+    var registry = normalizeSheetRegistry(loadSheetRegistry());
     if (!registry.length) {
       if (groups) groups.hidden = true;
       return;
