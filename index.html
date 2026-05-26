@@ -2161,26 +2161,19 @@
       <div id="homePanel" class="search-container">
         <section class="panel-section">
           <div class="section-head-row">
-            <div class="section-label section-label--inline">설문 목록</div>
+            <div class="section-label section-label--inline">설문 조사 결과</div>
             <button type="button" class="home-refresh-btn" id="homeListRefreshBtn">목록 새로고침</button>
             <a href="admin-login.html" class="admin-entry-btn admin-entry-link">관리자</a>
           </div>
           <p id="homeListStatus" class="home-list-status" role="status" aria-live="polite"></p>
           <div id="surveyListGroups">
-            <section class="survey-list-group" aria-labelledby="activeSurveyHeading">
-              <h3 class="survey-list-heading" id="activeSurveyHeading">진행중인 설문</h3>
+            <section class="survey-list-group">
               <p class="survey-list-hint">구글 시트로 연결된 설문입니다. 버튼을 누르면 결과를 조회합니다.</p>
-              <div id="activeSurveyGrid" class="sheet-btn-grid" role="group" aria-label="진행중인 설문"></div>
-              <p id="activeEmptyHint" class="home-section-empty" hidden>진행중인 설문이 없습니다.</p>
-            </section>
-            <section class="survey-list-group" aria-labelledby="completedSurveyHeading">
-              <h3 class="survey-list-heading survey-list-heading--done" id="completedSurveyHeading">완료된 설문</h3>
-              <p class="survey-list-hint">버튼을 누르면 반별 분석 결과를 표시합니다.</p>
-              <div id="completedSurveyGrid" class="sheet-btn-grid" role="group" aria-label="완료된 설문"></div>
-              <p id="completedEmptyHint" class="home-section-empty" hidden>완료된 설문이 없습니다.</p>
+              <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="설문 조사 결과"></div>
+              <p id="homeSectionEmpty" class="home-section-empty" hidden>등록된 설문이 없습니다.</p>
             </section>
           </div>
-          <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 시트가 없습니다. 관리자 페이지에서 시트를 추가해 주세요.</p>
+          <p id="homeEmptyHint" class="home-empty-hint" hidden>등록된 설문이 없습니다. 관리자 페이지에서 시트를 추가해 주세요.</p>
           <p id="error" class="error" hidden></p>
         </section>
       </div>
@@ -3798,7 +3791,6 @@
       saveSheetRegistry(merged);
       SurveyForm.saveRegistry(merged);
       renderSheetButtonGrid();
-      var parts = SurveyForm.partitionRegistryByStatus(merged);
       var time = new Date().toLocaleTimeString("ko-KR", {
         hour: "2-digit",
         minute: "2-digit",
@@ -3806,12 +3798,7 @@
       });
       setHomeListStatus(
         options.message ||
-          "반영 완료 · 진행 " +
-            parts.active.length +
-            " / 완료 " +
-            parts.completed.length +
-            " · " +
-            time,
+          "반영 완료 · 설문 " + merged.length + "개 · " + time,
         "is-ok"
       );
       flashHomeSurveyList();
@@ -3892,28 +3879,26 @@
     return sheets[0].sheetName;
   }
 
-  function buildSurveyLaunchButtonHtml(entry, isCompleted) {
-    var tag = "";
-    if (isCompleted) {
-      tag += '<span class="sheet-launch-btn__tag sheet-launch-btn__tag--done">완료</span>';
-    }
-    var cls =
-      "sheet-launch-btn sheet-launch-btn--survey" +
-      (isCompleted ? " sheet-launch-btn--completed" : "");
+  function sortSurveyEntriesForDisplay(entries) {
+    return (entries || []).slice().sort(function (a, b) {
+      var ac = SurveyForm.isSurveyCompleted(a) ? 1 : 0;
+      var bc = SurveyForm.isSurveyCompleted(b) ? 1 : 0;
+      if (ac !== bc) return ac - bc;
+      return String(a.label || "").localeCompare(String(b.label || ""), "ko");
+    });
+  }
+
+  function buildSurveyLaunchButtonHtml(entry) {
     return (
-      '<button type="button" class="' +
-      cls +
-      '" data-sheet-id="' +
+      '<button type="button" class="sheet-launch-btn sheet-launch-btn--survey" data-sheet-id="' +
       esc(entry.id) +
       '"><span class="sheet-launch-btn__label">' +
       esc(entry.label || "설문") +
-      "</span>" +
-      tag +
-      "</button>"
+      "</span></button>"
     );
   }
 
-  function bindSheetLaunchButtons(container, listMode) {
+  function bindSheetLaunchButtons(container) {
     if (!container) return;
     container.querySelectorAll(".sheet-launch-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -3925,35 +3910,12 @@
     });
   }
 
-  function renderSurveyGridSection(grid, hint, entries, isCompleted) {
-    if (!grid) return false;
-    if (!entries.length) {
-      grid.innerHTML = "";
-      grid.hidden = true;
-      grid.setAttribute("aria-hidden", "true");
-      if (hint) hint.hidden = false;
-      return false;
-    }
-    if (hint) hint.hidden = true;
-    grid.hidden = false;
-    grid.removeAttribute("aria-hidden");
-    grid.innerHTML = entries
-      .map(function (entry) {
-        return buildSurveyLaunchButtonHtml(entry, isCompleted);
-      })
-      .join("");
-    bindSheetLaunchButtons(grid, isCompleted ? "completed" : "active");
-    return true;
-  }
-
   function renderSheetButtonGrid() {
     var groups = document.getElementById("surveyListGroups");
-    var activeGrid = document.getElementById("activeSurveyGrid");
-    var completedGrid = document.getElementById("completedSurveyGrid");
-    var activeHint = document.getElementById("activeEmptyHint");
-    var completedHint = document.getElementById("completedEmptyHint");
+    var grid = document.getElementById("sheetButtonGrid");
+    var sectionEmpty = document.getElementById("homeSectionEmpty");
     var hint = document.getElementById("homeEmptyHint");
-    var entries = getHomeSurveyEntries();
+    var entries = sortSurveyEntriesForDisplay(getHomeSurveyEntries());
     if (!entries.length) {
       if (groups) groups.hidden = true;
       if (hint) hint.hidden = false;
@@ -3961,9 +3923,13 @@
     }
     if (groups) groups.hidden = false;
     if (hint) hint.hidden = true;
-    var parts = SurveyForm.partitionRegistryByStatus(entries);
-    renderSurveyGridSection(activeGrid, activeHint, parts.active, false);
-    renderSurveyGridSection(completedGrid, completedHint, parts.completed, true);
+    if (sectionEmpty) sectionEmpty.hidden = true;
+    if (grid) {
+      grid.hidden = false;
+      grid.removeAttribute("aria-hidden");
+      grid.innerHTML = entries.map(buildSurveyLaunchButtonHtml).join("");
+      bindSheetLaunchButtons(grid);
+    }
   }
 
   function setSheetButtonsDisabled(disabled) {

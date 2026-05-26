@@ -818,14 +818,6 @@
           </form>
           <div class="admin-registry-toolbar">
             <button type="button" class="admin-btn" id="adminRegistryRefreshBtn">목록 새로고침</button>
-            <button
-              type="button"
-              class="admin-btn admin-btn-danger"
-              id="adminDeleteAllActiveBtn"
-              title="진행중인 설문만 모두 목록에서 삭제합니다"
-            >
-              진행중 전체 삭제
-            </button>
             <p class="admin-registry-status" id="adminRegistryStatus" role="status" aria-live="polite"></p>
           </div>
           <div id="adminRegistryGroups">
@@ -844,12 +836,9 @@
               </button>
               <span class="registry-bulk-count" id="adminRegistryBulkCount" aria-live="polite"></span>
             </div>
-            <h3 class="registry-section-title">진행중인 설문</h3>
-            <ul id="adminRegistryListActive" class="admin-registry-list" aria-label="진행중인 설문"></ul>
-            <p id="adminRegistryActiveEmpty" class="registry-section-empty" hidden>진행중인 설문이 없습니다.</p>
-            <h3 class="registry-section-title registry-section-title--done">완료된 설문</h3>
-            <ul id="adminRegistryListCompleted" class="admin-registry-list" aria-label="완료된 설문"></ul>
-            <p id="adminRegistryCompletedEmpty" class="registry-section-empty" hidden>완료된 설문이 없습니다.</p>
+            <h3 class="registry-section-title">설문 조사 결과</h3>
+            <ul id="adminRegistryList" class="admin-registry-list" aria-label="설문 조사 결과"></ul>
+            <p id="adminRegistryEmpty" class="registry-section-empty" hidden>등록된 설문이 없습니다.</p>
           </div>
         </div>
       </section>
@@ -1373,53 +1362,16 @@
     deleteRegistryEntries([id]);
   }
 
-  function getActiveRegistryIds() {
-    var registry = normalizeSheetRegistry(loadSheetRegistry());
-    var parts = SurveyForm.partitionRegistryByStatus(registry);
-    return parts.active
-      .map(function (item) {
-        return item.id;
-      })
-      .filter(Boolean);
-  }
-
-  function deleteAllActiveRegistryEntries() {
-    var ids = getActiveRegistryIds();
-    if (!ids.length) {
-      setAdminRegistryStatus("진행중인 설문이 없습니다.", "is-ok");
-      return;
-    }
-    if (
-      !confirm(
-        "진행중인 설문 " +
-          ids.length +
-          "개를 모두 목록에서 삭제할까요?\n(완료된 설문은 유지됩니다.)"
-      )
-    ) {
-      return;
-    }
-    deleteRegistryEntries(ids, { skipConfirm: true });
-  }
-
-  function maybePurgeActiveFromQuery() {
-    if (!/[?&]purgeActive=1(?:&|$)/.test(location.search)) return;
-    try {
-      var url = new URL(location.href);
-      url.searchParams.delete("purgeActive");
-      history.replaceState(null, "", url.pathname + url.search + url.hash);
-    } catch (err) {
-      /* ignore */
-    }
-    var ids = getActiveRegistryIds();
-    if (!ids.length) {
-      setAdminRegistryStatus("진행중인 설문이 없습니다.", "is-ok");
-      return;
-    }
-    deleteRegistryEntries(ids);
+  function sortRegistryForDisplay(registry) {
+    return (registry || []).slice().sort(function (a, b) {
+      var ac = SurveyForm.isSurveyCompleted(a) ? 1 : 0;
+      var bc = SurveyForm.isSurveyCompleted(b) ? 1 : 0;
+      if (ac !== bc) return ac - bc;
+      return String(a.label || "").localeCompare(String(b.label || ""), "ko");
+    });
   }
 
   function buildRegistryItemHtml(item) {
-    var isCompleted = SurveyForm.isSurveyCompleted(item);
     return (
       "<li><label class=\"registry-select\"><input type=\"checkbox\" class=\"registry-select-cb\" data-select-id=\"" +
       esc(item.id) +
@@ -1427,7 +1379,6 @@
       esc(item.label || "설문") +
       " 선택</span></label><div class=\"registry-meta\"><strong>" +
       esc(item.label) +
-      (isCompleted ? " <span style=\"font-size:0.75em;opacity:0.85\">(완료)</span>" : "") +
       "</strong><span>" +
       esc(item.url || "") +
       "</span></div><div class=\"admin-actions registry-actions\">" +
@@ -1507,19 +1458,15 @@
 
   function renderAdminRegistryList() {
     var groups = document.getElementById("adminRegistryGroups");
-    var activeList = document.getElementById("adminRegistryListActive");
-    var completedList = document.getElementById("adminRegistryListCompleted");
-    var activeEmpty = document.getElementById("adminRegistryActiveEmpty");
-    var completedEmpty = document.getElementById("adminRegistryCompletedEmpty");
-    var registry = normalizeSheetRegistry(loadSheetRegistry());
+    var listEl = document.getElementById("adminRegistryList");
+    var emptyEl = document.getElementById("adminRegistryEmpty");
+    var registry = sortRegistryForDisplay(normalizeSheetRegistry(loadSheetRegistry()));
     if (!registry.length) {
       if (groups) groups.hidden = true;
       return;
     }
     if (groups) groups.hidden = false;
-    var parts = SurveyForm.partitionRegistryByStatus(registry);
-    renderRegistrySection(activeList, activeEmpty, parts.active);
-    renderRegistrySection(completedList, completedEmpty, parts.completed);
+    renderRegistrySection(listEl, emptyEl, registry);
     updateBulkDeleteUi();
   }
 
@@ -1548,10 +1495,6 @@
       bulkDelete.addEventListener("click", function () {
         deleteRegistryEntries(getSelectedRegistryIds());
       });
-    }
-    var deleteAllActive = document.getElementById("adminDeleteAllActiveBtn");
-    if (deleteAllActive) {
-      deleteAllActive.addEventListener("click", deleteAllActiveRegistryEntries);
     }
   })();
 
@@ -1672,11 +1615,7 @@
   if (!AdminSession.require()) return;
 
   initRosterModal();
-  refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" }).then(
-    function () {
-      maybePurgeActiveFromQuery();
-    }
-  );
+  refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
   bindSurveyNameField();
 
   document.getElementById("adminLogoutBtn").addEventListener("click", function () {
