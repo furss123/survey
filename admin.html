@@ -1264,7 +1264,8 @@
     listEl.querySelectorAll("[data-respond-id]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-respond-id");
-        var url = SurveyForm.buildStudentRespondUrl(id, location.href);
+        var entry = id ? findRegistryEntry(id) : null;
+        var url = SurveyForm.buildStudentRespondUrl(id, location.href, entry);
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(url).then(function () {
             alert("학생 참여 링크를 복사했습니다.\n\n" + url);

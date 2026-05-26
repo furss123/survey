@@ -244,7 +244,8 @@
   }
 
   function updateStudentLink(id) {
-    var url = SurveyForm.buildStudentRespondUrl(id, location.href);
+    var entry = SurveyForm.findSurvey(id) || { id: id, webAppUrl: SurveyForm.loadWebAppUrl() };
+    var url = SurveyForm.buildStudentRespondUrl(id, location.href, entry);
     document.getElementById("studentLink").textContent = url;
     document.getElementById("studentLinkBox").hidden = false;
     document.getElementById("btnCopyLink").onclick = function () {

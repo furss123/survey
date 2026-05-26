@@ -3668,7 +3668,7 @@
     if (!entry) return;
     showResultsView();
     var results = document.getElementById("results");
-    var participateUrl = SurveyForm.buildStudentRespondUrl(entry.id, location.href);
+    var participateUrl = SurveyForm.buildStudentRespondUrl(entry.id, location.href, entry);
     results.innerHTML =
       '<div class="active-survey-panel">' +
       "<h2>" +

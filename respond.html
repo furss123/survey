@@ -383,6 +383,10 @@
   });
 
   async function init() {
+    var webappParam = params.get("webapp");
+    if (webappParam && SurveyForm.isValidWebAppUrl(webappParam)) {
+      SurveyForm.saveWebAppUrlSession(webappParam);
+    }
     if (!surveyId) {
       showError("설문 ID가 없습니다. index.html에서 설문 링크를 열어 주세요.");
       elTitle.textContent = "설문 참여";

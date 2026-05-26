@@ -6,6 +6,7 @@
   var ROSTER_STORAGE_KEY = "school-roster-sheet-v1";
   var ROSTER_SESSION_KEY = "school-roster-sheet-session-v1";
   var WEBAPP_STORAGE_KEY = "school-survey-webapp-v1";
+  var WEBAPP_SESSION_KEY = "school-survey-webapp-session-v1";
   var DEFAULT_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
   var DEFAULT_RESPONSE_SPREADSHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
@@ -77,6 +78,21 @@
     else localStorage.removeItem(WEBAPP_STORAGE_KEY);
   }
 
+  function loadWebAppUrlSession() {
+    try {
+      return coerceText(sessionStorage.getItem(WEBAPP_SESSION_KEY));
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function saveWebAppUrlSession(url) {
+    var trimmed = coerceText(url);
+    if (trimmed && isValidWebAppUrl(trimmed)) {
+      sessionStorage.setItem(WEBAPP_SESSION_KEY, trimmed);
+    }
+  }
+
   function isValidWebAppUrl(url) {
     url = coerceText(url);
     return (
@@ -87,10 +103,12 @@
 
   function resolveWebAppUrl(entry) {
     var fromEntry = entry && coerceText(entry.webAppUrl);
+    var fromSession = loadWebAppUrlSession();
     var global = loadWebAppUrl();
     if (fromEntry && isValidWebAppUrl(fromEntry)) return fromEntry;
+    if (fromSession && isValidWebAppUrl(fromSession)) return fromSession;
     if (global && isValidWebAppUrl(global)) return global;
-    return global || fromEntry;
+    return "";
   }
 
   function getResponseSpreadsheetId(entry) {
@@ -117,16 +135,21 @@
     );
   }
 
-  function buildStudentRespondUrl(surveyId, baseHref) {
-    var base = String(baseHref || location.href).replace(
-      /admin-survey\.html.*$/,
-      "respond.html?s=" + encodeURIComponent(surveyId)
-    );
+  function buildStudentRespondUrl(surveyId, baseHref, entry) {
+    var url = new URL(baseHref || location.href);
+    url.pathname = url.pathname.replace(/[^/]*$/, "respond.html");
+    url.search = "";
+    url.searchParams.set("s", surveyId);
     var rosterId = getRosterSpreadsheetId();
     if (rosterId && rosterId !== DEFAULT_ROSTER_SPREADSHEET_ID) {
-      base += "&roster=" + encodeURIComponent(rosterId);
+      url.searchParams.set("roster", rosterId);
     }
-    return base;
+    var webApp =
+      (entry && coerceText(entry.webAppUrl)) || loadWebAppUrl();
+    if (isValidWebAppUrl(webApp)) {
+      url.searchParams.set("webapp", webApp);
+    }
+    return url.toString();
   }
 
   async function readJsonResponse(res) {
@@ -956,6 +979,8 @@
     resolveWebAppUrl: resolveWebAppUrl,
     getResponseSpreadsheetId: getResponseSpreadsheetId,
     buildStudentRespondUrl: buildStudentRespondUrl,
+    isValidWebAppUrl: isValidWebAppUrl,
+    saveWebAppUrlSession: saveWebAppUrlSession,
     loadSurveyForRespond: loadSurveyForRespond,
     fetchSurveyFromConfigSheet: fetchSurveyFromConfigSheet,
     fetchAllSurveysFromConfigSheet: fetchAllSurveysFromConfigSheet,
