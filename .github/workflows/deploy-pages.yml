@@ -49,15 +49,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-  sync-main:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Sync main branch to index (branch deploy 호환)
-        uses: actions/checkout@v4
-        with:
-          ref: index
-          fetch-depth: 1
-      - name: Force-push main from index
-        run: |
-          git push origin HEAD:refs/heads/main --force

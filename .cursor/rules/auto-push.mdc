@@ -1,11 +1,11 @@
 ---
-description: 모든 작업 완료 시 자동 커밋·푸시 (별도 요청 불필요)
+description: 모든 작업 완료 시 자동 커밋·푸시·배포 확인 (별도 요청 불필요)
 alwaysApply: true
 ---
 
-# 자동 커밋·푸시 (survey)
+# 자동 커밋·푸시·배포 확인 (survey)
 
-이 저장소에서 **파일을 수정한 모든 작업**은 사용자가 "커밋해줘"라고 하지 않아도, 작업을 마칠 때 **반드시** 커밋하고 푸시합니다.
+이 저장소에서 **파일을 수정한 모든 작업**은 사용자가 "커밋해줘"라고 하지 않아도, 작업을 마칠 때 **반드시** 커밋·푸시·**배포 확인**까지 합니다.
 
 ## 언제 실행하는가
 
@@ -19,16 +19,23 @@ alwaysApply: true
 2. 관련 파일만 `git add` (`.env`, 비밀·자격증명 파일 제외)
 3. 변경 **목적(why)** 이 드러나는 **한국어** 커밋 메시지로 `git commit`
 4. **`git push origin index`** 실행
-5. **`git push origin index:main --force-with-lease`** 로 `main` 동기화 (실패 시 `--force`) — Pages가 `main`이어도 반영
-6. `.github/workflows/deploy-pages.yml` 이 `index` push 시 Pages 자동 배포 (Settings → Pages → Source: **GitHub Actions** 권장)
-7. push 성공 여부 확인 후, 배포 URL 안내: https://furss123.github.io/survey/
+5. **`git push origin index:main --force-with-lease`** (실패 시 `--force`) — Pages `main` 동기화
+6. **`git push origin HEAD:refs/heads/gh-pages --force`** (실패해도 계속) — `gh-pages` 백업
+7. **배포 확인 (필수)** — `scripts/verify-deploy.ps1` 실행  
+   - 최대 12분, 30초 간격으로 https://furss123.github.io/survey/ 재확인  
+   - 성공 기준: 메인에 「구글 시트로 연결」 있음, 「학생 설문은 참여」「학생 설문 만들기」 없음
+8. 사용자에게 **배포 확인 결과를 반드시 보고**  
+   - ✅ 반영됨: URL + Last-Modified  
+   - ⏳ 미반영: Pages 설정 안내 (Settings → Pages, Actions) + 로컬 HEAD와 live 불일치 명시
 
 ## 규칙
 
-- **사용자의 별도 커밋·푸시 요청을 기다리지 않는다.** 이 프로젝트에서는 자동 커밋·푸시가 기본이다.
+- **배포 확인을 생략하지 않는다.** push만 하고 끝내지 않는다.
+- **사용자의 별도 커밋·푸시 요청을 기다리지 않는다.**
 - 변경이 없으면 빈 커밋을 만들지 않는다.
-- push 실패 시(인증·네트워크·충돌) 원인을 알리고 **재시도**한다.
-- PowerShell: `git commit -m "메시지"` 또는 here-string `@"..."@` 사용
+- push 실패 시 원인을 알리고 **재시도**한다.
+- 배포가 12분 내 미반영이면 사용자에게 [Pages 설정](https://github.com/furss123/survey/settings/pages) 점검을 안내한다.
+- PowerShell: `git commit -m "메시지"` 또는 here-string `@"..."@`
 - Git 경로(Windows): `C:\Program Files\Git\cmd`
 
 ## 커밋하지 않는 것
