@@ -177,10 +177,19 @@
     return v == null ? "" : String(v).trim();
   }
 
+  function isSheetRegistryEntry(entry) {
+    return entry && entry.type !== "form";
+  }
+
+  function filterSheetEntriesOnly(list) {
+    return (list || []).filter(isSheetRegistryEntry);
+  }
+
   function dedupeRegistryEntries(list) {
     var byId = {};
     (list || []).forEach(function (entry) {
       if (!entry || !entry.id) return;
+      if (!isSheetRegistryEntry(entry)) return;
       if (isSurveyDeleted(entry.id)) return;
       byId[entry.id] = entry;
     });
@@ -576,41 +585,15 @@
     return surveys;
   }
 
-  function mergeRegistryWithConfigSurveys(registry, remoteForms) {
-    var byId = {};
-    (registry || []).forEach(function (entry) {
-      if (entry && entry.id) byId[entry.id] = entry;
-    });
-    (remoteForms || []).forEach(function (remote) {
-      if (!remote || !remote.id) return;
-      if (isSurveyDeleted(remote.id)) return;
-      var local = byId[remote.id];
-      if (local && local.type !== "form") return;
-      if (local) {
-        byId[remote.id] = Object.assign({}, local, remote, {
-          type: "form",
-          surveyStatus: remote.surveyStatus || local.surveyStatus,
-          label: remote.label || local.label,
-          questions:
-            remote.questions && remote.questions.length
-              ? remote.questions
-              : local.questions,
-        });
-      } else {
-        byId[remote.id] = remote;
-      }
-    });
-    return Object.keys(byId).map(function (id) {
-      return byId[id];
-    });
+  function mergeRegistryWithConfigSurveys(registry) {
+    return dedupeRegistryEntries(filterSheetEntriesOnly(registry));
   }
 
   async function syncRegistryFromConfigSheet(registry) {
-    registry = (registry || []).filter(function (entry) {
+    registry = filterSheetEntriesOnly(registry || []).filter(function (entry) {
       return entry && entry.id && !isSurveyDeleted(entry.id);
     });
-    var remote = await fetchAllSurveysFromConfigSheet();
-    return mergeRegistryWithConfigSurveys(registry, remote);
+    return dedupeRegistryEntries(registry);
   }
 
   async function fetchSurveyFromConfigSheet(surveyId, spreadsheetId) {
@@ -1077,6 +1060,8 @@
     deleteSurveyOnServer: deleteSurveyOnServer,
     purgeSurveyFromServer: purgeSurveyFromServer,
     dedupeRegistryEntries: dedupeRegistryEntries,
+    filterSheetEntriesOnly: filterSheetEntriesOnly,
+    isSheetRegistryEntry: isSheetRegistryEntry,
     markSurveyDeleted: markSurveyDeleted,
     unmarkSurveyDeleted: unmarkSurveyDeleted,
     isSurveyDeleted: isSurveyDeleted,

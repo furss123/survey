@@ -2013,13 +2013,13 @@
           <div id="surveyListGroups">
             <section class="survey-list-group" aria-labelledby="activeSurveyHeading">
               <h3 class="survey-list-heading" id="activeSurveyHeading">진행중인 설문</h3>
-              <p class="survey-list-hint">학생 설문은 참여 링크로 응답합니다. (메인에서는 진행 안내·미리보기만)</p>
+              <p class="survey-list-hint">구글 시트로 연결된 설문입니다. 버튼을 누르면 결과를 조회합니다.</p>
               <div id="activeSurveyGrid" class="sheet-btn-grid" role="group" aria-label="진행중인 설문"></div>
               <p id="activeEmptyHint" class="home-section-empty" hidden>진행중인 설문이 없습니다.</p>
             </section>
             <section class="survey-list-group" aria-labelledby="completedSurveyHeading">
               <h3 class="survey-list-heading survey-list-heading--done" id="completedSurveyHeading">완료된 설문</h3>
-              <p class="survey-list-hint">버튼을 누르면 반별 분석 결과를 표시합니다. 학생 참여는 종료됩니다.</p>
+              <p class="survey-list-hint">버튼을 누르면 반별 분석 결과를 표시합니다.</p>
               <div id="completedSurveyGrid" class="sheet-btn-grid" role="group" aria-label="완료된 설문"></div>
               <p id="completedEmptyHint" class="home-section-empty" hidden>완료된 설문이 없습니다.</p>
             </section>
@@ -3563,7 +3563,7 @@
 
   /** 메인 화면: 설문 이름만 (이과·문과 등), 반별 분리 없음 */
   function getHomeSurveyEntries() {
-    return loadSheetRegistry();
+    return SurveyForm.filterSheetEntriesOnly(loadSheetRegistry());
   }
 
   function getSheetLaunchEntries() {
@@ -3583,7 +3583,9 @@
       if (raw) {
         var parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          var cleaned = stripDefaultClassButtons(parsed);
+          var cleaned = SurveyForm.filterSheetEntriesOnly(
+            stripDefaultClassButtons(parsed)
+          );
           cleaned = SurveyForm.dedupeRegistryEntries(cleaned);
           if (cleaned.length !== parsed.length) saveSheetRegistry(cleaned);
           return cleaned;
@@ -3636,7 +3638,9 @@
           ? loadSheetRegistry()
           : await SurveyForm.refreshRegistryFromServer();
       if (token !== homeSurveyListRefreshToken) return;
+      merged = SurveyForm.filterSheetEntriesOnly(merged);
       saveSheetRegistry(merged);
+      SurveyForm.saveRegistry(merged);
       renderSheetButtonGrid();
       var parts = SurveyForm.partitionRegistryByStatus(merged);
       var time = new Date().toLocaleTimeString("ko-KR", {
@@ -3733,10 +3737,7 @@
   }
 
   function buildSurveyLaunchButtonHtml(entry, isCompleted) {
-    var tag =
-      entry.type === "form"
-        ? '<span class="sheet-launch-btn__tag">설문</span>'
-        : "";
+    var tag = "";
     if (isCompleted) {
       tag += '<span class="sheet-launch-btn__tag sheet-launch-btn__tag--done">완료</span>';
     }
@@ -3756,42 +3757,6 @@
     );
   }
 
-  function showActiveFormSurveyPanel(entry) {
-    if (!entry) return;
-    showResultsView();
-    var results = document.getElementById("results");
-    var participateUrl = SurveyForm.buildStudentRespondUrl(entry.id, location.href, entry);
-    results.innerHTML =
-      '<div class="active-survey-panel">' +
-      "<h2>" +
-      esc(entry.label || "설문") +
-      "</h2>" +
-      "<p>이 설문은 <strong>진행 중</strong>입니다. 학생은 참여 링크로 응답할 수 있습니다.</p>" +
-      '<p class="active-survey-url"><a href="' +
-      esc(participateUrl) +
-      '" target="_blank" rel="noopener">' +
-      esc(participateUrl) +
-      "</a></p>" +
-      '<div class="active-survey-actions">' +
-      '<button type="button" class="sheet-launch-btn" id="btnPreviewActiveForm">결과 미리보기</button>' +
-      '<button type="button" class="sheet-launch-btn" id="btnBackFromActive">목록으로</button>' +
-      "</div></div>";
-    results.classList.add("visible");
-    var previewBtn = document.getElementById("btnPreviewActiveForm");
-    var backBtn = document.getElementById("btnBackFromActive");
-    if (previewBtn) {
-      previewBtn.addEventListener("click", function () {
-        launchFormSurveyAnalysis(entry, previewBtn, null);
-      });
-    }
-    if (backBtn) {
-      backBtn.addEventListener("click", function () {
-        showHomeView();
-      });
-    }
-    results.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
   function bindSheetLaunchButtons(container, listMode) {
     if (!container) return;
     container.querySelectorAll(".sheet-launch-btn").forEach(function (btn) {
@@ -3799,14 +3764,6 @@
         var id = btn.getAttribute("data-sheet-id");
         var entry = findRegistryEntry(id);
         if (!entry) return;
-        if (
-          listMode === "active" &&
-          entry.type === "form" &&
-          !SurveyForm.isSurveyCompleted(entry)
-        ) {
-          showActiveFormSurveyPanel(entry);
-          return;
-        }
         launchSheetAnalysis(entry, btn);
       });
     });
@@ -3860,83 +3817,8 @@
     });
   }
 
-  async function launchFormSurveyAnalysis(entry, triggerBtn, restoreView) {
-    if (analysisInFlight) return;
-    if (!entry || entry.type !== "form") return launchSheetAnalysis(entry, triggerBtn, restoreView);
-    adminSetupMode = false;
-    adminSetupClasses = [];
-    document.body.classList.remove("admin-setup-mode");
-    setSiteHeaderAdminMode(false);
-    var setupPanelLaunch = document.getElementById("adminSetupPanel");
-    if (setupPanelLaunch) setupPanelLaunch.hidden = true;
-    currentLaunchEntry = entry;
-    var errorEl = document.getElementById("error");
-    if (errorEl) errorEl.hidden = true;
-    document.getElementById("results").classList.remove("visible");
-    document.getElementById("results").innerHTML = "";
-    teardownScrollStudentTracker();
-    setFabStackVisible(false);
-    analysisInFlight = true;
-    setSheetButtonsDisabled(true);
-    var prevLabel = triggerBtn ? triggerBtn.textContent : "";
-    if (triggerBtn) triggerBtn.textContent = "불러오는 중…";
-    try {
-      var masterRoster = await fetchClassRosterFromMaster();
-      var roster = (masterRoster || []).map(function (s) {
-        var banMatch = String(s.반 || "").match(/(\d+)/);
-        return {
-          반: banMatch ? parseInt(banMatch[1], 10) : null,
-          번호: s.번호,
-          이름: s.이름,
-          학번: s.학번 || "",
-        };
-      });
-      lastMultiResult = await SurveyForm.fetchFormResponsesAnalysis(entry, roster);
-      if (!entry.categories || !entry.categories.length) {
-        entry.categories = SurveyForm.questionCategories(entry);
-      }
-      activeSubjectView = "all";
-      activeClassFilter = null;
-      var launchSheets = lastMultiResult.sheets.filter(function (s) {
-        return !isListSheetTab(s.sheetName);
-      });
-      activeSheetView = launchSheets.length ? launchSheets[0].sheetName : "전체";
-      applyInitialClassView(entry, getClassTabsConfig());
-      ensureClassSelectionForResults();
-      applyRestoreView(
-        Object.assign({}, restoreView || {}, {
-          classFilter:
-            restoreView && restoreView.classFilter
-              ? restoreView.classFilter
-              : restoreView && restoreView.class
-                ? restoreView.class
-                : activeClassFilter,
-        })
-      );
-      var sheetId =
-        entry.responseSpreadsheetId || DEFAULT_RESPONSE_SHEET_ID;
-      renderResults(getActiveAnalysis(), sheetId, lastMultiResult);
-      syncViewUrl();
-      document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
-    } catch (err) {
-      showHomeView();
-      if (errorEl) {
-        errorEl.textContent = err.message || "응답을 불러오지 못했습니다.";
-        errorEl.hidden = false;
-      }
-      setFabStackVisible(false);
-    } finally {
-      analysisInFlight = false;
-      setSheetButtonsDisabled(false);
-      if (triggerBtn) triggerBtn.textContent = prevLabel || entry.label;
-    }
-  }
-
   async function launchSheetAnalysis(entry, triggerBtn, restoreView) {
     if (analysisInFlight) return;
-    if (entry && entry.type === "form") {
-      return launchFormSurveyAnalysis(entry, triggerBtn, restoreView);
-    }
     adminSetupMode = false;
     adminSetupClasses = [];
     document.body.classList.remove("admin-setup-mode");
