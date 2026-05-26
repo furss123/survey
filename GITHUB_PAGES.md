@@ -6,11 +6,10 @@
 
 1. [survey 저장소 → Settings → Pages](https://github.com/furss123/survey/settings/pages)
 2. **Build and deployment**
-   - Source: **Deploy from a branch**
-   - Branch: **`index`** (필수 — `main`은 예전 코드) / Folder: **`/ (root)`**
-   - ⚠️ `main`으로 두면 관리자 화면·삭제 수정이 반영되지 않습니다.
+   - Source: **GitHub Actions** (권장 — `index` push마다 자동 배포)
+   - 또는 **Deploy from a branch** → Branch: **`index`** 또는 **`main`** (둘 다 `index`와 동기화됨) / Folder: **`/ (root)`**
 3. **Save**
-4. 1~10분 후 위 URL 접속
+4. 1~5분 후 위 URL 접속 (최초 Actions 배포는 워크플로 한 번 실행 필요)
 
 배포에 포함되는 파일(브랜치 루트):
 

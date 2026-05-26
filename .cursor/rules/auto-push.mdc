@@ -18,8 +18,10 @@ alwaysApply: true
 1. `git status`와 `git diff`로 변경 범위 확인
 2. 관련 파일만 `git add` (`.env`, 비밀·자격증명 파일 제외)
 3. 변경 **목적(why)** 이 드러나는 **한국어** 커밋 메시지로 `git commit`
-4. **`git push origin index`** 실행 (GitHub Pages 배포 브랜치)
-5. push 성공 여부 확인 후, 배포 URL을 사용자에게 안내: https://furss123.github.io/survey/
+4. **`git push origin index`** 실행
+5. **`git push origin index:main --force-with-lease`** 로 `main` 동기화 (실패 시 `--force`) — Pages가 `main`이어도 반영
+6. `.github/workflows/deploy-pages.yml` 이 `index` push 시 Pages 자동 배포 (Settings → Pages → Source: **GitHub Actions** 권장)
+7. push 성공 여부 확인 후, 배포 URL 안내: https://furss123.github.io/survey/
 
 ## 규칙
 

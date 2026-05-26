@@ -1336,11 +1336,11 @@
         }
       }
       await refreshAdminRegistryList({
-        sync: true,
+        sync: false,
         message:
           warnings.length > 0
             ? "삭제 반영 완료. " + warnings[0]
-            : "삭제를 반영하고 목록을 맞췄습니다.",
+            : "삭제를 반영하고 목록에 반영했습니다.",
         kind: warnings.length > 0 ? "is-warn" : "is-ok",
       });
     } catch (err) {
