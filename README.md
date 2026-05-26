@@ -1,20 +1,18 @@
 # 2026 남악고 1학년 설문 결과
 
-- **공개 URL**: https://furss123.github.io/survey/
-- **배포**: GitHub Pages (`index` 브랜치, 루트)
-- **파일**: `index.html`, `assets/`, `.nojekyll`
+- **메인(공개)**: [https://furss123.github.io/survey/](https://furss123.github.io/survey/) → `index.html`
+- **관리자**: [admin-login.html](./admin-login.html) → [admin.html](./admin.html)
+- **배포**: GitHub Pages (`index` / `main` / `gh-pages` 브랜치, 루트)
 
-자세한 설정은 [GITHUB_PAGES.md](./GITHUB_PAGES.md) 참고.
+## 사이트 구성
 
-## 로컬 CSV/Excel 분석 (진로 설문)
+| 파일 | 용도 |
+|------|------|
+| `index.html` | 설문 결과 조회 (메인) |
+| `admin-login.html` | 관리자 로그인 |
+| `admin.html` | 구글 시트 설문 등록·삭제 |
+| `scripts/survey-form-shared.js` | 목록·동기화·삭제 |
+| `scripts/admin-session.js` | 관리자 세션 |
+| `assets/` | 로고 등 |
 
-Google Forms 보내기 파일을 반별·전공 계열로 정리할 때:
-
-```bash
-pip install -r scripts/requirements.txt
-python scripts/analyze_survey.py path/to/export.csv
-```
-
-- Excel: `survey_result_YYYYMMDD.xlsx` (`전체_요약` + 반별 시트)
-- Markdown: `{파일명}_analysis.md`
-- 규격·Cursor 규칙: [docs/survey_analysis_meta_prompt.md](./docs/survey_analysis_meta_prompt.md)
+배포 설정: [GITHUB_PAGES.md](./GITHUB_PAGES.md)
