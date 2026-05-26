@@ -536,6 +536,52 @@
       padding: 0;
       list-style: none;
     }
+    .registry-bulk-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 14px;
+      margin-top: var(--space-4);
+      padding: 10px 12px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-md);
+      background: var(--theme-bg-panel);
+      font-size: var(--text-sm);
+    }
+    .registry-bulk-bar label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--theme-text);
+    }
+    .registry-bulk-bar input[type="checkbox"] {
+      width: 1.05rem;
+      height: 1.05rem;
+      margin: 0;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .registry-bulk-count {
+      color: var(--theme-text-muted);
+      font-size: var(--text-sm);
+    }
+    .registry-select {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+      margin: 0;
+      padding: 2px 4px 2px 0;
+      cursor: pointer;
+    }
+    .registry-select input[type="checkbox"] {
+      width: 1.1rem;
+      height: 1.1rem;
+      margin: 0;
+      cursor: pointer;
+    }
     .admin-registry-list li {
       display: flex;
       align-items: center;
@@ -721,6 +767,21 @@
             </div>
           </form>
           <div id="adminRegistryGroups">
+            <div class="registry-bulk-bar" id="adminRegistryBulkBar" hidden>
+              <label>
+                <input type="checkbox" id="adminRegistrySelectAll" />
+                <span>전체 선택</span>
+              </label>
+              <button
+                type="button"
+                class="admin-btn admin-btn-danger"
+                id="adminRegistryBulkDelete"
+                disabled
+              >
+                선택 삭제
+              </button>
+              <span class="registry-bulk-count" id="adminRegistryBulkCount" aria-live="polite"></span>
+            </div>
             <h3 class="registry-section-title">진행중인 설문</h3>
             <ul id="adminRegistryListActive" class="admin-registry-list" aria-label="진행중인 설문"></ul>
             <p id="adminRegistryActiveEmpty" class="registry-section-empty" hidden>진행중인 설문이 없습니다.</p>
@@ -1057,6 +1118,82 @@
     saveSheetRegistry(registry);
   }
 
+  function getSelectedRegistryIds() {
+    var ids = [];
+    document.querySelectorAll(".registry-select-cb:checked").forEach(function (cb) {
+      var id = cb.getAttribute("data-select-id");
+      if (id) ids.push(id);
+    });
+    return ids;
+  }
+
+  function updateBulkDeleteUi() {
+    var bulkBar = document.getElementById("adminRegistryBulkBar");
+    var btn = document.getElementById("adminRegistryBulkDelete");
+    var countEl = document.getElementById("adminRegistryBulkCount");
+    var selectAll = document.getElementById("adminRegistrySelectAll");
+    var allCbs = document.querySelectorAll(".registry-select-cb");
+    var ids = getSelectedRegistryIds();
+    if (bulkBar) bulkBar.hidden = !allCbs.length;
+    if (btn) {
+      btn.disabled = ids.length === 0;
+      btn.textContent = ids.length ? "선택 삭제 (" + ids.length + ")" : "선택 삭제";
+    }
+    if (countEl) {
+      countEl.textContent = ids.length ? ids.length + "개 선택됨" : "";
+    }
+    if (selectAll) {
+      selectAll.checked = allCbs.length > 0 && ids.length === allCbs.length;
+      selectAll.indeterminate = ids.length > 0 && ids.length < allCbs.length;
+    }
+  }
+
+  async function deleteRegistryEntries(ids) {
+    if (!ids || !ids.length) return;
+    var label = ids.length === 1 ? "이 항목을" : "선택한 " + ids.length + "개 항목을";
+    if (!confirm(label + " 목록에서 삭제할까요?")) return;
+    if (editingSheetId && ids.indexOf(editingSheetId) >= 0) cancelEditSheet();
+
+    var prev = loadSheetRegistry();
+    var toDelete = prev.filter(function (item) {
+      return ids.indexOf(item.id) >= 0;
+    });
+    var next = prev.filter(function (item) {
+      return ids.indexOf(item.id) < 0;
+    });
+    saveSheetRegistry(next);
+    renderAdminRegistryList();
+
+    var formEntries = toDelete.filter(function (entry) {
+      return entry.type === "form";
+    });
+    if (!formEntries.length) return;
+
+    formEntries.forEach(function (entry) {
+      SurveyForm.markSurveyDeleted(entry.id);
+    });
+    var bulkBtn = document.getElementById("adminRegistryBulkDelete");
+    if (bulkBtn) bulkBtn.disabled = true;
+    try {
+      for (var i = 0; i < formEntries.length; i++) {
+        var result = await SurveyForm.deleteSurveyOnServer(formEntries[i]);
+        if (result && result.ok === false) {
+          throw new Error(result.error || "서버 삭제에 실패했습니다.");
+        }
+        SurveyForm.unmarkSurveyDeleted(formEntries[i].id);
+      }
+    } catch (err) {
+      saveSheetRegistry(prev);
+      formEntries.forEach(function (entry) {
+        SurveyForm.unmarkSurveyDeleted(entry.id);
+      });
+      renderAdminRegistryList();
+      alert((err && err.message) || "삭제에 실패했습니다.");
+    } finally {
+      updateBulkDeleteUi();
+    }
+  }
+
   function buildRegistryItemHtml(item) {
     var isForm = item.type === "form";
     var isCompleted = SurveyForm.isSurveyCompleted(item);
@@ -1064,7 +1201,11 @@
       ? "학생 설문 · " + (item.webAppUrl ? "제출 연동됨" : "웹 앱 URL 미설정")
       : item.url;
     var html =
-      "<li><div class=\"registry-meta\"><strong>" +
+      "<li><label class=\"registry-select\"><input type=\"checkbox\" class=\"registry-select-cb\" data-select-id=\"" +
+      esc(item.id) +
+      "\" /><span class=\"visually-hidden\">" +
+      esc(item.label || "설문") +
+      " 선택</span></label><div class=\"registry-meta\"><strong>" +
       esc(item.label) +
       (isForm ? " <span style=\"font-size:0.75em;opacity:0.85\">(설문)</span>" : "") +
       (isCompleted ? " <span style=\"font-size:0.75em;opacity:0.85\">(완료)</span>" : "") +
@@ -1189,39 +1330,16 @@
         renderAdminRegistryList();
       });
     });
+    listEl.querySelectorAll(".registry-select-cb").forEach(function (cb) {
+      cb.addEventListener("change", updateBulkDeleteUi);
+    });
     listEl.querySelectorAll("[data-delete-id]").forEach(function (btn) {
-      btn.addEventListener("click", async function () {
+      btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-delete-id");
-        if (!confirm("이 시트를 목록에서 삭제할까요?")) return;
-        if (editingSheetId === id) cancelEditSheet();
-        var prev = loadSheetRegistry();
-        var entry = prev.find(function (item) {
-          return item.id === id;
-        });
-        var next = prev.filter(function (item) {
-          return item.id !== id;
-        });
-        saveSheetRegistry(next);
-        renderAdminRegistryList();
-        if (!entry || entry.type !== "form") return;
-        SurveyForm.markSurveyDeleted(id);
-        btn.disabled = true;
-        try {
-          var result = await SurveyForm.deleteSurveyOnServer(entry);
-          if (result && result.ok === false) {
-            throw new Error(result.error || "서버 삭제에 실패했습니다.");
-          }
-          SurveyForm.unmarkSurveyDeleted(id);
-        } catch (err) {
-          saveSheetRegistry(prev);
-          SurveyForm.unmarkSurveyDeleted(id);
-          renderAdminRegistryList();
-          alert((err && err.message) || "삭제에 실패했습니다.");
-        } finally {
-          btn.disabled = false;
-        }
+        if (id) deleteRegistryEntries([id]);
       });
     });
+    updateBulkDeleteUi();
   }
 
   function renderRegistrySection(listEl, emptyEl, items) {
@@ -1253,7 +1371,27 @@
     var parts = SurveyForm.partitionRegistryByStatus(registry);
     renderRegistrySection(activeList, activeEmpty, parts.active);
     renderRegistrySection(completedList, completedEmpty, parts.completed);
+    updateBulkDeleteUi();
   }
+
+  (function initRegistryBulkActions() {
+    var selectAll = document.getElementById("adminRegistrySelectAll");
+    var bulkDelete = document.getElementById("adminRegistryBulkDelete");
+    if (selectAll) {
+      selectAll.addEventListener("change", function () {
+        var checked = selectAll.checked;
+        document.querySelectorAll(".registry-select-cb").forEach(function (cb) {
+          cb.checked = checked;
+        });
+        updateBulkDeleteUi();
+      });
+    }
+    if (bulkDelete) {
+      bulkDelete.addEventListener("click", function () {
+        deleteRegistryEntries(getSelectedRegistryIds());
+      });
+    }
+  })();
 
   (function initTheme() {
     var key = "school-theme-v1";
