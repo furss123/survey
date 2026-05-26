@@ -568,6 +568,42 @@
       color: var(--theme-text-muted);
       font-size: var(--text-sm);
     }
+    .admin-registry-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      margin-top: var(--space-4);
+    }
+    .admin-registry-status {
+      flex: 1;
+      min-width: 12rem;
+      margin: 0;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--theme-text-muted);
+    }
+    .admin-registry-status.is-ok {
+      color: #047857;
+    }
+    .admin-registry-status.is-warn {
+      color: var(--danger-text);
+    }
+    .admin-registry-status.is-busy {
+      color: var(--theme-heading);
+    }
+    #adminRegistryGroups.is-refreshing {
+      opacity: 0.55;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    #adminRegistryGroups.is-flash {
+      animation: registry-flash 0.55s ease;
+    }
+    @keyframes registry-flash {
+      0% { box-shadow: 0 0 0 0 rgba(74, 122, 176, 0.45); }
+      100% { box-shadow: 0 0 0 10px rgba(74, 122, 176, 0); }
+    }
     .registry-select {
       display: inline-flex;
       align-items: center;
@@ -766,6 +802,10 @@
               <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>
             </div>
           </form>
+          <div class="admin-registry-toolbar">
+            <button type="button" class="admin-btn" id="adminRegistryRefreshBtn">목록 새로고침</button>
+            <p class="admin-registry-status" id="adminRegistryStatus" role="status" aria-live="polite"></p>
+          </div>
           <div id="adminRegistryGroups">
             <div class="registry-bulk-bar" id="adminRegistryBulkBar" hidden>
               <label>
@@ -1129,6 +1169,73 @@
     return ids;
   }
 
+  var adminRegistryRefreshToken = 0;
+
+  function setAdminRegistryStatus(text, kind) {
+    var el = document.getElementById("adminRegistryStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.remove("is-ok", "is-warn", "is-busy");
+    if (kind) el.classList.add(kind);
+  }
+
+  function flashAdminRegistryGroups() {
+    var groups = document.getElementById("adminRegistryGroups");
+    if (!groups) return;
+    groups.classList.remove("is-flash");
+    void groups.offsetWidth;
+    groups.classList.add("is-flash");
+    window.setTimeout(function () {
+      groups.classList.remove("is-flash");
+    }, 600);
+  }
+
+  async function refreshAdminRegistryList(options) {
+    options = options || {};
+    var token = ++adminRegistryRefreshToken;
+    var groups = document.getElementById("adminRegistryGroups");
+    var refreshBtn = document.getElementById("adminRegistryRefreshBtn");
+    if (groups) groups.classList.add("is-refreshing");
+    if (refreshBtn) refreshBtn.disabled = true;
+    setAdminRegistryStatus(
+      options.loadingMessage || "목록을 서버와 맞추는 중…",
+      "is-busy"
+    );
+    try {
+      if (options.sync !== false) {
+        var merged = await SurveyForm.refreshRegistryFromServer();
+        saveSheetRegistry(merged);
+      }
+      if (token !== adminRegistryRefreshToken) return;
+      renderAdminRegistryList();
+      var count = loadSheetRegistry().length;
+      var time = new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      setAdminRegistryStatus(
+        options.message ||
+          "목록을 반영했습니다. (" + count + "개 · " + time + ")",
+        options.kind || "is-ok"
+      );
+      flashAdminRegistryGroups();
+    } catch (err) {
+      if (token === adminRegistryRefreshToken) {
+        renderAdminRegistryList();
+        setAdminRegistryStatus(
+          (err && err.message) || "목록 새로고침에 실패했습니다.",
+          "is-warn"
+        );
+      }
+    } finally {
+      if (token === adminRegistryRefreshToken) {
+        if (groups) groups.classList.remove("is-refreshing");
+        if (refreshBtn) refreshBtn.disabled = false;
+      }
+    }
+  }
+
   function updateBulkDeleteUi() {
     var bulkBar = document.getElementById("adminRegistryBulkBar");
     var btn = document.getElementById("adminRegistryBulkDelete");
@@ -1169,7 +1276,11 @@
     });
     saveSheetRegistry(next);
     SurveyForm.saveRegistry(next);
-    renderAdminRegistryList();
+    await refreshAdminRegistryList({
+      sync: false,
+      loadingMessage: "삭제 반영 중…",
+      message: "목록에서 삭제했습니다. 서버와 맞추는 중…",
+    });
 
     var formEntries = toDelete.filter(function (entry) {
       return entry.type === "form";
@@ -1188,7 +1299,20 @@
       if (bulkBtn) bulkBtn.disabled = false;
       updateBulkDeleteUi();
     }
+    await refreshAdminRegistryList({
+      sync: true,
+      message:
+        ids.length +
+        "개 삭제 완료 · 목록 새로고침 (" +
+        loadSheetRegistry().length +
+        "개 남음)",
+      kind: warnings.length ? "is-warn" : "is-ok",
+    });
     if (warnings.length) {
+      setAdminRegistryStatus(
+        "삭제했으나 서버 확인 필요: " + warnings[0],
+        "is-warn"
+      );
       alert(
         "목록에서는 삭제했습니다.\n\n다음 항목을 확인해 주세요:\n• " +
           warnings.join("\n• ")
@@ -1316,8 +1440,9 @@
       });
     });
     listEl.querySelectorAll("[data-status-id]").forEach(function (sel) {
-      sel.addEventListener("change", function () {
+      sel.addEventListener("change", async function () {
         var id = sel.getAttribute("data-status-id");
+        var prevValue = sel.value === "completed" ? "active" : "completed";
         var next = sel.value === "completed" ? "completed" : "active";
         if (next === "completed") {
           if (
@@ -1329,8 +1454,26 @@
             return;
           }
         }
-        SurveyForm.setSurveyStatus(id, next);
-        renderAdminRegistryList();
+        sel.disabled = true;
+        try {
+          await SurveyForm.setSurveyStatusAsync(id, next);
+          await refreshAdminRegistryList({
+            sync: true,
+            message:
+              "상태를 「" +
+              (next === "completed" ? "완료" : "진행중") +
+              "」로 반영했습니다.",
+          });
+        } catch (err) {
+          sel.value = prevValue;
+          setAdminRegistryStatus(
+            (err && err.message) || "상태 변경에 실패했습니다.",
+            "is-warn"
+          );
+          alert((err && err.message) || "상태 변경에 실패했습니다.");
+        } finally {
+          sel.disabled = false;
+        }
       });
     });
     listEl.querySelectorAll(".registry-select-cb").forEach(function (cb) {
@@ -1376,6 +1519,30 @@
     renderRegistrySection(completedList, completedEmpty, parts.completed);
     updateBulkDeleteUi();
   }
+
+  (function initRegistryLiveRefresh() {
+    var refreshBtn = document.getElementById("adminRegistryRefreshBtn");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", function () {
+        refreshAdminRegistryList({ sync: true });
+      });
+    }
+    window.addEventListener("pageshow", function () {
+      refreshAdminRegistryList({ sync: true });
+    });
+    window.addEventListener("storage", function (e) {
+      if (e.key === SHEET_REGISTRY_KEY || e.key === SurveyForm.REGISTRY_KEY) {
+        refreshAdminRegistryList({ sync: false });
+      }
+    });
+    window.addEventListener("survey-registry-updated", function () {
+      refreshAdminRegistryList({ sync: false });
+    });
+    if (new URLSearchParams(location.search).get("refresh") === "1") {
+      history.replaceState({}, "", "admin.html");
+      refreshAdminRegistryList({ sync: true, message: "설문 저장 내용을 반영했습니다." });
+    }
+  })();
 
   (function initRegistryBulkActions() {
     var selectAll = document.getElementById("adminRegistrySelectAll");
@@ -1493,7 +1660,7 @@
   if (!AdminSession.require()) return;
 
   initRosterModal();
-  renderAdminRegistryList();
+  refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
   bindSurveyNameField();
 
   document.getElementById("adminLogoutBtn").addEventListener("click", function () {

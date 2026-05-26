@@ -259,11 +259,24 @@
       completedAt: completed ? Date.now() : null,
     });
     saveRegistry(list);
-    var entry = list[idx];
+    return list[idx];
+  }
+
+  async function setSurveyStatusAsync(id, status) {
+    var entry = setSurveyStatus(id, status);
     if (entry && entry.type === "form" && resolveWebAppUrl(entry)) {
-      registerSurveyOnServer(entry).catch(function () { /* 백그라운드 동기화 */ });
+      var sync = await registerSurveyOnServer(entry);
+      if (sync && sync.ok === false) {
+        throw new Error(sync.error || "서버에 상태를 반영하지 못했습니다.");
+      }
     }
     return entry;
+  }
+
+  async function refreshRegistryFromServer() {
+    var merged = await syncRegistryFromConfigSheet(loadRegistry());
+    saveRegistry(merged);
+    return merged;
   }
 
   function partitionRegistryByStatus(registry) {
@@ -1046,6 +1059,8 @@
     isSurveyCompleted: isSurveyCompleted,
     defaultSurveyStatus: defaultSurveyStatus,
     setSurveyStatus: setSurveyStatus,
+    setSurveyStatusAsync: setSurveyStatusAsync,
+    refreshRegistryFromServer: refreshRegistryFromServer,
     partitionRegistryByStatus: partitionRegistryByStatus,
     findSurvey: findSurvey,
     parseStudentId: parseStudentId,

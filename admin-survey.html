@@ -288,11 +288,12 @@
       btnSave.textContent = "등록 중…";
       showStatus("서버에 설문을 등록하는 중…", true);
       await SurveyForm.registerSurveyReliably(entry);
-      showStatus(
+      statusMsg.hidden = false;
+      statusMsg.className = "msg ok";
+      statusMsg.innerHTML =
         "메인 목록·서버(Config 시트)에 등록되었습니다. 상태: " +
-          (entry.surveyStatus === "completed" ? "완료" : "진행중"),
-        true
-      );
+        (entry.surveyStatus === "completed" ? "완료" : "진행중") +
+        ' — <a href="admin.html?refresh=1">관리자 목록에서 확인</a>';
     } catch (err) {
       showStatus(err.message || "등록에 실패했습니다.", false);
     } finally {

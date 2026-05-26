@@ -497,6 +497,39 @@
       text-align: center;
     }
     .home-section-empty[hidden] { display: none !important; }
+    .home-list-status {
+      margin: 8px 0 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--theme-text-muted);
+    }
+    .home-list-status.is-ok { color: #047857; }
+    .home-list-status.is-busy { color: var(--theme-heading); }
+    #surveyListGroups.is-refreshing {
+      opacity: 0.55;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    #surveyListGroups.is-flash {
+      animation: home-list-flash 0.55s ease;
+    }
+    @keyframes home-list-flash {
+      0% { box-shadow: 0 0 0 0 rgba(74, 122, 176, 0.45); }
+      100% { box-shadow: 0 0 0 10px rgba(74, 122, 176, 0); }
+    }
+    .home-refresh-btn {
+      margin-left: auto;
+      margin-right: 8px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid var(--theme-border);
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      cursor: pointer;
+      font-family: inherit;
+    }
     .survey-list-hint {
       margin: -4px 0 10px;
       font-size: var(--text-sm);
@@ -1973,8 +2006,10 @@
         <section class="panel-section">
           <div class="section-head-row">
             <div class="section-label section-label--inline">설문 목록</div>
+            <button type="button" class="home-refresh-btn" id="homeListRefreshBtn">목록 새로고침</button>
             <a href="admin-login.html" class="admin-entry-btn admin-entry-link">관리자</a>
           </div>
+          <p id="homeListStatus" class="home-list-status" role="status" aria-live="polite"></p>
           <div id="surveyListGroups">
             <section class="survey-list-group" aria-labelledby="activeSurveyHeading">
               <h3 class="survey-list-heading" id="activeSurveyHeading">진행중인 설문</h3>
@@ -3567,16 +3602,72 @@
 
   var homeSurveyListRefreshToken = 0;
 
-  async function refreshHomeSurveyList() {
+  function setHomeListStatus(text, kind) {
+    var el = document.getElementById("homeListStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.remove("is-ok", "is-busy");
+    if (kind) el.classList.add(kind);
+  }
+
+  function flashHomeSurveyList() {
+    var groups = document.getElementById("surveyListGroups");
+    if (!groups) return;
+    groups.classList.remove("is-flash");
+    void groups.offsetWidth;
+    groups.classList.add("is-flash");
+    window.setTimeout(function () {
+      groups.classList.remove("is-flash");
+    }, 600);
+  }
+
+  async function refreshHomeSurveyList(options) {
+    options = options || {};
     var token = ++homeSurveyListRefreshToken;
+    var groups = document.getElementById("surveyListGroups");
+    var refreshBtn = document.getElementById("homeListRefreshBtn");
+    if (groups) groups.classList.add("is-refreshing");
+    if (refreshBtn) refreshBtn.disabled = true;
+    setHomeListStatus(options.loadingMessage || "목록 새로고침 중…", "is-busy");
     renderSheetButtonGrid();
     try {
-      var merged = await SurveyForm.syncRegistryFromConfigSheet(loadSheetRegistry());
+      var merged =
+        options.sync === false
+          ? loadSheetRegistry()
+          : await SurveyForm.refreshRegistryFromServer();
       if (token !== homeSurveyListRefreshToken) return;
       saveSheetRegistry(merged);
       renderSheetButtonGrid();
+      var parts = SurveyForm.partitionRegistryByStatus(merged);
+      var time = new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      setHomeListStatus(
+        options.message ||
+          "반영 완료 · 진행 " +
+            parts.active.length +
+            " / 완료 " +
+            parts.completed.length +
+            " · " +
+            time,
+        "is-ok"
+      );
+      flashHomeSurveyList();
     } catch (err) {
-      if (token === homeSurveyListRefreshToken) renderSheetButtonGrid();
+      if (token === homeSurveyListRefreshToken) {
+        renderSheetButtonGrid();
+        setHomeListStatus(
+          (err && err.message) || "목록을 불러오지 못했습니다.",
+          ""
+        );
+      }
+    } finally {
+      if (token === homeSurveyListRefreshToken) {
+        if (groups) groups.classList.remove("is-refreshing");
+        if (refreshBtn) refreshBtn.disabled = false;
+      }
     }
   }
 
@@ -5873,15 +5964,26 @@
   window.addEventListener("resize", scheduleHeaderTitleFit);
   window.addEventListener("load", scheduleHeaderTitleFit);
 
-  refreshHomeSurveyList();
+  refreshHomeSurveyList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
+  var homeListRefreshBtn = document.getElementById("homeListRefreshBtn");
+  if (homeListRefreshBtn) {
+    homeListRefreshBtn.addEventListener("click", function () {
+      refreshHomeSurveyList({ sync: true });
+    });
+  }
   window.addEventListener("pageshow", function () {
-    refreshHomeSurveyList();
+    refreshHomeSurveyList({ sync: true });
+  });
+  window.addEventListener("focus", function () {
+    refreshHomeSurveyList({ sync: true });
   });
   window.addEventListener("survey-registry-updated", function () {
-    refreshHomeSurveyList();
+    refreshHomeSurveyList({ sync: true });
   });
   window.addEventListener("storage", function (e) {
-    if (e.key === SHEET_REGISTRY_KEY) refreshHomeSurveyList();
+    if (e.key === SHEET_REGISTRY_KEY || e.key === SurveyForm.REGISTRY_KEY) {
+      refreshHomeSurveyList({ sync: true });
+    }
   });
 
   document.getElementById("adminSetupConfirm").addEventListener("click", function () {
