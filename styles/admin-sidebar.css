@@ -3,7 +3,7 @@
   width: 100%;
   max-width: var(--content-max, 980px);
   margin: 0 auto;
-  padding: var(--space-5, 20px) var(--content-pad, 20px) var(--space-6, 24px);
+  padding: var(--space-5, 20px) var(--content-pad, 20px) calc(var(--space-6, 24px) + var(--site-footer-h, 32px));
 }
 .admin-app-grid {
   display: grid;

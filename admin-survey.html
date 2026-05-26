@@ -326,6 +326,7 @@
       <div class="actions">
         <button type="button" class="btn btn-primary" id="btnSave">메인에 등록</button>
         <button type="button" class="btn" id="btnSyncServer">서버에 설문 동기화</button>
+        <button type="button" class="btn btn-danger" id="btnDeleteSurvey" hidden>목록에서 설문 삭제</button>
       </div>
       <p class="msg" id="statusMsg" hidden></p>
       <div class="link-box" id="studentLinkBox" hidden>
@@ -369,6 +370,10 @@
 
   var editId = new URLSearchParams(location.search).get("edit");
   var questionList = document.getElementById("questionList");
+
+  function registryIdsMatch(a, b) {
+    return String(a == null ? "" : a) === String(b == null ? "" : b);
+  }
   var statusMsg = document.getElementById("statusMsg");
   var rosterState = {
     source: "",
@@ -706,7 +711,9 @@
     try {
       var entry = buildEntry();
       var list = SurveyForm.loadRegistry();
-      var idx = list.findIndex(function (x) { return x.id === entry.id; });
+      var idx = list.findIndex(function (x) {
+        return registryIdsMatch(x && x.id, entry.id);
+      });
       if (idx >= 0) list[idx] = Object.assign({}, list[idx], entry);
       else list.push(entry);
       SurveyForm.saveRegistry(list);
@@ -718,6 +725,31 @@
       showStatus(err.message, false);
     }
   });
+
+  var btnDeleteSurvey = document.getElementById("btnDeleteSurvey");
+  if (editId && btnDeleteSurvey) btnDeleteSurvey.hidden = false;
+  if (btnDeleteSurvey) {
+    btnDeleteSurvey.addEventListener("click", function () {
+      if (!editId) return;
+      if (
+        !confirm(
+          "이 설문을 관리자 목록에서 삭제할까요?\n(이미 저장된 응답·서버 Config 시트는 그대로 남습니다.)"
+        )
+      ) {
+        return;
+      }
+      var list = SurveyForm.loadRegistry();
+      var next = list.filter(function (item) {
+        return !registryIdsMatch(item && item.id, editId);
+      });
+      if (next.length === list.length) {
+        showStatus("삭제할 설문을 찾지 못했습니다.", false);
+        return;
+      }
+      SurveyForm.saveRegistry(next);
+      location.href = "admin.html";
+    });
+  }
 
   document.getElementById("btnSyncServer").addEventListener("click", async function () {
     try {

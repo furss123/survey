@@ -3474,9 +3474,13 @@
     localStorage.setItem(SHEET_REGISTRY_KEY, JSON.stringify(registry));
   }
 
+  function registryIdsMatch(a, b) {
+    return String(a == null ? "" : a) === String(b == null ? "" : b);
+  }
+
   function findRegistryEntry(id) {
     return loadSheetRegistry().find(function (item) {
-      return item.id === id;
+      return registryIdsMatch(item && item.id, id);
     });
   }
 
@@ -3486,7 +3490,7 @@
     if (String(id).indexOf("::") >= 0) {
       var parts = String(id).split("::");
       var base = registry.find(function (item) {
-        return item.id === parts[0];
+        return registryIdsMatch(item && item.id, parts[0]);
       });
       if (!base) return null;
       var cls = (base.classes || []).find(function (c) {
@@ -3505,7 +3509,7 @@
     }
     return (
       registry.find(function (item) {
-        return item.id === id;
+        return registryIdsMatch(item && item.id, id);
       }) || null
     );
   }
@@ -4603,7 +4607,7 @@
     };
     if (adminSetupEditId) {
       var idx = registry.findIndex(function (item) {
-        return item.id === adminSetupEditId;
+        return registryIdsMatch(item && item.id, adminSetupEditId);
       });
       if (idx < 0) {
         alert("수정할 시트를 찾을 수 없습니다.");

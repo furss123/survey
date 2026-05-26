@@ -98,7 +98,7 @@
     }
     body {
       margin: 0;
-      padding: 0 0 var(--site-footer-h);
+      padding: 0 0 calc(var(--site-footer-h) + 20px);
       font-family: "Pretendard", "Malgun Gothic", sans-serif;
       font-size: 1rem;
       line-height: 1.55;
@@ -514,8 +514,14 @@
         flex-wrap: wrap;
         align-items: flex-start;
       }
-      .section-head-row .admin-btn-logout {
+      .section-head-row .section-head-actions {
         margin-left: auto;
+      }
+      .section-head-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
       }
       .admin-registry-list li { flex-direction: column; align-items: stretch; }
     }
@@ -606,7 +612,10 @@
           <section class="panel-section">
             <div class="section-head-row">
               <div class="section-label">시트 등록·관리</div>
-              <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
+              <div class="section-head-actions">
+                <button type="button" class="admin-btn admin-btn-danger" id="adminClearAllBtn">등록 전체 삭제</button>
+                <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
+              </div>
             </div>
             <div id="adminPanel">
               <div class="roster-box">
@@ -695,25 +704,53 @@
     throw new Error("스프레드시트 ID를 URL에서 찾을 수 없습니다.");
   }
 
+  function stripDefaultClassButtons(registry) {
+    if (!Array.isArray(registry)) return [];
+    return registry.filter(function (item) {
+      return !/^class-[1-8]$/.test(String(item && item.id || ""));
+    });
+  }
+
+  function registryIdsMatch(a, b) {
+    return String(a == null ? "" : a) === String(b == null ? "" : b);
+  }
+
   function loadSheetRegistry() {
     try {
       var raw = localStorage.getItem(SHEET_REGISTRY_KEY);
       if (raw) {
         var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          var cleaned = stripDefaultClassButtons(parsed);
+          if (cleaned.length !== parsed.length) saveSheetRegistry(cleaned);
+          return cleaned;
+        }
       }
     } catch (err) { /* ignore */ }
     return [];
   }
 
   function saveSheetRegistry(registry) {
-    localStorage.setItem(SHEET_REGISTRY_KEY, JSON.stringify(registry));
+    try {
+      localStorage.setItem(SHEET_REGISTRY_KEY, JSON.stringify(registry));
+    } catch (err) {
+      alert("목록을 저장하지 못했습니다. 브라우저 저장 공간·개인정보 보호 모드를 확인해 주세요.");
+      throw err;
+    }
   }
 
   function findRegistryEntry(id) {
     return loadSheetRegistry().find(function (item) {
-      return item.id === id;
+      return registryIdsMatch(item && item.id, id);
     });
+  }
+
+  function clearAllSheetRegistry() {
+    saveSheetRegistry([]);
+    try {
+      sessionStorage.removeItem(ADMIN_SETUP_DRAFT_KEY);
+    } catch (err) { /* ignore */ }
+    if (editingSheetId) cancelEditSheet();
   }
 
   var editingSheetId = null;
@@ -953,7 +990,7 @@
   function updateRegistryEntry(id, label, url) {
     var registry = loadSheetRegistry();
     var idx = registry.findIndex(function (item) {
-      return item.id === id;
+      return registryIdsMatch(item && item.id, id);
     });
     if (idx < 0) throw new Error("수정할 시트를 찾을 수 없습니다.");
     registry[idx] = Object.assign({}, registry[idx], { label: label, url: url });
@@ -1070,11 +1107,20 @@
       btn.addEventListener("click", function () {
         var id = btn.getAttribute("data-delete-id");
         if (!confirm("이 시트를 목록에서 삭제할까요?")) return;
-        if (editingSheetId === id) cancelEditSheet();
-        var next = loadSheetRegistry().filter(function (item) {
-          return item.id !== id;
+        if (registryIdsMatch(editingSheetId, id)) cancelEditSheet();
+        var prev = loadSheetRegistry();
+        var next = prev.filter(function (item) {
+          return !registryIdsMatch(item && item.id, id);
         });
-        saveSheetRegistry(next);
+        if (next.length === prev.length) {
+          alert("삭제할 항목을 찾지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.");
+          return;
+        }
+        try {
+          saveSheetRegistry(next);
+        } catch (err) {
+          return;
+        }
         renderAdminRegistryList();
       });
     });
@@ -1117,8 +1163,35 @@
     },
   });
 
+  (function clearAllFromQuery() {
+    if (new URLSearchParams(location.search).get("clearAll") !== "1") return;
+    history.replaceState({}, "", location.pathname);
+    var count = loadSheetRegistry().length;
+    if (!count) return;
+    if (!confirm("등록된 시트·설문 " + count + "개를 모두 삭제할까요?\n되돌릴 수 없습니다.")) return;
+    clearAllSheetRegistry();
+  })();
+
   renderAdminRegistryList();
   bindSurveyNameField();
+
+  document.getElementById("adminClearAllBtn").addEventListener("click", function () {
+    var count = loadSheetRegistry().length;
+    if (!count) {
+      alert("등록된 시트·설문이 없습니다.");
+      return;
+    }
+    if (
+      !confirm(
+        "등록된 시트·설문 " + count + "개를 모두 삭제할까요?\n메인 설문 목록에서도 사라집니다. 되돌릴 수 없습니다."
+      )
+    ) {
+      return;
+    }
+    clearAllSheetRegistry();
+    renderAdminRegistryList();
+    alert("등록 목록을 모두 비웠습니다.");
+  });
 
   document.getElementById("adminLogoutBtn").addEventListener("click", function () {
     AdminSession.clear();
