@@ -23,8 +23,8 @@ function Test-LiveSite([string]$body, [string]$expectedBuild) {
     if ($expectedBuild -and $liveBuild -eq $expectedBuild) {
         return @{ Ok = $true; LiveBuild = $liveBuild }
     }
-    $isNew = $body -match "ui-version: 20260526-dark-hover"
-    $isOld = $body -match "ui-version: 20260522"
+    $isNew = ($body -match "ui-version: 20260526-sheet-only") -or ($body -match "구글 시트로 연결")
+    $isOld = ($body -match "ui-version: 20260522") -or ($body -match "학생 설문은 참여")
     return @{
         Ok = $isNew -and -not $isOld
         LiveBuild = $liveBuild
