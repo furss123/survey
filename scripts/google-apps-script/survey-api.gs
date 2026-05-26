@@ -98,16 +98,34 @@ function registerSurvey_(survey) {
 function syncResponseHeaders_(survey) {
   var sheets = ensureSheets_();
   var resp = sheets.responses;
-  var header = resp.getRange(1, 1, 1, resp.getLastColumn()).getValues()[0];
+  var lastCol = Math.max(resp.getLastColumn(), 1);
+  var header = resp.getRange(1, 1, 1, lastCol).getValues()[0];
   var base = ["제출시각", "설문ID", "학번", "반", "번호", "이름"];
   var labels = (survey.questions || []).map(function (q) {
     return q.label || q.id;
   });
   var merged = base.concat(labels);
-  if (header.join("|") !== merged.join("|")) {
-    resp.clear();
-    resp.appendRow(merged);
+  if (header.join("|") === merged.join("|")) return;
+
+  var lastRow = resp.getLastRow();
+  var existingData = [];
+  if (lastRow > 1) {
+    existingData = resp.getRange(2, 1, lastRow, lastCol).getValues();
   }
+  resp.clear();
+  resp.getRange(1, 1, 1, merged.length).setValues([merged]);
+  if (!existingData.length) return;
+
+  var newRows = existingData.map(function (oldRow) {
+    var byHeader = {};
+    header.forEach(function (h, i) {
+      byHeader[h] = oldRow[i];
+    });
+    return merged.map(function (h) {
+      return byHeader[h] != null ? byHeader[h] : "";
+    });
+  });
+  resp.getRange(2, 1, 1 + newRows.length, merged.length).setValues(newRows);
 }
 
 function getSurvey_(id) {
@@ -147,6 +165,23 @@ function submitResponse_(body) {
   var sheets = ensureSheets_();
   var resp = sheets.responses;
   var header = resp.getRange(1, 1, 1, resp.getLastColumn()).getValues()[0];
+  var sidCol = header.indexOf("설문ID");
+  var idCol = header.indexOf("학번");
+  var 학번 = String(body.학번 || "");
+  if (sidCol >= 0 && idCol >= 0 && 학번) {
+    var data = resp.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (
+        String(data[i][sidCol]) === String(body.surveyId) &&
+        String(data[i][idCol]) === 학번
+      ) {
+        return {
+          ok: false,
+          error: "이미 응답한 설문입니다. 수정이 필요하면 관리자에게 문의하세요.",
+        };
+      }
+    }
+  }
   var answers = body.answers || {};
   var row = [];
   header.forEach(function (h) {

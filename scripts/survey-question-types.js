@@ -197,13 +197,21 @@
     });
   }
 
+  function disablePreviewInputs(root) {
+    if (!root) return;
+    root.querySelectorAll("input, textarea, select, button").forEach(function (el) {
+      el.disabled = true;
+      el.tabIndex = -1;
+    });
+  }
+
   function renderAdminPreview(row) {
     var host = row.querySelector(".sq-admin-preview-body");
     if (!host) return;
     try {
       var q = readAdminQuestionFromRow(row);
       host.innerHTML = renderRespondField(q, 0);
-      bindRespondInteractions(host);
+      disablePreviewInputs(host);
     } catch (e) {
       host.innerHTML = '<p class="sq-type-hint">미리보기를 표시할 수 없습니다.</p>';
     }
@@ -489,10 +497,6 @@
       }
     }
     if (q.type === "grid_radio" || q.type === "grid_checkbox") {
-      var rows = q.options.rows || [];
-      var filled = coerceText(value).split(";").filter(Boolean).length;
-      if (q.required && filled < rows.length) return "필수";
-      if (!coerceText(value)) return q.required ? "필수" : "";
       return "";
     }
     if (q.type === "number" && !Number.isFinite(Number(value))) {
@@ -501,12 +505,35 @@
     return "";
   }
 
+  function countGridAnswered(q, root) {
+    var rows = (q.options && q.options.rows) || [];
+    var n = 0;
+    rows.forEach(function (unused, ri) {
+      if (q.type === "grid_radio") {
+        if (root.querySelector('[name="' + fieldName(q, "r" + ri) + '"]:checked')) n++;
+      } else if (
+        root.querySelectorAll('[name="' + fieldName(q, "r" + ri) + '[]"]:checked').length
+      ) {
+        n++;
+      }
+    });
+    return n;
+  }
+
   function validateAll(questions, root) {
     var missing = [];
     var invalid = [];
     (questions || []).forEach(function (q) {
       q = normalizeQuestion(q);
       if (!hasInput(q.type)) return;
+      if (q.type === "grid_radio" || q.type === "grid_checkbox") {
+        var rows = (q.options && q.options.rows) || [];
+        var filled = countGridAnswered(q, root);
+        if (q.required && filled < rows.length) {
+          missing.push(q.label || q.id);
+        }
+        return;
+      }
       var val = collectAnswer(q, root);
       var err = validateAnswer(q, val);
       if (err === "필수") missing.push(q.label || q.id);
@@ -614,9 +641,16 @@
         otherLabel: coerceText((row.querySelector(".q-other-label") || {}).value) || "기타",
       };
     } else if (type === "scale") {
+      var scaleMin = Number((row.querySelector(".q-scale-min") || {}).value) || 1;
+      var scaleMax = Number((row.querySelector(".q-scale-max") || {}).value) || 5;
+      if (scaleMax < scaleMin) {
+        var tmp = scaleMin;
+        scaleMin = scaleMax;
+        scaleMax = tmp;
+      }
       q.options = {
-        min: Number((row.querySelector(".q-scale-min") || {}).value) || 1,
-        max: Number((row.querySelector(".q-scale-max") || {}).value) || 5,
+        min: scaleMin,
+        max: scaleMax,
         minLabel: coerceText((row.querySelector(".q-scale-min-label") || {}).value),
         maxLabel: coerceText((row.querySelector(".q-scale-max-label") || {}).value),
       };
@@ -636,7 +670,10 @@
     row.className = "q-row";
     row.dataset.qid = q.id;
     row.innerHTML =
-      '<div class="q-row-head"><strong>문항</strong><button type="button" class="btn btn-danger btn-remove">삭제</button></div>' +
+      '<div class="q-row-head"><strong>문항</strong><div class="q-row-actions">' +
+      '<button type="button" class="btn q-move-up" title="위로">↑</button>' +
+      '<button type="button" class="btn q-move-down" title="아래로">↓</button>' +
+      '<button type="button" class="btn btn-danger btn-remove">삭제</button></div></div>' +
       '<label>질문 유형</label><select class="q-type field-input">' +
       buildTypeSelectHtml(q.type) +
       "</select>" +
@@ -673,8 +710,6 @@
         Object.assign({}, defaultOptions(type), cachedOptions)
       );
       row.querySelector(".q-required-wrap").hidden = type === "section";
-      var previewWrap = row.querySelector(".sq-admin-preview");
-      if (previewWrap) previewWrap.hidden = type === "section";
       bindLineListEditors(row, schedulePreview);
       renderAdminPreview(row);
     }
@@ -696,6 +731,14 @@
     row.querySelector(".btn-remove").addEventListener("click", function () {
       row.remove();
       if (onRemove) onRemove();
+    });
+    row.querySelector(".q-move-up").addEventListener("click", function () {
+      var prev = row.previousElementSibling;
+      if (prev) container.insertBefore(row, prev);
+    });
+    row.querySelector(".q-move-down").addEventListener("click", function () {
+      var next = row.nextElementSibling;
+      if (next) container.insertBefore(next, row);
     });
     refreshOptions();
     container.appendChild(row);

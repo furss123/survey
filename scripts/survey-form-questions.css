@@ -67,3 +67,13 @@
   font-weight: 700;
   color: var(--theme-text-muted, #475569);
 }
+.sq-admin-preview-body {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.92;
+}
+.sq-admin-preview-body input,
+.sq-admin-preview-body textarea,
+.sq-admin-preview-body select {
+  cursor: default;
+}

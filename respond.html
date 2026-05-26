@@ -355,6 +355,8 @@
 
   document.getElementById("btnSubmit").addEventListener("click", async function () {
     if (!validateAnswers()) return;
+    var btnSubmit = document.getElementById("btnSubmit");
+    if (btnSubmit.disabled) return;
     onStudentPickChange();
     var num = selectedNum;
     var 학번 = SurveyForm.formatStudentId(entry.grade || 1, selectedBan, num);
@@ -366,6 +368,8 @@
       answers: collectAnswers(),
       submittedAt: new Date().toISOString(),
     };
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "제출 중…";
     try {
       await SurveyForm.submitSurveyResponse(entry, payload);
       document.getElementById("stepForm").hidden = true;
@@ -373,6 +377,8 @@
       showError("");
     } catch (err) {
       showError(err.message || "제출에 실패했습니다.");
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = "제출하기";
     }
   });
 
