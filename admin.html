@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <script>
   (function () {
+    document.querySelectorAll('script[src*="admin-app.js"]').forEach(function (node) {
+      node.parentNode.removeChild(node);
+    });
+  })();
+  </script>
+  <script>
+  (function () {
     var k = "school-theme-v1";
     var t = localStorage.getItem(k);
     if (t !== "light" && t !== "dark") {
@@ -14,7 +21,7 @@
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>설문 관리자 · 남악고</title>
-  <!-- build: purge-active-btn -->
+  <!-- ui-version: 20260528-no-site-publish -->
   <link rel="icon" href="assets/namak-logo.png" type="image/png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
@@ -455,56 +462,12 @@
       border-color: rgba(15, 118, 110, 0.35);
       font-weight: 600;
     }
+    #adminPublishNowBtn,
+    #adminPublishSummary,
+    #adminGitSyncSummary,
+    #autoPublishPanel,
     .auto-publish-panel {
-      margin: 0 0 var(--space-4);
-      padding: 12px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--theme-border-light);
-      background: var(--theme-bg-muted);
-    }
-    .auto-publish-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .auto-publish-title {
-      margin: 0;
-      font-size: var(--text-sm);
-      font-weight: 700;
-      color: var(--theme-heading);
-    }
-    .auto-publish-toggle {
-      min-width: 84px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border-strong);
-      background: var(--theme-bg-panel);
-      color: var(--theme-text);
-      font-size: var(--text-sm);
-      font-weight: 700;
-      cursor: pointer;
-      transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
-    }
-    .auto-publish-toggle.is-on {
-      border-color: transparent;
-      background: linear-gradient(180deg, var(--theme-btn-top) 0%, var(--theme-btn-bottom) 100%);
-      color: var(--chip-active-text);
-    }
-    .auto-publish-toggle:hover {
-      border-color: var(--border-accent);
-    }
-    .auto-publish-note {
-      margin: 10px 0 0;
-      font-size: var(--text-sm);
-      color: var(--theme-text-muted);
-      line-height: 1.45;
-    }
-    .auto-publish-actions {
-      margin-top: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      display: none !important;
     }
     .admin-form textarea {
       width: 100%;
@@ -823,16 +786,6 @@
             <button type="button" class="admin-btn admin-btn-primary" id="adminRosterOpenBtn">명렬표 입력</button>
           </div>
           <p class="roster-summary" id="adminRosterSummary" role="status">명렬표 시트가 설정되지 않았습니다. 「명렬표 입력」을 눌러 주세요.</p>
-          <div class="auto-publish-panel" id="autoPublishPanel">
-            <div class="auto-publish-head">
-              <p class="auto-publish-title">자동 게시</p>
-              <button type="button" class="auto-publish-toggle" id="autoPublishToggleBtn" aria-pressed="false">꺼짐</button>
-            </div>
-            <p class="auto-publish-note" id="autoPublishStatusText" role="status" aria-live="polite"></p>
-            <div class="auto-publish-actions">
-              <button type="button" class="admin-btn" id="autoPublishRunBtn">PowerShell 실행 명령 복사</button>
-            </div>
-          </div>
           <form id="adminSheetForm" class="admin-form">
             <label for="adminSheetUrl">구글 시트 주소</label>
             <div class="admin-url-row">
@@ -903,8 +856,6 @@
 
   var ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
   var SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
-  var AUTO_PUBLISH_ENABLED_KEY = "school-auto-publish-enabled-v2";
-  var AUTO_PUBLISH_CMD = ".\\scripts\\start-registry-sync.ps1";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
 
   function esc(s) {
@@ -1390,7 +1341,7 @@
     stripLegacyAdminActions();
   }
 
-  function isLegacyAdminDeleteControl(el) {
+  function isLegacyAdminChromeToRemove(el) {
     if (!el || el.nodeType !== 1) return false;
     var id = el.id || "";
     if (
@@ -1401,7 +1352,10 @@
       id === "adminRegistryDeleteAll" ||
       id === "adminRegistryPurgeAll" ||
       id === "adminRegistryBulkCount" ||
-      id === "adminPublishNowBtn"
+      id === "adminPublishNowBtn" ||
+      id === "adminPublishSummary" ||
+      id === "adminGitSyncSummary" ||
+      id === "autoPublishPanel"
     ) {
       return true;
     }
@@ -1411,24 +1365,36 @@
       txt === "전체 삭제" ||
       txt === "선택 삭제" ||
       txt === "전체 선택" ||
+      txt === "지금 사이트에 게시" ||
       txt.indexOf("지금 사이트") >= 0 ||
-      txt.indexOf("사이트에 배치") >= 0
+      txt.indexOf("사이트에 배치") >= 0 ||
+      txt.indexOf("사이트에 게시") >= 0
     );
   }
 
   function stripLegacyAdminActions() {
     var root = document.getElementById("adminPanel") || document;
+    [
+      "adminRegistryBulkBar",
+      "adminPublishNowBtn",
+      "adminPublishSummary",
+      "adminGitSyncSummary",
+      "autoPublishPanel",
+    ].forEach(function (legacyId) {
+      var legacyEl = document.getElementById(legacyId);
+      if (legacyEl && legacyEl.parentNode) legacyEl.parentNode.removeChild(legacyEl);
+    });
     var removed = true;
     while (removed) {
       removed = false;
-      root.querySelectorAll(".registry-bulk-bar, #adminRegistryBulkBar").forEach(function (bar) {
+      root.querySelectorAll(".registry-bulk-bar, .auto-publish-panel").forEach(function (bar) {
         if (bar.parentNode) {
           bar.parentNode.removeChild(bar);
           removed = true;
         }
       });
-      root.querySelectorAll("button, label, a, input[type='checkbox']").forEach(function (el) {
-        if (!isLegacyAdminDeleteControl(el)) return;
+      root.querySelectorAll("button, label, a, input[type='checkbox'], p").forEach(function (el) {
+        if (!isLegacyAdminChromeToRemove(el)) return;
         var drop = el;
         if (el.tagName === "INPUT" && el.type === "checkbox" && el.parentNode && el.parentNode.tagName === "LABEL") {
           drop = el.parentNode;
@@ -1441,7 +1407,7 @@
     }
   }
 
-  (function watchLegacyAdminDeleteUi() {
+  (function watchLegacyAdminChrome() {
     var panel = document.getElementById("adminPanel");
     if (!panel || !window.MutationObserver) return;
     var timer = 0;
@@ -1507,64 +1473,6 @@
     el.classList.add("is-set");
   }
 
-  function loadAutoPublishEnabled() {
-    try {
-      return localStorage.getItem(AUTO_PUBLISH_ENABLED_KEY) === "1";
-    } catch (err) {
-      return false;
-    }
-  }
-
-  function saveAutoPublishEnabled(enabled) {
-    try {
-      localStorage.setItem(AUTO_PUBLISH_ENABLED_KEY, enabled ? "1" : "0");
-    } catch (err) { /* ignore */ }
-  }
-
-  function renderAutoPublishState() {
-    var btn = document.getElementById("autoPublishToggleBtn");
-    var text = document.getElementById("autoPublishStatusText");
-    if (!btn || !text) return;
-    var enabled = loadAutoPublishEnabled();
-    btn.textContent = enabled ? "켜짐" : "꺼짐";
-    btn.classList.toggle("is-on", enabled);
-    btn.setAttribute("aria-pressed", enabled ? "true" : "false");
-    text.textContent = enabled
-      ? "자동 게시: 켜짐 — PowerShell 동기화 스크립트가 실행 중이면 등록 변경이 자동 반영됩니다."
-      : "자동 게시: 꺼짐 — 아래 버튼으로 PowerShell 명령을 복사해 바로 실행할 수 있습니다.";
-  }
-
-  function copyAutoPublishCommand() {
-    var cmd = AUTO_PUBLISH_CMD;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(cmd).then(function () {
-        setAdminRegistryStatus("PowerShell 명령을 복사했습니다: " + cmd, "is-ok");
-      }).catch(function () {
-        alert("PowerShell에서 다음 명령을 실행하세요:\n" + cmd);
-      });
-      return;
-    }
-    alert("PowerShell에서 다음 명령을 실행하세요:\n" + cmd);
-  }
-
-  function initAutoPublishToggle() {
-    var btn = document.getElementById("autoPublishToggleBtn");
-    var runBtn = document.getElementById("autoPublishRunBtn");
-    renderAutoPublishState();
-    if (btn) {
-      btn.addEventListener("click", function () {
-        var next = !loadAutoPublishEnabled();
-        saveAutoPublishEnabled(next);
-        renderAutoPublishState();
-      });
-    }
-    if (runBtn) {
-      runBtn.addEventListener("click", function () {
-        copyAutoPublishCommand();
-      });
-    }
-  }
-
   function openRosterModal() {
     var overlay = document.getElementById("rosterModalOverlay");
     var urlInput = document.getElementById("rosterModalUrl");
@@ -1624,11 +1532,12 @@
     updateRosterSummary();
   }
 
+  stripLegacyAdminActions();
+
   if (!AdminSession.require()) return;
 
   stripLegacyAdminActions();
   initRosterModal();
-  initAutoPublishToggle();
   refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
   bindSurveyNameField();
 
