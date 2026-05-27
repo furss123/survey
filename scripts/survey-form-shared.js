@@ -1,14 +1,19 @@
+/**
+ * 설문 목록: localStorage · 공개 data/sheet-registry.json (GitHub Pages)
+ */
 (function (global) {
   "use strict";
 
   var REGISTRY_KEY = "school-sheet-registry-v1";
   var DELETED_SURVEYS_KEY = "school-sheet-deleted-surveys-v1";
-  var ROSTER_STORAGE_KEY = "school-roster-sheet-v1";
-  var ROSTER_SESSION_KEY = "school-roster-sheet-session-v1";
   var WEBAPP_STORAGE_KEY = "school-survey-webapp-v1";
   var WEBAPP_SESSION_KEY = "school-survey-webapp-session-v1";
-  var DEFAULT_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  var MASTER_ROSTER_SPREADSHEET_ID = "1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ";
+  var MASTER_ROSTER_SPREADSHEET_URL =
+    "https://docs.google.com/spreadsheets/d/1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ/edit?usp=sharing";
+  var DEFAULT_ROSTER_SPREADSHEET_ID = MASTER_ROSTER_SPREADSHEET_ID;
   var DEFAULT_RESPONSE_SPREADSHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
+  var BUNDLED_REGISTRY_PATH = "data/sheet-registry.json";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
   var GRADE = 1;
 
@@ -20,48 +25,12 @@
     throw new Error("스프레드시트 ID를 URL에서 찾을 수 없습니다.");
   }
 
-  function loadRosterConfig() {
-    try {
-      var raw = localStorage.getItem(ROSTER_STORAGE_KEY);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      if (parsed && parsed.id && parsed.remember !== false) return parsed;
-    } catch (e) { /* ignore */ }
-    return null;
-  }
-
-  function loadSessionRosterConfig() {
-    try {
-      var raw = sessionStorage.getItem(ROSTER_SESSION_KEY);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      if (parsed && parsed.id) return parsed;
-    } catch (e) { /* ignore */ }
-    return null;
-  }
-
-  function getActiveRosterConfig() {
-    return loadSessionRosterConfig() || loadRosterConfig();
-  }
-
-  function saveRosterConfig(config, remember) {
-    var payload = Object.assign({}, config, {
-      remember: !!remember,
-      savedAt: Date.now(),
-    });
-    sessionStorage.setItem(ROSTER_SESSION_KEY, JSON.stringify(payload));
-    if (remember) {
-      localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(payload));
-    } else {
-      try {
-        localStorage.removeItem(ROSTER_STORAGE_KEY);
-      } catch (e) { /* ignore */ }
-    }
-  }
-
   function getRosterSpreadsheetId() {
-    var cfg = getActiveRosterConfig();
-    return (cfg && cfg.id) || DEFAULT_ROSTER_SPREADSHEET_ID;
+    return MASTER_ROSTER_SPREADSHEET_ID;
+  }
+
+  function getMasterRosterSpreadsheetUrl() {
+    return MASTER_ROSTER_SPREADSHEET_URL;
   }
 
   function loadWebAppUrl() {
@@ -143,8 +112,43 @@
     return v == null ? "" : String(v).trim();
   }
 
+  function hasSheetSource(entry) {
+    if (!entry) return false;
+    if (entry.sourceType === "md") return false;
+    if (String(entry.id || "").indexOf("md-") === 0) return false;
+    if (entry.sourceType === "sheet") return !!coerceText(entry.url);
+    var url = coerceText(entry.url);
+    if (!url || url.indexOf("spreadsheets/d/") < 0) return false;
+    try {
+      var parsedId = parseSpreadsheetId(url);
+      return String(parsedId).indexOf("md-") !== 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function ensureSurveyFullyPublic(entry) {
+    if (!entry || !hasSheetSource(entry)) return entry;
+    var out = Object.assign({}, entry, {
+      sourceType: "sheet",
+      categorySelectAll: true,
+      visibility: "public",
+    });
+    if (Array.isArray(out.categories)) {
+      out.categories = out.categories.map(function (c) {
+        return Object.assign({}, c, { enabled: true });
+      });
+    }
+    if (Array.isArray(out.classes)) {
+      out.classes = out.classes.map(function (c) {
+        return Object.assign({}, c, { enabled: true });
+      });
+    }
+    return out;
+  }
+
   function isSheetRegistryEntry(entry) {
-    return entry && entry.type !== "form";
+    return entry && entry.type !== "form" && hasSheetSource(entry);
   }
 
   function filterSheetEntriesOnly(list) {
@@ -157,7 +161,7 @@
       if (!entry || !entry.id) return;
       if (!isSheetRegistryEntry(entry)) return;
       if (isSurveyDeleted(entry.id)) return;
-      byId[entry.id] = entry;
+      byId[entry.id] = ensureSurveyFullyPublic(entry);
     });
     return Object.keys(byId).map(function (id) {
       return byId[id];
@@ -175,8 +179,10 @@
     }
   }
 
-  function saveRegistry(list) {
-    localStorage.setItem(REGISTRY_KEY, JSON.stringify(list));
+  function saveRegistry(list, options) {
+    options = options || {};
+    localStorage.setItem(REGISTRY_KEY, JSON.stringify(dedupeRegistryEntries(list)));
+    if (options.silent) return;
     try {
       window.dispatchEvent(new CustomEvent("survey-registry-updated"));
     } catch (e) { /* ignore */ }
@@ -241,9 +247,54 @@
     return setSurveyStatus(id, status);
   }
 
-  async function refreshRegistryFromServer() {
-    var merged = await syncRegistryFromConfigSheet(loadRegistry());
-    saveRegistry(merged);
+  function mergeRemoteAndLocalRegistry(remote, local) {
+    var byId = {};
+    (remote || []).forEach(function (entry) {
+      if (entry && entry.id) byId[entry.id] = entry;
+    });
+    (local || []).forEach(function (entry) {
+      if (!entry || !entry.id || isSurveyDeleted(entry.id)) return;
+      if (!byId[entry.id]) byId[entry.id] = entry;
+    });
+    return dedupeRegistryEntries(
+      Object.keys(byId).map(function (id) {
+        return byId[id];
+      })
+    );
+  }
+
+  function expandBundledRegistryEntry(entry) {
+    if (!entry || !entry.id) return null;
+    if (String(entry.id).indexOf("md-") === 0) return null;
+    var out = ensureSurveyFullyPublic(Object.assign({}, entry, { sourceType: "sheet" }));
+    return hasSheetSource(out) ? out : null;
+  }
+
+  async function fetchBundledSheetRegistry() {
+    try {
+      var res = await fetch(BUNDLED_REGISTRY_PATH + "?v=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) return [];
+      var data = await res.json();
+      if (!Array.isArray(data)) {
+        if (data && typeof data === "object" && data.id) data = [data];
+        else return [];
+      }
+      return data
+        .map(expandBundledRegistryEntry)
+        .filter(function (entry) {
+          return entry && entry.id && !isSurveyDeleted(entry.id);
+        });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function refreshRegistryFromServer(options) {
+    options = options || {};
+    var local = loadRegistry();
+    var published = await fetchBundledSheetRegistry();
+    var merged = mergeRemoteAndLocalRegistry(published, local);
+    saveRegistry(merged, { silent: options.silent });
     return merged;
   }
 
@@ -509,17 +560,6 @@
       });
   }
 
-  function mergeRegistryWithConfigSurveys(registry) {
-    return dedupeRegistryEntries(filterSheetEntriesOnly(registry));
-  }
-
-  async function syncRegistryFromConfigSheet(registry) {
-    registry = filterSheetEntriesOnly(registry || []).filter(function (entry) {
-      return entry && entry.id && !isSurveyDeleted(entry.id);
-    });
-    return dedupeRegistryEntries(registry);
-  }
-
   async function fetchGvizValues(spreadsheetId, sheetName) {
     var base =
       "https://docs.google.com/spreadsheets/d/" +
@@ -613,12 +653,14 @@
 
   global.SurveyForm = {
     REGISTRY_KEY: REGISTRY_KEY,
-    ROSTER_STORAGE_KEY: ROSTER_STORAGE_KEY,
-    ROSTER_SESSION_KEY: ROSTER_SESSION_KEY,
+    MASTER_ROSTER_SPREADSHEET_ID: MASTER_ROSTER_SPREADSHEET_ID,
+    MASTER_ROSTER_SPREADSHEET_URL: MASTER_ROSTER_SPREADSHEET_URL,
     DEFAULT_ROSTER_SPREADSHEET_ID: DEFAULT_ROSTER_SPREADSHEET_ID,
     DEFAULT_RESPONSE_SPREADSHEET_ID: DEFAULT_RESPONSE_SPREADSHEET_ID,
+    BUNDLED_REGISTRY_PATH: BUNDLED_REGISTRY_PATH,
     WEBAPP_STORAGE_KEY: WEBAPP_STORAGE_KEY,
     getRosterSpreadsheetId: getRosterSpreadsheetId,
+    getMasterRosterSpreadsheetUrl: getMasterRosterSpreadsheetUrl,
     loadWebAppUrl: loadWebAppUrl,
     saveWebAppUrl: saveWebAppUrl,
     resolveWebAppUrl: resolveWebAppUrl,
@@ -626,17 +668,15 @@
     isValidWebAppUrl: isValidWebAppUrl,
     saveWebAppUrlSession: saveWebAppUrlSession,
     fetchSurveyFromConfigSheet: fetchSurveyFromConfigSheet,
-    mergeRegistryWithConfigSurveys: mergeRegistryWithConfigSurveys,
-    syncRegistryFromConfigSheet: syncRegistryFromConfigSheet,
-    getActiveRosterConfig: getActiveRosterConfig,
-    loadRosterConfig: loadRosterConfig,
-    loadSessionRosterConfig: loadSessionRosterConfig,
-    saveRosterConfig: saveRosterConfig,
     parseSpreadsheetId: parseSpreadsheetId,
     GRADE: GRADE,
     esc: esc,
+    coerceText: coerceText,
+    hasSheetSource: hasSheetSource,
+    ensureSurveyFullyPublic: ensureSurveyFullyPublic,
     loadRegistry: loadRegistry,
     saveRegistry: saveRegistry,
+    fetchBundledSheetRegistry: fetchBundledSheetRegistry,
     isSurveyCompleted: isSurveyCompleted,
     defaultSurveyStatus: defaultSurveyStatus,
     setSurveyStatus: setSurveyStatus,

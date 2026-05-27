@@ -7,5 +7,6 @@ service-account.json
 .DS_Store
 survey_result_*.xlsx
 *_analysis.md
+data/local-registry-import.json
 __pycache__/
 *.pyc

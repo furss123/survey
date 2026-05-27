@@ -4,13 +4,6 @@
   <meta charset="UTF-8">
   <script>
   (function () {
-    document.querySelectorAll('script[src*="admin-app.js"]').forEach(function (node) {
-      node.parentNode.removeChild(node);
-    });
-  })();
-  </script>
-  <script>
-  (function () {
     var k = "school-theme-v1";
     var t = localStorage.getItem(k);
     if (t !== "light" && t !== "dark") {
@@ -796,10 +789,9 @@
           <button type="button" class="admin-btn admin-btn-logout" id="adminLogoutBtn">로그아웃</button>
         </div>
         <div id="adminPanel">
-          <div class="admin-toolbar">
-            <button type="button" class="admin-btn admin-btn-primary" id="adminRosterOpenBtn">명렬표 입력</button>
-          </div>
-          <p class="roster-summary" id="adminRosterSummary" role="status">명렬표 시트가 설정되지 않았습니다. 「명렬표 입력」을 눌러 주세요.</p>
+          <p class="roster-summary is-set" id="adminRosterSummary" role="status">
+            명렬표: 학교 고정 시트 사용 (<a href="https://docs.google.com/spreadsheets/d/1GHbpOBkx2dLZvhiBzBIgpBgN5OBB80G-mQFcrfdpFXQ/edit?usp=sharing" target="_blank" rel="noopener">열기</a>)
+          </p>
           <form id="adminSheetForm" class="admin-form">
             <label for="adminSurveyName">설문 이름</label>
             <input
@@ -846,56 +838,30 @@
     <div class="site-footer-inner">남악고등학교 설문 · 관리자</div>
   </footer>
 
-  <div class="roster-modal-overlay" id="rosterModalOverlay" hidden>
-    <div class="roster-modal" role="dialog" aria-modal="true" aria-labelledby="rosterModalTitle">
-      <h2 id="rosterModalTitle">학생 명렬표 시트</h2>
-      <p class="roster-modal-desc">반·번호·이름이 있는 구글 스프레드시트 주소를 입력하세요. 결과 조회의 미참여 명단에 사용됩니다.</p>
-      <label for="rosterModalUrl">구글 시트 주소</label>
-      <input
-        type="url"
-        id="rosterModalUrl"
-        placeholder="https://docs.google.com/spreadsheets/d/..."
-        autocomplete="off"
-      />
-      <label class="roster-modal-remember">
-        <input type="checkbox" id="rosterModalRemember" checked />
-        <span>다음에도 기억 (이 브라우저에서 이후 설문에도 같은 명렬표 사용)</span>
-      </label>
-      <p class="roster-modal-error" id="rosterModalError" aria-live="polite"></p>
-      <div class="roster-modal-actions">
-        <button type="button" class="admin-btn" id="rosterModalCancelBtn">취소</button>
-        <button type="button" class="admin-btn admin-btn-primary" id="rosterModalSaveBtn">저장</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="scripts/admin-session.js?v=20260528-prompt"></script>
-  <script src="scripts/survey-form-shared.js?v=20260528-prompt"></script>
+  <script src="scripts/admin-session.js?v=20260528"></script>
+  <script src="scripts/survey-form-shared.js?v=20260528"></script>
   <script>
 (function () {
   "use strict";
 
+  if (typeof SurveyForm === "undefined") {
+    console.error("SurveyForm을 불러오지 못했습니다.");
+    return;
+  }
+
   var ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
-  var SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
-  var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
+  var SHEET_REGISTRY_KEY = SurveyForm.REGISTRY_KEY;
 
   function esc(s) {
-    var d = document.createElement("div");
-    d.textContent = s == null ? "" : String(s);
-    return d.innerHTML;
+    return SurveyForm.esc(s);
   }
 
   function coerceText(value) {
-    if (value == null) return "";
-    return String(value).trim();
+    return SurveyForm.coerceText(value);
   }
 
   function parseSpreadsheetId(url) {
-    var trimmed = String(url || "").trim();
-    var match = trimmed.match(SPREADSHEET_ID_PATTERN);
-    if (match && match[1]) return match[1];
-    if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) return trimmed;
-    throw new Error("스프레드시트 ID를 URL에서 찾을 수 없습니다.");
+    return SurveyForm.parseSpreadsheetId(url);
   }
 
   function normalizeSheetRegistry(registry) {
@@ -924,11 +890,8 @@
     return [];
   }
 
-  function saveSheetRegistry(registry) {
-    localStorage.setItem(SHEET_REGISTRY_KEY, JSON.stringify(registry));
-    try {
-      window.dispatchEvent(new CustomEvent("survey-registry-updated"));
-    } catch (err) { /* ignore */ }
+  function saveSheetRegistry(registry, options) {
+    SurveyForm.saveRegistry(registry, options);
   }
 
   function findRegistryEntry(id) {
@@ -1287,7 +1250,6 @@
           await SurveyForm.refreshRegistryFromServer()
         );
         saveSheetRegistry(merged);
-        SurveyForm.saveRegistry(merged);
       }
       if (token !== adminRegistryRefreshToken) return;
       renderAdminRegistryList();
@@ -1420,85 +1382,7 @@
     }
     if (groups) groups.hidden = false;
     renderRegistrySection(listEl, emptyEl, registry);
-    stripLegacyAdminActions();
   }
-
-  function isLegacyAdminChromeToRemove(el) {
-    if (!el || el.nodeType !== 1) return false;
-    var id = el.id || "";
-    if (
-      id === "adminRegistryBulkBar" ||
-      id === "adminRegistrySelectAll" ||
-      id === "adminRegistryBulkDelete" ||
-      id === "adminRegistryDeleteSelected" ||
-      id === "adminRegistryDeleteAll" ||
-      id === "adminRegistryPurgeAll" ||
-      id === "adminRegistryBulkCount" ||
-      id === "adminPublishNowBtn" ||
-      id === "adminPublishSummary" ||
-      id === "adminGitSyncSummary" ||
-      id === "autoPublishPanel"
-    ) {
-      return true;
-    }
-    var txt = coerceText(el.textContent);
-    if (!txt) return false;
-    return (
-      txt === "전체 삭제" ||
-      txt === "선택 삭제" ||
-      txt === "전체 선택" ||
-      txt === "지금 사이트에 게시" ||
-      txt.indexOf("지금 사이트") >= 0 ||
-      txt.indexOf("사이트에 배치") >= 0 ||
-      txt.indexOf("사이트에 게시") >= 0
-    );
-  }
-
-  function stripLegacyAdminActions() {
-    var root = document.getElementById("adminPanel") || document;
-    [
-      "adminRegistryBulkBar",
-      "adminPublishNowBtn",
-      "adminPublishSummary",
-      "adminGitSyncSummary",
-      "autoPublishPanel",
-    ].forEach(function (legacyId) {
-      var legacyEl = document.getElementById(legacyId);
-      if (legacyEl && legacyEl.parentNode) legacyEl.parentNode.removeChild(legacyEl);
-    });
-    var removed = true;
-    while (removed) {
-      removed = false;
-      root.querySelectorAll(".registry-bulk-bar, .auto-publish-panel").forEach(function (bar) {
-        if (bar.parentNode) {
-          bar.parentNode.removeChild(bar);
-          removed = true;
-        }
-      });
-      root.querySelectorAll("button, label, a, input[type='checkbox'], p").forEach(function (el) {
-        if (!isLegacyAdminChromeToRemove(el)) return;
-        var drop = el;
-        if (el.tagName === "INPUT" && el.type === "checkbox" && el.parentNode && el.parentNode.tagName === "LABEL") {
-          drop = el.parentNode;
-        }
-        if (drop.parentNode) {
-          drop.parentNode.removeChild(drop);
-          removed = true;
-        }
-      });
-    }
-  }
-
-  (function watchLegacyAdminChrome() {
-    var panel = document.getElementById("adminPanel");
-    if (!panel || !window.MutationObserver) return;
-    var timer = 0;
-    var obs = new MutationObserver(function () {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(stripLegacyAdminActions, 0);
-    });
-    obs.observe(panel, { childList: true, subtree: true });
-  })();
 
   (function initRegistryLiveRefresh() {
     var refreshBtn = document.getElementById("adminRegistryRefreshBtn");
@@ -1534,92 +1418,16 @@
     var saved = localStorage.getItem(key);
     if (saved === "dark" || saved === "light") applyTheme(saved);
     else applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    document.getElementById("themeToggle").addEventListener("click", function () {
-      applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
-    });
-  })();
-
-  function updateRosterSummary() {
-    var el = document.getElementById("adminRosterSummary");
-    if (!el) return;
-    var cfg = SurveyForm.getActiveRosterConfig();
-    if (!cfg || !cfg.id) {
-      el.textContent = "명렬표 시트가 설정되지 않았습니다. 「명렬표 입력」을 눌러 주세요.";
-      el.classList.remove("is-set");
-      return;
-    }
-    var mode = cfg.remember
-      ? "다음에도 기억"
-      : "이번 브라우저 세션만";
-    el.textContent = "명렬표 연결됨 · " + mode + " · ID " + cfg.id;
-    el.classList.add("is-set");
-  }
-
-  function openRosterModal() {
-    var overlay = document.getElementById("rosterModalOverlay");
-    var urlInput = document.getElementById("rosterModalUrl");
-    var rememberInput = document.getElementById("rosterModalRemember");
-    var errEl = document.getElementById("rosterModalError");
-    if (!overlay || !urlInput) return;
-    var active = SurveyForm.getActiveRosterConfig();
-    var remembered = SurveyForm.loadRosterConfig();
-    urlInput.value = (active && active.url) || "";
-    rememberInput.checked = !!(remembered && remembered.remember) || !active;
-    if (errEl) errEl.textContent = "";
-    overlay.hidden = false;
-    urlInput.focus();
-  }
-
-  function closeRosterModal() {
-    var overlay = document.getElementById("rosterModalOverlay");
-    if (overlay) overlay.hidden = true;
-  }
-
-  function saveRosterFromModal() {
-    var urlInput = document.getElementById("rosterModalUrl");
-    var rememberInput = document.getElementById("rosterModalRemember");
-    var errEl = document.getElementById("rosterModalError");
-    var url = coerceText(urlInput && urlInput.value);
-    if (!url) {
-      if (errEl) errEl.textContent = "구글 시트 주소를 입력해 주세요.";
-      return;
-    }
-    try {
-      var id = SurveyForm.parseSpreadsheetId(url);
-      var remember = !!(rememberInput && rememberInput.checked);
-      SurveyForm.saveRosterConfig({ url: url, id: id }, remember);
-      updateRosterSummary();
-      closeRosterModal();
-    } catch (err) {
-      if (errEl) errEl.textContent = err.message || "구글 시트 주소 형식을 확인해 주세요.";
-    }
-  }
-
-  function initRosterModal() {
-    var openBtn = document.getElementById("adminRosterOpenBtn");
-    var cancelBtn = document.getElementById("rosterModalCancelBtn");
-    var saveBtn = document.getElementById("rosterModalSaveBtn");
-    var overlay = document.getElementById("rosterModalOverlay");
-    if (openBtn) openBtn.addEventListener("click", openRosterModal);
-    if (cancelBtn) cancelBtn.addEventListener("click", closeRosterModal);
-    if (saveBtn) saveBtn.addEventListener("click", saveRosterFromModal);
-    if (overlay) {
-      overlay.addEventListener("click", function (e) {
-        if (e.target === overlay) closeRosterModal();
+    var themeToggleEl = document.getElementById("themeToggle");
+    if (themeToggleEl) {
+      themeToggleEl.addEventListener("click", function () {
+        applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
       });
     }
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && overlay && !overlay.hidden) closeRosterModal();
-    });
-    updateRosterSummary();
-  }
-
-  stripLegacyAdminActions();
+  })();
 
   if (!AdminSession.require()) return;
 
-  stripLegacyAdminActions();
-  initRosterModal();
   refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
   bindSurveyNameField();
   bindAnalysisPromptField();
