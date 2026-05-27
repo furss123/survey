@@ -616,9 +616,12 @@
       color: var(--theme-text-muted);
       font-style: italic;
     }
-    .admin-registry-list li.is-removing {
-      opacity: 0.35;
-      pointer-events: none;
+    .registry-bulk-bar,
+    #adminRegistryBulkBar,
+    #adminRegistryDeleteAll,
+    #adminRegistryBulkDelete,
+    #adminRegistryDeleteSelected {
+      display: none !important;
     }
     .admin-registry-list {
       margin: var(--space-4) 0 0;
@@ -1222,7 +1225,6 @@
   }
 
   var adminRegistryRefreshToken = 0;
-  var registryDeleteInFlight = false;
 
   function setAdminRegistryStatus(text, kind) {
     var el = document.getElementById("adminRegistryStatus");
@@ -1292,76 +1294,6 @@
     }
   }
 
-  async function deleteRegistryEntries(ids, options) {
-    options = options || {};
-    if (!ids || !ids.length) {
-      setAdminRegistryStatus("삭제할 항목이 없습니다.", "is-warn");
-      return;
-    }
-    if (registryDeleteInFlight) return;
-    if (!options.skipConfirm) {
-      var label =
-        ids.length === 1 ? "이 항목" : "선택한 " + ids.length + "개 항목";
-      if (!confirm(label + "을(를) 목록에서 삭제할까요?")) return;
-    }
-    if (editingSheetId && ids.indexOf(editingSheetId) >= 0) cancelEditSheet();
-
-    registryDeleteInFlight = true;
-
-    var prev = loadSheetRegistry();
-    var toDelete = prev.filter(function (item) {
-      return ids.indexOf(item.id) >= 0;
-    });
-    var next = prev.filter(function (item) {
-      return ids.indexOf(item.id) < 0;
-    });
-
-    ids.forEach(function (id) {
-      SurveyForm.markSurveyDeleted(id);
-    });
-    next = normalizeSheetRegistry(next);
-    saveSheetRegistry(next);
-    SurveyForm.saveRegistry(next);
-
-    renderAdminRegistryList();
-    flashAdminRegistryGroups();
-    setAdminRegistryStatus(
-      toDelete.length + "개를 목록에서 삭제했습니다.",
-      "is-ok"
-    );
-
-    var warnings = [];
-    try {
-      for (var i = 0; i < toDelete.length; i++) {
-        var purge = await SurveyForm.purgeSurveyFromServer(toDelete[i]);
-        if (purge && purge.warnings && purge.warnings.length) {
-          warnings = warnings.concat(purge.warnings);
-        }
-      }
-      await refreshAdminRegistryList({
-        sync: false,
-        message:
-          warnings.length > 0
-            ? "삭제 반영 완료. " + warnings[0]
-            : "삭제를 반영하고 목록에 반영했습니다.",
-        kind: warnings.length > 0 ? "is-warn" : "is-ok",
-      });
-    } catch (err) {
-      setAdminRegistryStatus(
-        (err && err.message) || "서버 동기화 중 오류가 발생했습니다.",
-        "is-warn"
-      );
-      renderAdminRegistryList();
-    } finally {
-      registryDeleteInFlight = false;
-    }
-  }
-
-  function deleteRegistryEntry(id) {
-    if (!id) return;
-    deleteRegistryEntries([id]);
-  }
-
   function sortRegistryForDisplay(registry) {
     return (registry || []).slice().sort(function (a, b) {
       var ac = SurveyForm.isSurveyCompleted(a) ? 1 : 0;
@@ -1384,10 +1316,7 @@
       esc(item.id) +
       "\">구성</button><button type=\"button\" class=\"admin-btn admin-btn-edit\" data-edit-id=\"" +
       esc(item.id) +
-      "\">수정</button>" +
-      "<button type=\"button\" class=\"admin-btn admin-btn-danger\" data-delete-id=\"" +
-      esc(item.id) +
-      "\">삭제</button></div></li>"
+      "\">수정</button></div></li>"
     );
   }
 
@@ -1431,12 +1360,6 @@
         if (id) startEditSheet(id);
       });
     });
-    listEl.querySelectorAll("[data-delete-id]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var id = btn.getAttribute("data-delete-id");
-        if (id) deleteRegistryEntry(id);
-      });
-    });
   }
 
   function renderRegistrySection(listEl, emptyEl, items) {
@@ -1467,33 +1390,67 @@
     stripLegacyAdminActions();
   }
 
-  function stripLegacyAdminActions() {
-    // 구버전 잔재: 전체삭제/선택삭제/지금 사이트 게시 버튼 제거
-    [
-      "adminRegistryBulkBar",
-      "adminRegistrySelectAll",
-      "adminRegistryDeleteSelected",
-      "adminRegistryDeleteAll",
-      "adminRegistryPurgeAll",
-      "adminPublishNowBtn",
-    ].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el && el.parentNode) el.parentNode.removeChild(el);
-    });
-    document.querySelectorAll("button, label, a").forEach(function (el) {
-      var txt = coerceText(el.textContent);
-      if (!txt) return;
-      if (
-        txt.indexOf("전체 삭제") >= 0 ||
-        txt.indexOf("선택 삭제") >= 0 ||
-        txt.indexOf("전체 선택") >= 0 ||
-        txt.indexOf("지금 사이트") >= 0 ||
-        txt.indexOf("사이트에 배치") >= 0
-      ) {
-        el.style.display = "none";
-      }
-    });
+  function isLegacyAdminDeleteControl(el) {
+    if (!el || el.nodeType !== 1) return false;
+    var id = el.id || "";
+    if (
+      id === "adminRegistryBulkBar" ||
+      id === "adminRegistrySelectAll" ||
+      id === "adminRegistryBulkDelete" ||
+      id === "adminRegistryDeleteSelected" ||
+      id === "adminRegistryDeleteAll" ||
+      id === "adminRegistryPurgeAll" ||
+      id === "adminRegistryBulkCount" ||
+      id === "adminPublishNowBtn"
+    ) {
+      return true;
+    }
+    var txt = coerceText(el.textContent);
+    if (!txt) return false;
+    return (
+      txt === "전체 삭제" ||
+      txt === "선택 삭제" ||
+      txt === "전체 선택" ||
+      txt.indexOf("지금 사이트") >= 0 ||
+      txt.indexOf("사이트에 배치") >= 0
+    );
   }
+
+  function stripLegacyAdminActions() {
+    var root = document.getElementById("adminPanel") || document;
+    var removed = true;
+    while (removed) {
+      removed = false;
+      root.querySelectorAll(".registry-bulk-bar, #adminRegistryBulkBar").forEach(function (bar) {
+        if (bar.parentNode) {
+          bar.parentNode.removeChild(bar);
+          removed = true;
+        }
+      });
+      root.querySelectorAll("button, label, a, input[type='checkbox']").forEach(function (el) {
+        if (!isLegacyAdminDeleteControl(el)) return;
+        var drop = el;
+        if (el.tagName === "INPUT" && el.type === "checkbox" && el.parentNode && el.parentNode.tagName === "LABEL") {
+          drop = el.parentNode;
+        }
+        if (drop.parentNode) {
+          drop.parentNode.removeChild(drop);
+          removed = true;
+        }
+      });
+    }
+  }
+
+  (function watchLegacyAdminDeleteUi() {
+    var panel = document.getElementById("adminPanel");
+    if (!panel || !window.MutationObserver) return;
+    var timer = 0;
+    var obs = new MutationObserver(function () {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(stripLegacyAdminActions, 0);
+    });
+    obs.observe(panel, { childList: true, subtree: true });
+  })();
 
   (function initRegistryLiveRefresh() {
     var refreshBtn = document.getElementById("adminRegistryRefreshBtn");
