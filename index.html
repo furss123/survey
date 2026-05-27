@@ -2249,13 +2249,19 @@
         <strong id="adminSetupTitle">시트 구성 미리보기</strong>
         <span class="admin-setup-meta" id="adminSetupMeta"></span>
       </div>
+      <div class="admin-setup-prompt">
+        <label for="adminAnalysisPrompt">분석 관련 프롬프트</label>
+        <textarea
+          id="adminAnalysisPrompt"
+          maxlength="500"
+          rows="4"
+          placeholder="예) 핵심 키워드 3개만 요약, 위험신호 문장은 별도 표시"
+        ></textarea>
+        <p class="admin-setup-prompt-hint" id="adminSetupPromptHint">등록·수정 시 함께 저장됩니다. (최대 500자)</p>
+        <p class="admin-setup-prompt-hint" id="adminSetupPromptCount" aria-live="polite">0 / 500자</p>
+      </div>
       <div class="admin-setup-section">
         <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
-      </div>
-      <div class="admin-setup-prompt">
-        <label for="adminAnalysisPrompt">분석 규칙 (간단 프롬프트)</label>
-        <textarea id="adminAnalysisPrompt" placeholder="예) 핵심 키워드 3개만 요약, 위험신호 문장은 별도 표시"></textarea>
-        <p class="admin-setup-prompt-hint">등록 시 함께 저장됩니다. (최대 500자)</p>
       </div>
       <div class="admin-setup-actions">
         <button type="button" class="admin-btn admin-btn-primary" id="adminSetupConfirm">메인에 등록</button>
@@ -5138,6 +5144,22 @@
     });
   }
 
+  function updateAdminSetupPromptCount() {
+    var input = document.getElementById("adminAnalysisPrompt");
+    var countEl = document.getElementById("adminSetupPromptCount");
+    if (!input || !countEl) return;
+    var len = coerceText(input.value).length;
+    countEl.textContent = len + " / 500자";
+  }
+
+  (function bindAdminSetupPromptField() {
+    var input = document.getElementById("adminAnalysisPrompt");
+    if (!input || input.dataset.bound === "1") return;
+    input.dataset.bound = "1";
+    input.addEventListener("input", updateAdminSetupPromptCount);
+    updateAdminSetupPromptCount();
+  })();
+
   function confirmAdminSetup() {
     if (!adminSetupLabel || !adminSetupUrl) return;
     syncAdminCategoriesFromDom();
@@ -5294,7 +5316,14 @@
       } catch (e) { /* ignore */ }
       var promptInput = document.getElementById("adminAnalysisPrompt");
       if (promptInput) {
-        promptInput.value = draft && draft.analysisPrompt ? String(draft.analysisPrompt) : "";
+        var params = new URLSearchParams(location.search);
+        var promptFromUrl = params.get("prompt") || "";
+        var promptValue =
+          (draft && draft.analysisPrompt ? String(draft.analysisPrompt) : "") ||
+          promptFromUrl ||
+          "";
+        promptInput.value = coerceText(promptValue).slice(0, 500);
+        updateAdminSetupPromptCount();
       }
       adminSetupCategories = deriveCategoriesFromAnalysis(lastMultiResult);
       if (draft && draft.categories && draft.categories.length) {
@@ -6329,7 +6358,12 @@
       location.href = "admin.html";
       return;
     }
-    adminSetupEditId = draft && draft.editId ? draft.editId : null;
+    adminSetupEditId =
+      params.get("editId") || (draft && draft.editId ? draft.editId : null);
+    var promptParam = coerceText(params.get("prompt") || "");
+    var analysisPrompt =
+      promptParam ||
+      (draft && draft.analysisPrompt ? String(draft.analysisPrompt) : "");
     sessionStorage.setItem(
       ADMIN_SETUP_DRAFT_KEY,
       JSON.stringify({
@@ -6339,7 +6373,7 @@
         editId: adminSetupEditId,
         categories: draft && draft.categories ? draft.categories : null,
         classes: draft && draft.classes ? draft.classes : null,
-        analysisPrompt: draft && draft.analysisPrompt ? draft.analysisPrompt : "",
+        analysisPrompt: analysisPrompt,
         categorySelectAll: adminCategorySelectAll,
       })
     );
