@@ -589,6 +589,10 @@
       font-family: inherit;
       transition: background 0.2s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease);
     }
+    /* 핵심 기능(조회/분석) 집중: 보조 새로고침 버튼 숨김 */
+    .home-refresh-btn {
+      display: none !important;
+    }
     .home-refresh-btn:hover:not(:disabled) {
       border-color: var(--border-accent);
       background: var(--theme-hover-bg);
@@ -1523,6 +1527,12 @@
       color: var(--text);
       max-height: min(70vh, 368px);
       overflow-y: auto;
+    }
+    /* 비핵심 보조 UI 제거 */
+    .view-tracker,
+    .page-chrome-actions {
+      display: none !important;
+      visibility: hidden !important;
     }
     .view-tracker[hidden] { display: none !important; }
     .view-tracker-head {
@@ -2869,7 +2879,6 @@
 
   function extractCommonThemes(rows) {
     var categoryFill = {};
-    var keywordHits = {};
     for (var ri = 0; ri < rows.length; ri++) {
       var row = rows[ri];
       var sections = row.sections || parseSections((row._raw && row._raw.프로필) || "", null);
@@ -2878,23 +2887,10 @@
         if (!title || /^[\s💌📚📖📝✏️🎯⭐🔖•\-]+$/.test(title)) continue;
         categoryFill[title] = (categoryFill[title] || 0) + 1;
       }
-      var corpus = sections.map(function (s) {
-        return (s.body || "") + " " + (s.fields || []).map(function (f) { return f.value; }).join(" ");
-      }).join(" ");
-      for (var ti = 0; ti < PROFILE_KEYWORD_THEMES.length; ti++) {
-        var theme = PROFILE_KEYWORD_THEMES[ti];
-        var matches = corpus.match(theme.re);
-        if (matches && matches.length) {
-          keywordHits[theme.label] = (keywordHits[theme.label] || 0) + matches.length;
-        }
-      }
     }
     var themes = [];
     for (var ckey in categoryFill) {
       themes.push({ 주제: ckey, 언급수: categoryFill[ckey], 유형: "category" });
-    }
-    for (var kkey in keywordHits) {
-      themes.push({ 주제: kkey, 언급수: keywordHits[kkey], 유형: "keyword" });
     }
     themes.sort(function (a, b) { return b.언급수 - a.언급수; });
     return themes.slice(0, 10);
@@ -3397,16 +3393,8 @@
   }
 
   function detectThemes(rows) {
-    var corpus = rows.map(function (r) {
-      return Object.values(r._raw || {}).join(" ");
-    }).join(" ").toLowerCase();
-    var hits = THEME_KEYWORDS.map(function (t) {
-      var regex = new RegExp(t.key, "gi");
-      var count = (corpus.match(regex) || []).length;
-      return { 주제: t.label, 언급수: count };
-    }).filter(function (t) { return t.언급수 > 0; });
-    hits.sort(function (a, b) { return b.언급수 - a.언급수; });
-    return hits.slice(0, 6);
+    // 핵심 상담 주제 표시에 집중하기 위해 자동 키워드 테마 카드는 비활성화
+    return [];
   }
 
   function buildAnalysisPayload(headers, rows, meta) {
@@ -3440,7 +3428,7 @@
         반미입력: missingClass,
       },
       byClass: byClass,
-      columnInsights: buildColumnInsights(headers, rows),
+      columnInsights: [],
       themes: detectThemes(rows),
       commonThemes: (meta.format === "profile" || rows.some(rowHasSections)) ? extractCommonThemes(rows) : [],
       headers: headers,
