@@ -2440,7 +2440,7 @@
     }
   }
 
-  /** 설문 시트 기본 레이아웃: 1행=카테고리(헤더), B열=학번(4자리: 학년+반+번호), C열=이름 */
+  /** 설문 시트 기본 레이아웃: A열=반, B열=반번호+이름(또는 학번), C열=이름(선택) */
   const SURVEY_HEADER_ROW_INDEX = 0;
   const SURVEY_COL_STUDENT_ID = 1;
   const SURVEY_COL_NAME = 2;
@@ -2449,7 +2449,13 @@
   const STUDENT_ID_ALIASES = ["학번", "student_id", "학생번호", "studentid"];
   const NUMBER_ALIASES = ["번호", "number", "no", "no."];
   const NAME_ALIASES = ["이름", "name", "성명", "학생"];
-  const STUDENT_SELECTOR_HEADER_HINTS = ["번호와 이름을 선택", "번호와 이름"];
+  const STUDENT_SELECTOR_HEADER_HINTS = [
+    "번호와 이름을 선택",
+    "번호와 이름",
+    "반번호 이름",
+    "반 번호 이름",
+    "반번호이름",
+  ];
   const ROSTER_NAME_ALIASES = ["이름", "name", "성명", "성함", "studentname", "학생이름"];
   const COMPLETION_ALIASES = ["완료", "제출", "응답", "status", "상태", "completed", "done", "체크"];
   const CONTENT_ALIASES = ["상담", "내용", "응답", "메모", "비고", "고민", "주제", "프로필", "기록", "comment", "note"];
