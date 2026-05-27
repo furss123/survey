@@ -793,7 +793,7 @@
           <div class="auto-publish-panel" id="autoPublishPanel">
             <div class="auto-publish-head">
               <p class="auto-publish-title">자동 게시</p>
-              <button type="button" class="auto-publish-toggle" id="autoPublishToggleBtn" aria-pressed="false">꺼짐</button>
+              <button type="button" class="auto-publish-toggle is-on" id="autoPublishToggleBtn" aria-pressed="true" disabled>항상 켜짐</button>
             </div>
             <p class="auto-publish-note" id="autoPublishStatusText" role="status" aria-live="polite"></p>
           </div>
@@ -864,7 +864,6 @@
 
   var ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
   var SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
-  var AUTO_PUBLISH_ENABLED_KEY = "school-auto-publish-enabled-v1";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
 
   function esc(s) {
@@ -1471,43 +1470,19 @@
     el.classList.add("is-set");
   }
 
-  function loadAutoPublishEnabled() {
-    try {
-      return localStorage.getItem(AUTO_PUBLISH_ENABLED_KEY) === "1";
-    } catch (err) {
-      return false;
-    }
-  }
-
-  function saveAutoPublishEnabled(enabled) {
-    try {
-      localStorage.setItem(AUTO_PUBLISH_ENABLED_KEY, enabled ? "1" : "0");
-    } catch (err) { /* ignore */ }
-  }
-
-  function renderAutoPublishState(enabled) {
+  function renderAutoPublishState() {
     var btn = document.getElementById("autoPublishToggleBtn");
     var text = document.getElementById("autoPublishStatusText");
     if (!btn || !text) return;
-    btn.textContent = enabled ? "켜짐" : "꺼짐";
-    btn.classList.toggle("is-on", !!enabled);
-    btn.setAttribute("aria-pressed", enabled ? "true" : "false");
-    if (enabled) {
-      text.textContent = "자동 게시: 켜짐 — PowerShell 동기화 스크립트가 실행 중이면 등록 변경이 자동 반영됩니다.";
-      return;
-    }
-    text.textContent = "자동 게시: 꺼짐 — 등록 전에 PowerShell에서 .\\scripts\\start-registry-sync.ps1 을 실행하세요.";
+    btn.textContent = "항상 켜짐";
+    btn.classList.add("is-on");
+    btn.setAttribute("aria-pressed", "true");
+    btn.disabled = true;
+    text.textContent = "자동 게시: 켜짐 — 등록 변경 사항을 자동 반영합니다.";
   }
 
   function initAutoPublishToggle() {
-    var btn = document.getElementById("autoPublishToggleBtn");
-    if (!btn) return;
-    renderAutoPublishState(loadAutoPublishEnabled());
-    btn.addEventListener("click", function () {
-      var next = !loadAutoPublishEnabled();
-      saveAutoPublishEnabled(next);
-      renderAutoPublishState(next);
-    });
+    renderAutoPublishState();
   }
 
   function openRosterModal() {
