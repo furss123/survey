@@ -455,6 +455,51 @@
       border-color: rgba(15, 118, 110, 0.35);
       font-weight: 600;
     }
+    .auto-publish-panel {
+      margin: 0 0 var(--space-4);
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--theme-border-light);
+      background: var(--theme-bg-muted);
+    }
+    .auto-publish-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .auto-publish-title {
+      margin: 0;
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--theme-heading);
+    }
+    .auto-publish-toggle {
+      min-width: 84px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      font-size: var(--text-sm);
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
+    }
+    .auto-publish-toggle.is-on {
+      border-color: transparent;
+      background: linear-gradient(180deg, var(--theme-btn-top) 0%, var(--theme-btn-bottom) 100%);
+      color: var(--chip-active-text);
+    }
+    .auto-publish-toggle:hover {
+      border-color: var(--border-accent);
+    }
+    .auto-publish-note {
+      margin: 10px 0 0;
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
+      line-height: 1.45;
+    }
     html[data-theme="dark"] .roster-summary.is-set {
       color: #5eead4;
     }
@@ -745,6 +790,13 @@
             <button type="button" class="admin-btn admin-btn-primary" id="adminRosterOpenBtn">명렬표 입력</button>
           </div>
           <p class="roster-summary" id="adminRosterSummary" role="status">명렬표 시트가 설정되지 않았습니다. 「명렬표 입력」을 눌러 주세요.</p>
+          <div class="auto-publish-panel" id="autoPublishPanel">
+            <div class="auto-publish-head">
+              <p class="auto-publish-title">자동 게시</p>
+              <button type="button" class="auto-publish-toggle" id="autoPublishToggleBtn" aria-pressed="false">꺼짐</button>
+            </div>
+            <p class="auto-publish-note" id="autoPublishStatusText" role="status" aria-live="polite"></p>
+          </div>
           <form id="adminSheetForm" class="admin-form">
             <label for="adminSheetUrl">구글 시트 주소</label>
             <div class="admin-url-row">
@@ -812,6 +864,7 @@
 
   var ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
   var SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
+  var AUTO_PUBLISH_ENABLED_KEY = "school-auto-publish-enabled-v1";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
 
   function esc(s) {
@@ -1417,6 +1470,45 @@
     el.classList.add("is-set");
   }
 
+  function loadAutoPublishEnabled() {
+    try {
+      return localStorage.getItem(AUTO_PUBLISH_ENABLED_KEY) === "1";
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function saveAutoPublishEnabled(enabled) {
+    try {
+      localStorage.setItem(AUTO_PUBLISH_ENABLED_KEY, enabled ? "1" : "0");
+    } catch (err) { /* ignore */ }
+  }
+
+  function renderAutoPublishState(enabled) {
+    var btn = document.getElementById("autoPublishToggleBtn");
+    var text = document.getElementById("autoPublishStatusText");
+    if (!btn || !text) return;
+    btn.textContent = enabled ? "켜짐" : "꺼짐";
+    btn.classList.toggle("is-on", !!enabled);
+    btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+    if (enabled) {
+      text.textContent = "자동 게시: 켜짐 — PowerShell 동기화 스크립트가 실행 중이면 등록 변경이 자동 반영됩니다.";
+      return;
+    }
+    text.textContent = "자동 게시: 꺼짐 — 등록 전에 PowerShell에서 .\\scripts\\start-registry-sync.ps1 을 실행하세요.";
+  }
+
+  function initAutoPublishToggle() {
+    var btn = document.getElementById("autoPublishToggleBtn");
+    if (!btn) return;
+    renderAutoPublishState(loadAutoPublishEnabled());
+    btn.addEventListener("click", function () {
+      var next = !loadAutoPublishEnabled();
+      saveAutoPublishEnabled(next);
+      renderAutoPublishState(next);
+    });
+  }
+
   function openRosterModal() {
     var overlay = document.getElementById("rosterModalOverlay");
     var urlInput = document.getElementById("rosterModalUrl");
@@ -1479,6 +1571,7 @@
   if (!AdminSession.require()) return;
 
   initRosterModal();
+  initAutoPublishToggle();
   refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
   bindSurveyNameField();
 
