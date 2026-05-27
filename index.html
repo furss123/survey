@@ -1847,6 +1847,39 @@
       flex-wrap: wrap;
       gap: 8px;
     }
+    .admin-setup-prompt {
+      margin: 0 0 var(--space-4);
+    }
+    .admin-setup-prompt label {
+      display: block;
+      margin: 0 0 8px;
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--theme-heading);
+    }
+    .admin-setup-prompt textarea {
+      width: 100%;
+      min-height: 72px;
+      resize: vertical;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      line-height: 1.45;
+    }
+    .admin-setup-prompt textarea:focus {
+      outline: none;
+      border-color: var(--border-accent);
+      box-shadow: var(--focus-ring);
+    }
+    .admin-setup-prompt-hint {
+      margin: 6px 0 0;
+      font-size: 0.78rem;
+      color: var(--theme-text-muted);
+    }
     .admin-setup-actions .admin-btn {
       text-decoration: none;
       display: inline-flex;
@@ -2208,6 +2241,11 @@
       </div>
       <div class="admin-setup-section">
         <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
+      </div>
+      <div class="admin-setup-prompt">
+        <label for="adminAnalysisPrompt">게시 분석규칙 (간단 프롬프트)</label>
+        <textarea id="adminAnalysisPrompt" placeholder="예) 핵심 키워드 3개만 요약, 위험신호 문장은 별도 표시"></textarea>
+        <p class="admin-setup-prompt-hint">등록 시 함께 저장됩니다. (최대 500자)</p>
       </div>
       <div class="admin-setup-actions">
         <button type="button" class="admin-btn admin-btn-primary" id="adminSetupConfirm">메인에 등록</button>
@@ -5069,6 +5107,9 @@
       label: adminSetupLabel,
       url: adminSetupUrl,
       tab: preferredTab,
+      analysisPrompt: coerceText(
+        (document.getElementById("adminAnalysisPrompt") || {}).value
+      ).slice(0, 500),
       classes: registryClasses,
       categorySelectAll: adminCategorySelectAll,
       categories: adminSetupCategories.map(function (c, i) {
@@ -5196,6 +5237,10 @@
       try {
         if (draftRaw) draft = JSON.parse(draftRaw);
       } catch (e) { /* ignore */ }
+      var promptInput = document.getElementById("adminAnalysisPrompt");
+      if (promptInput) {
+        promptInput.value = draft && draft.analysisPrompt ? String(draft.analysisPrompt) : "";
+      }
       adminSetupCategories = deriveCategoriesFromAnalysis(lastMultiResult);
       if (draft && draft.categories && draft.categories.length) {
         adminSetupCategories = mergeSavedCategoryPrefs(
@@ -6239,6 +6284,7 @@
         editId: adminSetupEditId,
         categories: draft && draft.categories ? draft.categories : null,
         classes: draft && draft.classes ? draft.classes : null,
+        analysisPrompt: draft && draft.analysisPrompt ? draft.analysisPrompt : "",
         categorySelectAll: adminCategorySelectAll,
       })
     );
