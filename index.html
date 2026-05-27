@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -2277,7 +2277,11 @@
           <div class="section-head-row">
             <div class="section-label section-label--inline">설문 조사 결과</div>
             <button type="button" class="home-refresh-btn" id="homeListRefreshBtn">목록 새로고침</button>
-            <a href="admin-login.html" class="admin-entry-btn admin-entry-link">관리자</a>
+            <a
+              href="admin-login.html"
+              id="homeAdminEntryBtn"
+              class="admin-entry-btn admin-entry-link"
+            >관리자</a>
           </div>
           <p id="homeListStatus" class="home-list-status" role="status" aria-live="polite"></p>
           <div id="surveyListGroups">
@@ -2364,13 +2368,40 @@
     <div class="site-footer-inner">남악고등학교 1학년 설문 결과 · <span>survey</span></div>
   </footer>
 
-  <script src="scripts/survey-form-shared.js"></script>
-  <script src="scripts/admin-session.js"></script>
+  <script src="scripts/survey-form-shared.js?v=20260528"></script>
+  <script src="scripts/admin-session.js?v=20260528"></script>
+  <script>
+(function () {
+  var btn = document.getElementById("homeAdminEntryBtn");
+  if (btn) {
+    function adminTargetUrl() {
+      return typeof AdminSession !== "undefined" && AdminSession.isValid()
+        ? "admin.html"
+        : "admin-login.html";
+    }
+    btn.setAttribute("href", adminTargetUrl());
+    btn.addEventListener(
+      "click",
+      function () {
+        btn.setAttribute("href", adminTargetUrl());
+      },
+      true
+    );
+  }
+})();
+  </script>
   <script>
 (function () {
   "use strict";
 
+  if (typeof SurveyForm === "undefined") {
+    console.error("SurveyForm을 불러오지 못했습니다. scripts/survey-form-shared.js를 확인하세요.");
+    return;
+  }
+
   const SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
+  const ROSTER_CACHE_KEY = "survey-class-roster-cache-v1";
+  const ROSTER_CACHE_TTL_MS = 15 * 60 * 1000;
   function getClassRosterSpreadsheetId() {
     return SurveyForm.getRosterSpreadsheetId();
   }
@@ -2583,19 +2614,38 @@
     return probed;
   }
 
-  async function fetchSpreadsheetTabs(spreadsheetId) {
+  async function fetchSpreadsheetTabs(spreadsheetId, options) {
+    options = options || {};
+    var tabs = [];
     var urls = [
       "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/edit?usp=sharing",
       "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/edit",
+      "https://docs.google.com/spreadsheets/d/" + spreadsheetId + "/htmlview",
     ];
-    for (var u = 0; u < urls.length; u++) {
-      try {
-        var res = await fetch(urls[u]);
-        if (!res.ok) continue;
-        var tabs = parseTabsFromHtml(await res.text());
-        if (tabs.length) return tabs;
-      } catch (err) { /* CORS or network */ }
-    }
+    var htmlTexts = await Promise.all(
+      urls.map(function (url) {
+        return fetch(url)
+          .then(function (res) {
+            return res.ok ? res.text() : "";
+          })
+          .catch(function () {
+            return "";
+          });
+      })
+    );
+    htmlTexts.forEach(function (html) {
+      if (!html) return;
+      var parsed = parseTabsFromHtml(html);
+      if (parsed.length) {
+        var seen = {};
+        parsed.forEach(function (tab) {
+          var key = (tab.gid || "") + "|" + String(tab.title || "").toLowerCase();
+          if (seen[key]) return;
+          seen[key] = true;
+          tabs.push(tab);
+        });
+      }
+    });
     var feedUrl = "https://spreadsheets.google.com/feeds/worksheets/" + spreadsheetId + "/public/full?alt=json";
     try {
       var feedRes = await fetch(feedUrl);
@@ -2603,20 +2653,30 @@
         var feed = await feedRes.json();
         var entries = (feed && feed.feed && feed.feed.entry) || [];
         if (entries.length) {
-          return entries.map(function (entry) {
+          var feedTabs = entries.map(function (entry) {
             var gidMatch = String(entry.id || "").match(/gid=(\d+)/);
             return {
               gid: gidMatch ? gidMatch[1] : null,
               title: String(entry.title && entry.title.$t || entry.title || "시트").trim(),
             };
           });
+          var seenFeed = {};
+          feedTabs.forEach(function (tab) {
+            var key = (tab.gid || "") + "|" + String(tab.title || "").toLowerCase();
+            if (seenFeed[key]) return;
+            seenFeed[key] = true;
+            tabs.push(tab);
+          });
         }
       }
     } catch (e) { /* feed unavailable */ }
-    var classTabs = await probeTabsByClassNames(spreadsheetId);
-    if (classTabs.length) return classTabs;
-    var sheetTabs = await probeTabsBySheetIndex(spreadsheetId);
-    if (sheetTabs.length) return sheetTabs;
+    if (!tabs.length && options.allowProbe !== false) {
+      var classTabs = await probeTabsByClassNames(spreadsheetId);
+      if (classTabs.length) return classTabs;
+      var sheetTabs = await probeTabsBySheetIndex(spreadsheetId);
+      if (sheetTabs.length) return sheetTabs;
+    }
+    if (tabs.length) return tabs;
     throw new Error("시트 탭을 찾을 수 없습니다. URL·공개 공유 설정을 확인하세요.");
   }
 
@@ -3627,19 +3687,52 @@
     return roster;
   }
 
+  function loadCachedClassRoster() {
+    try {
+      var raw = sessionStorage.getItem(ROSTER_CACHE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (!data || !data.at || Date.now() - data.at > ROSTER_CACHE_TTL_MS) return null;
+      return Array.isArray(data.roster) ? data.roster : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveCachedClassRoster(roster) {
+    if (!roster || !roster.length) return;
+    try {
+      sessionStorage.setItem(
+        ROSTER_CACHE_KEY,
+        JSON.stringify({ at: Date.now(), roster: roster })
+      );
+    } catch (e) { /* quota */ }
+  }
+
   async function fetchClassRosterFromMaster() {
+    var cached = loadCachedClassRoster();
+    if (cached && cached.length) return cached;
+
     var probeTitles = ["1반", "명단", "list"];
     for (var i = 0; i < probeTitles.length; i++) {
       try {
         var values = await fetchSheetValuesGviz(getClassRosterSpreadsheetId(), { title: probeTitles[i] });
-        if (isMatrixClassRoster(values)) return parseMatrixClassRoster(values);
+        if (isMatrixClassRoster(values)) {
+          var roster = parseMatrixClassRoster(values);
+          saveCachedClassRoster(roster);
+          return roster;
+        }
       } catch (err) { /* try next tab */ }
     }
     try {
-      var tabs = await fetchSpreadsheetTabs(getClassRosterSpreadsheetId());
+      var tabs = await fetchSpreadsheetTabs(getClassRosterSpreadsheetId(), { allowProbe: false });
       if (tabs.length) {
         var values = await fetchSheetValuesGviz(getClassRosterSpreadsheetId(), tabs[0]);
-        if (isMatrixClassRoster(values)) return parseMatrixClassRoster(values);
+        if (isMatrixClassRoster(values)) {
+          var roster = parseMatrixClassRoster(values);
+          saveCachedClassRoster(roster);
+          return roster;
+        }
       }
     } catch (err) { /* master roster unavailable */ }
     return [];
@@ -4058,15 +4151,19 @@
     var token = ++homeSurveyListRefreshToken;
     var groups = document.getElementById("surveyListGroups");
     var refreshBtn = document.getElementById("homeListRefreshBtn");
+    var localMerged = SurveyForm.filterSheetEntriesOnly(loadSheetRegistry());
+    saveSheetRegistry(localMerged);
+    renderSheetButtonGrid();
     if (groups) groups.classList.add("is-refreshing");
     if (refreshBtn) refreshBtn.disabled = true;
-    setHomeListStatus(options.loadingMessage || "목록 새로고침 중…", "is-busy");
-    showDataLoadingOverlay(options.loadingMessage || "목록 새로고침 중…", 1, 35);
-    renderSheetButtonGrid();
+    if (options.showOverlay !== false) {
+      setHomeListStatus(options.loadingMessage || "목록 새로고침 중…", "is-busy");
+      showDataLoadingOverlay(options.loadingMessage || "목록 새로고침 중…", 1, 35);
+    }
     try {
       var merged =
         options.sync === false
-          ? loadSheetRegistry()
+          ? localMerged
           : await SurveyForm.refreshRegistryFromServer();
       if (token !== homeSurveyListRefreshToken) return;
       merged = SurveyForm.filterSheetEntriesOnly(merged);
@@ -4253,10 +4350,12 @@
 
     try {
       var id = parseSpreadsheetId(entry.url);
-      var sheetInputs = await fetchAllSheetsGviz(id);
-      setDataLoadingOverlayProgress(25);
-      setDataLoadingOverlayCap(60);
-      var masterRoster = await fetchClassRosterFromMaster();
+      var fetched = await Promise.all([
+        fetchAllSheetsGviz(id),
+        fetchClassRosterFromMaster(),
+      ]);
+      var sheetInputs = fetched[0];
+      var masterRoster = fetched[1];
       setDataLoadingOverlayProgress(45);
       setDataLoadingOverlayCap(85);
       var hasData = sheetInputs.some(function (s) {
@@ -6296,26 +6395,30 @@
   }
 
   initTheme();
-  document.getElementById("themeToggle").addEventListener("click", function () {
-    var isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    applyTheme(isDark ? "light" : "dark");
-  });
+  var themeToggleEl = document.getElementById("themeToggle");
+  if (themeToggleEl) {
+    themeToggleEl.addEventListener("click", function () {
+      var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      applyTheme(isDark ? "light" : "dark");
+    });
+  }
   scheduleHeaderTitleFit();
   window.addEventListener("resize", scheduleHeaderTitleFit);
   window.addEventListener("load", scheduleHeaderTitleFit);
 
-  refreshHomeSurveyList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
+  refreshHomeSurveyList({
+    sync: true,
+    loadingMessage: "설문 목록 불러오는 중…",
+    showOverlay: false,
+  });
   var homeListRefreshBtn = document.getElementById("homeListRefreshBtn");
   if (homeListRefreshBtn) {
     homeListRefreshBtn.addEventListener("click", function () {
-      refreshHomeSurveyList({ sync: true });
+      refreshHomeSurveyList({ sync: true, showOverlay: true });
     });
   }
-  window.addEventListener("pageshow", function () {
-    refreshHomeSurveyList({ sync: true });
-  });
-  window.addEventListener("focus", function () {
-    refreshHomeSurveyList({ sync: true });
+  window.addEventListener("pageshow", function (e) {
+    if (e.persisted) refreshHomeSurveyList({ sync: true, showOverlay: false });
   });
   window.addEventListener("survey-registry-updated", function () {
     refreshHomeSurveyList({ sync: true });
@@ -6402,15 +6505,17 @@
       getDefaultClassSheetButtons().find(function (item) {
         return item.id === openId;
       });
-    if (entry) {
-      var baseId = String(openId).split("::")[0];
-      var regEntry = findRegistryEntry(baseId) || entry;
-      launchSheetAnalysis(regEntry, null, {
-        sheet: params.get("sheet"),
-        class: params.get("class"),
-        subject: params.get("subject"),
-      });
-    }
+    if (!entry) return;
+    var baseId = String(openId).split("::")[0];
+    var regEntry = findRegistryEntry(baseId) || entry;
+    var restoreView = {
+      sheet: params.get("sheet"),
+      class: params.get("class"),
+      subject: params.get("subject"),
+    };
+    setTimeout(function () {
+      launchSheetAnalysis(regEntry, null, restoreView);
+    }, 0);
   })();
 
   var headerLogoHome = document.getElementById("headerLogoHome");
