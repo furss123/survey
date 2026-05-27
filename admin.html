@@ -500,6 +500,36 @@
       color: var(--theme-text-muted);
       line-height: 1.45;
     }
+    .auto-publish-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-form textarea {
+      width: 100%;
+      margin-top: 6px;
+      padding: 9px 11px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--theme-bg-panel);
+      color: var(--theme-text);
+      font-family: inherit;
+      font-size: var(--text-base);
+      line-height: 1.45;
+      min-height: 68px;
+      resize: vertical;
+    }
+    .admin-form textarea:focus {
+      outline: none;
+      border-color: var(--border-accent);
+      box-shadow: var(--focus-ring);
+    }
+    .admin-field-hint {
+      margin: 6px 0 0;
+      font-size: 0.78rem;
+      color: var(--theme-text-muted);
+    }
     html[data-theme="dark"] .roster-summary.is-set {
       color: #5eead4;
     }
@@ -793,9 +823,12 @@
           <div class="auto-publish-panel" id="autoPublishPanel">
             <div class="auto-publish-head">
               <p class="auto-publish-title">자동 게시</p>
-              <button type="button" class="auto-publish-toggle is-on" id="autoPublishToggleBtn" aria-pressed="true" disabled>항상 켜짐</button>
+              <button type="button" class="auto-publish-toggle" id="autoPublishToggleBtn" aria-pressed="false">꺼짐</button>
             </div>
             <p class="auto-publish-note" id="autoPublishStatusText" role="status" aria-live="polite"></p>
+            <div class="auto-publish-actions">
+              <button type="button" class="admin-btn" id="autoPublishRunBtn">PowerShell 실행 명령 복사</button>
+            </div>
           </div>
           <form id="adminSheetForm" class="admin-form">
             <label for="adminSheetUrl">구글 시트 주소</label>
@@ -810,6 +843,9 @@
               placeholder="주소 입력 후 시트 이름이 표시됩니다"
               autocomplete="off"
             />
+            <label for="adminAnalysisPromptInput">분석 프롬프트</label>
+            <textarea id="adminAnalysisPromptInput" placeholder="예) 핵심 주제만 간단 요약, 위험 신호 문장 별도 표시"></textarea>
+            <p class="admin-field-hint">분석 전 단계에서 입력한 규칙이 함께 전달됩니다. (최대 500자)</p>
             <div class="admin-actions">
               <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn" hidden>시트 추가</button>
               <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>
@@ -864,6 +900,8 @@
 
   var ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
   var SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
+  var AUTO_PUBLISH_ENABLED_KEY = "school-auto-publish-enabled-v2";
+  var AUTO_PUBLISH_CMD = ".\\scripts\\start-registry-sync.ps1";
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
 
   function esc(s) {
@@ -938,6 +976,11 @@
 
   function getSurveyNameInput() {
     return document.getElementById("adminSurveyName");
+  }
+
+  function getAnalysisPromptValue() {
+    var input = document.getElementById("adminAnalysisPromptInput");
+    return coerceText(input && input.value).slice(0, 500);
   }
 
   function getSurveyNameValue() {
@@ -1137,6 +1180,8 @@
       nameInput.value = entry.label || "";
       nameInput.classList.remove("is-suggested", "is-loading");
     }
+    var promptInput = document.getElementById("adminAnalysisPromptInput");
+    if (promptInput) promptInput.value = coerceText(entry.analysisPrompt || "");
     document.getElementById("adminSheetUrl").value = entry.url || "";
     setSheetFormMode("edit");
     document.getElementById("adminSheetForm").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1150,6 +1195,8 @@
     urlClearOnNextFocus = true;
     var nameInput = getSurveyNameInput();
     if (nameInput) nameInput.classList.remove("is-suggested", "is-loading");
+    var promptInput = document.getElementById("adminAnalysisPromptInput");
+    if (promptInput) promptInput.value = "";
     setSheetFormMode("add");
   }
 
@@ -1158,13 +1205,17 @@
     return "index.html?open=" + encodeURIComponent(entry.id);
   }
 
-  function updateRegistryEntry(id, label, url) {
+  function updateRegistryEntry(id, label, url, analysisPrompt) {
     var registry = loadSheetRegistry();
     var idx = registry.findIndex(function (item) {
       return item.id === id;
     });
     if (idx < 0) throw new Error("수정할 시트를 찾을 수 없습니다.");
-    registry[idx] = Object.assign({}, registry[idx], { label: label, url: url });
+    registry[idx] = Object.assign({}, registry[idx], {
+      label: label,
+      url: url,
+      analysisPrompt: coerceText(analysisPrompt || "").slice(0, 500),
+    });
     registry = normalizeSheetRegistry(registry);
     saveSheetRegistry(registry);
     SurveyForm.saveRegistry(registry);
@@ -1413,6 +1464,35 @@
     }
     if (groups) groups.hidden = false;
     renderRegistrySection(listEl, emptyEl, registry);
+    stripLegacyAdminActions();
+  }
+
+  function stripLegacyAdminActions() {
+    // 구버전 잔재: 전체삭제/선택삭제/지금 사이트 게시 버튼 제거
+    [
+      "adminRegistryBulkBar",
+      "adminRegistrySelectAll",
+      "adminRegistryDeleteSelected",
+      "adminRegistryDeleteAll",
+      "adminRegistryPurgeAll",
+      "adminPublishNowBtn",
+    ].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+    document.querySelectorAll("button, label, a").forEach(function (el) {
+      var txt = coerceText(el.textContent);
+      if (!txt) return;
+      if (
+        txt.indexOf("전체 삭제") >= 0 ||
+        txt.indexOf("선택 삭제") >= 0 ||
+        txt.indexOf("전체 선택") >= 0 ||
+        txt.indexOf("지금 사이트") >= 0 ||
+        txt.indexOf("사이트에 배치") >= 0
+      ) {
+        el.style.display = "none";
+      }
+    });
   }
 
   (function initRegistryLiveRefresh() {
@@ -1470,19 +1550,62 @@
     el.classList.add("is-set");
   }
 
+  function loadAutoPublishEnabled() {
+    try {
+      return localStorage.getItem(AUTO_PUBLISH_ENABLED_KEY) === "1";
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function saveAutoPublishEnabled(enabled) {
+    try {
+      localStorage.setItem(AUTO_PUBLISH_ENABLED_KEY, enabled ? "1" : "0");
+    } catch (err) { /* ignore */ }
+  }
+
   function renderAutoPublishState() {
     var btn = document.getElementById("autoPublishToggleBtn");
     var text = document.getElementById("autoPublishStatusText");
     if (!btn || !text) return;
-    btn.textContent = "항상 켜짐";
-    btn.classList.add("is-on");
-    btn.setAttribute("aria-pressed", "true");
-    btn.disabled = true;
-    text.textContent = "자동 게시: 켜짐 — 등록 변경 사항을 자동 반영합니다.";
+    var enabled = loadAutoPublishEnabled();
+    btn.textContent = enabled ? "켜짐" : "꺼짐";
+    btn.classList.toggle("is-on", enabled);
+    btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+    text.textContent = enabled
+      ? "자동 게시: 켜짐 — PowerShell 동기화 스크립트가 실행 중이면 등록 변경이 자동 반영됩니다."
+      : "자동 게시: 꺼짐 — 아래 버튼으로 PowerShell 명령을 복사해 바로 실행할 수 있습니다.";
+  }
+
+  function copyAutoPublishCommand() {
+    var cmd = AUTO_PUBLISH_CMD;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(cmd).then(function () {
+        setAdminRegistryStatus("PowerShell 명령을 복사했습니다: " + cmd, "is-ok");
+      }).catch(function () {
+        alert("PowerShell에서 다음 명령을 실행하세요:\n" + cmd);
+      });
+      return;
+    }
+    alert("PowerShell에서 다음 명령을 실행하세요:\n" + cmd);
   }
 
   function initAutoPublishToggle() {
+    var btn = document.getElementById("autoPublishToggleBtn");
+    var runBtn = document.getElementById("autoPublishRunBtn");
     renderAutoPublishState();
+    if (btn) {
+      btn.addEventListener("click", function () {
+        var next = !loadAutoPublishEnabled();
+        saveAutoPublishEnabled(next);
+        renderAutoPublishState();
+      });
+    }
+    if (runBtn) {
+      runBtn.addEventListener("click", function () {
+        copyAutoPublishCommand();
+      });
+    }
   }
 
   function openRosterModal() {
@@ -1546,6 +1669,7 @@
 
   if (!AdminSession.require()) return;
 
+  stripLegacyAdminActions();
   initRosterModal();
   initAutoPublishToggle();
   refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
@@ -1562,6 +1686,7 @@
 
   document.getElementById("adminSheetPreviewBtn").addEventListener("click", function () {
     var label = getSurveyNameValue();
+    var analysisPrompt = getAnalysisPromptValue();
     var url = coerceText(document.getElementById("adminSheetUrl").value);
     if (!url) {
       alert("구글 시트 주소를 입력해 주세요.");
@@ -1579,7 +1704,12 @@
     }
     sessionStorage.setItem(
       ADMIN_SETUP_DRAFT_KEY,
-      JSON.stringify({ label: label, url: url, ts: Date.now() })
+      JSON.stringify({
+        label: label,
+        url: url,
+        ts: Date.now(),
+        analysisPrompt: analysisPrompt,
+      })
     );
     location.href =
       "index.html?adminSetup=1&label=" +
@@ -1591,6 +1721,7 @@
   document.getElementById("adminSheetForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var label = getSurveyNameValue();
+    var analysisPrompt = getAnalysisPromptValue();
     var url = coerceText(document.getElementById("adminSheetUrl").value);
     if (!editingSheetId) {
       alert("새 시트는 주소 옆 「카테고리 구성」으로 미리보기·구성 후 등록해 주세요.");
@@ -1611,7 +1742,7 @@
       if (submitBtn) submitBtn.disabled = true;
       setAdminRegistryStatus("시트 정보 저장 중…", "is-busy");
       try {
-        updateRegistryEntry(editingSheetId, label, url);
+        updateRegistryEntry(editingSheetId, label, url, analysisPrompt);
       } catch (err) {
         setAdminRegistryStatus(err.message || "시트 수정에 실패했습니다.", "is-warn");
         if (submitBtn) submitBtn.disabled = false;
