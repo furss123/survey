@@ -167,9 +167,6 @@
     if (!entry) return entry;
     var out = Object.assign({}, entry);
     if (out.label != null) out.label = normalizeDisplayText(out.label) || out.label;
-    if (out.analysisPrompt != null) {
-      out.analysisPrompt = normalizeDisplayText(out.analysisPrompt);
-    }
     if (Array.isArray(out.categories)) {
       out.categories = out.categories.map(function (c) {
         if (!c) return c;

@@ -438,8 +438,17 @@
       opacity: 0.65;
       cursor: wait;
     }
-    .sheet-launch-btn.is-loading .sheet-launch-btn__label,
-    .sheet-launch-btn.is-loading .sheet-launch-btn__date { opacity: 0.85; }
+    .sheet-launch-btn.is-loading {
+      cursor: wait;
+      border-color: var(--border-accent);
+    }
+    .sheet-launch-btn.is-loading .sheet-launch-btn__label {
+      color: var(--theme-heading-accent);
+      font-weight: 800;
+    }
+    .sheet-launch-btn.is-loading .sheet-launch-btn__date {
+      display: none;
+    }
     .sheet-launch-btn__progress {
       position: absolute;
       left: 0;
@@ -450,17 +459,43 @@
       pointer-events: none;
       background: linear-gradient(
         90deg,
-        rgba(61, 107, 158, 0.35) 0%,
-        rgba(74, 122, 176, 0.22) 100%
+        rgba(196, 160, 53, 0.28) 0%,
+        rgba(61, 107, 158, 0.32) 100%
       );
       transition: width 0.12s ease-out;
     }
     html[data-theme="dark"] .sheet-launch-btn__progress {
       background: linear-gradient(
         90deg,
-        rgba(96, 165, 250, 0.28) 0%,
-        rgba(61, 107, 158, 0.18) 100%
+        rgba(196, 160, 53, 0.22) 0%,
+        rgba(96, 165, 250, 0.26) 100%
       );
+    }
+    .sheet-launch-btn__track {
+      display: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 5px;
+      z-index: 2;
+      pointer-events: none;
+      background: rgba(15, 36, 64, 0.08);
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      overflow: hidden;
+    }
+    html[data-theme="dark"] .sheet-launch-btn__track {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .sheet-launch-btn.is-loading .sheet-launch-btn__track {
+      display: block;
+    }
+    .sheet-launch-btn__track-fill {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--school-accent) 0%, var(--school-navy-light) 100%);
+      transition: width 0.12s ease-out;
     }
     .sheet-launch-btn__label,
     .sheet-launch-btn__date {
@@ -485,14 +520,18 @@
     }
     .sheet-launch-btn__pct {
       flex: 0 0 auto;
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-size: 0.8125rem;
+      font-weight: 800;
       color: var(--theme-heading-accent);
-      min-width: 2.5rem;
+      min-width: 2.75rem;
       text-align: right;
       z-index: 1;
+      font-variant-numeric: tabular-nums;
     }
     .sheet-launch-btn__pct[hidden] { display: none !important; }
+    .sheet-launch-btn.is-loading .sheet-launch-btn__pct {
+      display: block !important;
+    }
     .sheet-launch-btn__tag {
       font-size: 0.7rem;
       font-weight: 700;
@@ -562,57 +601,6 @@
     .home-list-status.is-ok { color: #047857; }
     .home-list-status.is-busy { color: var(--theme-heading); }
 
-    /* 상단 로딩 게이지 (1%~100%) */
-    .data-loading-overlay {
-      position: fixed;
-      left: 0;
-      right: 0;
-      top: 0;
-      z-index: 4000;
-      padding: 10px 16px 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      background: rgba(15, 23, 42, 0.92);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-      backdrop-filter: blur(2px);
-    }
-    html:not([data-theme="dark"]) .data-loading-overlay {
-      background: rgba(238, 242, 247, 0.92);
-      border-bottom-color: rgba(148, 163, 184, 0.55);
-    }
-    .data-loading-overlay[hidden] { display: none !important; }
-    .data-loading-overlay__text {
-      color: #e2e8f0;
-      font-weight: 800;
-      font-size: 0.95rem;
-      letter-spacing: -0.01em;
-    }
-    html:not([data-theme="dark"]) .data-loading-overlay__text {
-      color: #0f172a;
-    }
-    .data-loading-overlay__sub {
-      color: rgba(226, 232, 240, 0.85);
-      font-weight: 700;
-      font-size: 0.78rem;
-    }
-    html:not([data-theme="dark"]) .data-loading-overlay__sub {
-      color: rgba(71, 85, 105, 0.9);
-    }
-    .data-loading-overlay__bar {
-      width: min(760px, 92vw);
-      height: 5px;
-      border-radius: 999px;
-      overflow: hidden;
-      background: rgba(148, 163, 184, 0.25);
-    }
-    .data-loading-overlay__bar-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--theme-btn-top) 0%, var(--school-accent) 100%);
-      transition: width 0.15s linear;
-    }
     #surveyListGroups.is-refreshing {
       opacity: 0.55;
       pointer-events: none;
@@ -1884,80 +1872,11 @@
       flex-wrap: wrap;
       gap: 8px;
     }
-    .admin-setup-prompt {
-      margin: 0 0 var(--space-4);
-    }
-    .admin-setup-prompt label {
-      display: block;
-      margin: 0 0 8px;
-      font-size: var(--text-sm);
-      font-weight: 700;
-      color: var(--theme-heading);
-    }
-    .admin-setup-prompt textarea {
-      width: 100%;
-      min-height: 72px;
-      resize: vertical;
-      padding: 10px 12px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-strong);
-      background: var(--theme-bg-panel);
-      color: var(--theme-text);
-      font-family: inherit;
-      font-size: var(--text-sm);
-      line-height: 1.45;
-    }
-    .admin-setup-prompt textarea:focus {
-      outline: none;
-      border-color: var(--border-accent);
-      box-shadow: var(--focus-ring);
-    }
-    .admin-setup-prompt-hint {
-      margin: 6px 0 0;
-      font-size: 0.78rem;
-      color: var(--theme-text-muted);
-    }
     .admin-setup-actions .admin-btn {
       text-decoration: none;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-    }
-    .admin-setup-prompt-live {
-      margin: 8px 0 0;
-      padding: 10px 12px;
-      border-radius: var(--radius-sm);
-      border: 1px dashed var(--theme-border);
-      background: var(--theme-bg-muted);
-      font-size: var(--text-sm);
-      line-height: 1.5;
-      color: var(--theme-text-muted);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .admin-setup-prompt-live:empty {
-      display: none;
-    }
-    .admin-setup-prompt-banner {
-      margin: 0 0 var(--space-4);
-      padding: 12px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--theme-border-light);
-      background: var(--theme-bg-muted);
-    }
-    .admin-setup-prompt-banner strong {
-      display: block;
-      margin-bottom: 6px;
-      font-size: var(--text-sm);
-      color: var(--theme-heading);
-    }
-    .admin-setup-prompt-banner p {
-      margin: 0;
-      font-size: var(--text-sm);
-      line-height: 1.55;
-      color: var(--theme-text);
-      white-space: pre-wrap;
-      word-break: break-word;
     }
     body.admin-setup-mode.admin-setup-step-configure #results {
       display: none !important;
@@ -2304,30 +2223,11 @@
     </div>
   </header>
 
-  <div class="data-loading-overlay" id="dataLoadingOverlay" hidden aria-live="polite" aria-label="로딩 상태">
-    <div class="data-loading-overlay__text" id="dataLoadingOverlayText">로딩 중…</div>
-    <div class="data-loading-overlay__sub" id="dataLoadingOverlaySub">1%</div>
-    <div class="data-loading-overlay__bar" aria-hidden="true">
-      <div class="data-loading-overlay__bar-fill" id="dataLoadingOverlayFill"></div>
-    </div>
-  </div>
-
   <div id="adminSetupPanel" class="admin-setup-panel no-print" hidden>
     <div class="admin-setup-inner">
       <div class="admin-setup-head">
         <strong id="adminSetupTitle">시트 구성 미리보기</strong>
         <span class="admin-setup-meta" id="adminSetupMeta"></span>
-      </div>
-      <div class="admin-setup-prompt">
-        <label for="adminAnalysisPrompt">분석 관련 프롬프트</label>
-        <textarea
-          id="adminAnalysisPrompt"
-          rows="4"
-          placeholder="예) 핵심 키워드 3개만 요약, 위험신호 문장은 별도 표시"
-        ></textarea>
-        <p class="admin-setup-prompt-hint" id="adminSetupPromptHint">프롬프트를 바꾸면 아래 미리보기 문구가 즉시 갱신됩니다.</p>
-        <p class="admin-setup-prompt-hint" id="adminSetupPromptCount" aria-live="polite">0자</p>
-        <div class="admin-setup-prompt-live" id="adminSetupPromptLive" aria-live="polite"></div>
       </div>
       <div class="admin-setup-section">
         <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
@@ -2338,7 +2238,7 @@
       </div>
       <div class="admin-setup-actions admin-setup-section--preview-only" id="adminSetupActionsPreview" hidden>
         <button type="button" class="admin-btn admin-btn-primary" id="adminSetupConfirm">게시</button>
-        <button type="button" class="admin-btn" id="adminSetupEditPromptBtn">프롬프트 수정</button>
+        <button type="button" class="admin-btn" id="adminSetupBackToConfigureBtn">구성 수정</button>
         <a href="admin.html" class="admin-btn">관리자로 돌아가기</a>
       </div>
     </div>
@@ -2481,6 +2381,7 @@
   const DEFAULT_RESPONSE_SHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
   const SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
   const ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
+  const CLASS_VIEW_ALL = "__all__";
   const INDEX_PAGE_PATH = (location.pathname.split("/").pop() || "index.html");
   const PROFILE_PATTERN = /\[(\d+)반\]\s*\[(\d+)\]\s*\[([^\]]+)\]/;
 
@@ -4135,75 +4036,6 @@
     if (kind) el.classList.add(kind);
   }
 
-  var dataLoadingOverlayToken = 0;
-  var dataLoadingOverlayTimer = null;
-  var dataLoadingOverlayCap = 100;
-  var dataLoadingOverlayPercent = 1;
-
-  function showDataLoadingOverlay(message, initialPercent, capPercent) {
-    var overlay = document.getElementById("dataLoadingOverlay");
-    var text = document.getElementById("dataLoadingOverlayText");
-    var sub = document.getElementById("dataLoadingOverlaySub");
-    var fill = document.getElementById("dataLoadingOverlayFill");
-    if (!overlay || !text || !sub || !fill) return;
-
-    var token = ++dataLoadingOverlayToken;
-    if (dataLoadingOverlayTimer) window.clearInterval(dataLoadingOverlayTimer);
-    dataLoadingOverlayTimer = null;
-    dataLoadingOverlayCap = capPercent == null ? 99 : capPercent;
-    dataLoadingOverlayPercent = initialPercent == null ? 1 : initialPercent;
-
-    text.textContent = message || "로딩 중…";
-    sub.textContent = String(Math.max(1, Math.min(100, dataLoadingOverlayPercent))) + "%";
-    fill.style.width = String(Math.max(1, Math.min(100, dataLoadingOverlayPercent))) + "%";
-
-    overlay.hidden = false;
-
-    dataLoadingOverlayTimer = window.setInterval(function () {
-      if (token !== dataLoadingOverlayToken) {
-        if (dataLoadingOverlayTimer) window.clearInterval(dataLoadingOverlayTimer);
-        dataLoadingOverlayTimer = null;
-        return;
-      }
-      if (dataLoadingOverlayPercent < dataLoadingOverlayCap) {
-        // 부드럽게 증가 (결정형이지만 네트워크 지연에서 "멈춘 느낌"을 줄이기 위함)
-        var next = Math.min(dataLoadingOverlayCap, dataLoadingOverlayPercent + Math.max(1, Math.round(dataLoadingOverlayCap * 0.02)));
-        dataLoadingOverlayPercent = Math.max(1, next);
-        sub.textContent = String(dataLoadingOverlayPercent) + "%";
-        fill.style.width = String(dataLoadingOverlayPercent) + "%";
-      }
-    }, 120);
-  }
-
-  function setDataLoadingOverlayCap(capPercent) {
-    if (capPercent == null) return;
-    dataLoadingOverlayCap = Math.max(1, Math.min(100, capPercent));
-  }
-
-  function setDataLoadingOverlayProgress(percent) {
-    var overlay = document.getElementById("dataLoadingOverlay");
-    var sub = document.getElementById("dataLoadingOverlaySub");
-    var fill = document.getElementById("dataLoadingOverlayFill");
-    if (!overlay || !sub || !fill) return;
-    dataLoadingOverlayPercent = Math.max(1, Math.min(100, Math.round(Number(percent) || 1)));
-    sub.textContent = String(dataLoadingOverlayPercent) + "%";
-    fill.style.width = String(dataLoadingOverlayPercent) + "%";
-  }
-
-  function hideDataLoadingOverlaySoon() {
-    var overlay = document.getElementById("dataLoadingOverlay");
-    if (!overlay) return;
-    try {
-      if (dataLoadingOverlayTimer) window.clearInterval(dataLoadingOverlayTimer);
-      dataLoadingOverlayTimer = null;
-    } catch (err) { /* ignore */ }
-
-    setDataLoadingOverlayProgress(100);
-    window.setTimeout(function () {
-      if (overlay) overlay.hidden = true;
-    }, 250);
-  }
-
   function flashHomeSurveyList() {
     var groups = document.getElementById("surveyListGroups");
     if (!groups) return;
@@ -4338,7 +4170,7 @@
     return (
       '<button type="button" class="sheet-launch-btn sheet-launch-btn--survey" data-sheet-id="' +
       esc(entry.id) +
-      '"><span class="sheet-launch-btn__progress" aria-hidden="true"></span><span class="sheet-launch-btn__label">' +
+      '"><span class="sheet-launch-btn__progress" aria-hidden="true"></span><span class="sheet-launch-btn__track" aria-hidden="true"><span class="sheet-launch-btn__track-fill"></span></span><span class="sheet-launch-btn__label">' +
       esc(label) +
       '</span><span class="sheet-launch-btn__date">' +
       esc(dateText || "—") +
@@ -4346,11 +4178,47 @@
     );
   }
 
+  var SHEET_BTN_LOADING_MSG = "설문 데이터 불러오는 중…";
   var sheetBtnProgressToken = 0;
   var sheetBtnProgressTimer = null;
   var sheetBtnProgressCap = 99;
   var sheetBtnProgressPercent = 1;
   var sheetBtnProgressEl = null;
+
+  function findSheetLaunchButton(sheetId) {
+    if (!sheetId) return null;
+    var id = String(sheetId).split("::")[0];
+    return document.querySelector('.sheet-launch-btn[data-sheet-id="' + id.replace(/"/g, "") + '"]');
+  }
+
+  function captureSheetLaunchButtonIdleState(btn) {
+    if (!btn) return;
+    var labelEl = btn.querySelector(".sheet-launch-btn__label");
+    var dateEl = btn.querySelector(".sheet-launch-btn__date");
+    if (labelEl) btn.dataset.idleLabel = labelEl.textContent;
+    if (dateEl) btn.dataset.idleDate = dateEl.textContent;
+  }
+
+  function setSheetLaunchButtonLoadingUi(btn, message) {
+    if (!btn) return;
+    var labelEl = btn.querySelector(".sheet-launch-btn__label");
+    if (labelEl) labelEl.textContent = message || SHEET_BTN_LOADING_MSG;
+    btn.setAttribute("aria-busy", "true");
+  }
+
+  function restoreSheetLaunchButtonIdleState(btn) {
+    if (!btn) return;
+    var labelEl = btn.querySelector(".sheet-launch-btn__label");
+    var dateEl = btn.querySelector(".sheet-launch-btn__date");
+    if (labelEl && btn.dataset.idleLabel != null) labelEl.textContent = btn.dataset.idleLabel;
+    if (dateEl) {
+      dateEl.hidden = false;
+      if (btn.dataset.idleDate != null) dateEl.textContent = btn.dataset.idleDate;
+    }
+    btn.removeAttribute("aria-busy");
+    delete btn.dataset.idleLabel;
+    delete btn.dataset.idleDate;
+  }
 
   function ensureSheetLaunchButtonProgress(btn) {
     if (!btn) return null;
@@ -4369,26 +4237,34 @@
     var fill = ensureSheetLaunchButtonProgress(btn);
     var pct = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
     fill.style.width = pct + "%";
+    var trackFill = btn.querySelector(".sheet-launch-btn__track-fill");
+    if (trackFill) trackFill.style.width = pct + "%";
     var pctEl = btn.querySelector(".sheet-launch-btn__pct");
     if (pctEl) {
-      if (pct > 0 && pct < 100) {
+      if (btn.classList.contains("is-loading") && pct > 0) {
         pctEl.hidden = false;
+        pctEl.removeAttribute("aria-hidden");
         pctEl.textContent = pct + "%";
-      } else {
+      } else if (pct >= 100) {
+        pctEl.textContent = "100%";
+      } else if (!btn.classList.contains("is-loading")) {
         pctEl.hidden = true;
+        pctEl.setAttribute("aria-hidden", "true");
         pctEl.textContent = "";
       }
     }
   }
 
-  function startSheetLaunchButtonProgress(btn, capPercent) {
+  function startSheetLaunchButtonProgress(btn, capPercent, message) {
     stopSheetLaunchButtonProgress(false);
     if (!btn) return;
+    captureSheetLaunchButtonIdleState(btn);
     sheetBtnProgressEl = btn;
     sheetBtnProgressPercent = 1;
     sheetBtnProgressCap = capPercent == null ? 99 : capPercent;
     btn.classList.add("is-loading");
     btn.disabled = true;
+    setSheetLaunchButtonLoadingUi(btn, message);
     setSheetLaunchButtonProgressFill(btn, 1);
     var token = ++sheetBtnProgressToken;
     sheetBtnProgressTimer = window.setInterval(function () {
@@ -4434,7 +4310,33 @@
       setSheetLaunchButtonProgressFill(btn, 0);
       btn.classList.remove("is-loading");
       btn.disabled = false;
+      restoreSheetLaunchButtonIdleState(btn);
     }
+  }
+
+  function showDataLoadingOverlay(message, initialPercent, capPercent) {
+    var btn =
+      sheetBtnProgressEl ||
+      (currentLaunchEntry && findSheetLaunchButton(currentLaunchEntry.id));
+    if (!btn) return;
+    if (!sheetBtnProgressEl) {
+      startSheetLaunchButtonProgress(btn, capPercent, message);
+    } else if (message) {
+      setSheetLaunchButtonLoadingUi(btn, message);
+    }
+    if (initialPercent != null) setSheetLaunchButtonProgress(initialPercent);
+  }
+
+  function setDataLoadingOverlayCap(capPercent) {
+    setSheetLaunchButtonProgressCap(capPercent);
+  }
+
+  function setDataLoadingOverlayProgress(percent) {
+    setSheetLaunchButtonProgress(percent);
+  }
+
+  function hideDataLoadingOverlaySoon() {
+    if (sheetBtnProgressEl) finishSheetLaunchButtonProgress();
   }
 
   function bindSheetLaunchButtons(container) {
@@ -4499,8 +4401,10 @@
     setFabStackVisible(false);
 
     analysisInFlight = true;
-    if (triggerBtn) startSheetLaunchButtonProgress(triggerBtn, 25);
-    setSheetButtonsDisabled(true, triggerBtn || null);
+    var sheetId = String((entry && entry.id) || "").split("::")[0];
+    var launchBtn = triggerBtn || findSheetLaunchButton(sheetId);
+    if (launchBtn) startSheetLaunchButtonProgress(launchBtn, 25, SHEET_BTN_LOADING_MSG);
+    setSheetButtonsDisabled(true, launchBtn || null);
 
     try {
       var id = parseSpreadsheetId(entry.url);
@@ -4541,7 +4445,7 @@
       setSheetLaunchButtonProgressCap(98);
       syncViewUrl();
       document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
-      if (triggerBtn) finishSheetLaunchButtonProgress();
+      if (launchBtn) finishSheetLaunchButtonProgress();
     } catch (err) {
       showHomeView();
       if (errorEl) {
@@ -4549,10 +4453,10 @@
         errorEl.hidden = false;
       }
       setFabStackVisible(false);
-      if (triggerBtn) stopSheetLaunchButtonProgress(false);
+      if (launchBtn) stopSheetLaunchButtonProgress(false);
     } finally {
       analysisInFlight = false;
-      setSheetButtonsDisabled(false, triggerBtn && triggerBtn.classList.contains("is-loading") ? triggerBtn : null);
+      setSheetButtonsDisabled(false, launchBtn && launchBtn.classList.contains("is-loading") ? launchBtn : null);
     }
   }
   var activeSheetView = null;
@@ -4566,7 +4470,6 @@
   var adminSetupClasses = [];
   var adminSetupEditId = null;
   var adminSetupStep = "configure";
-  var adminSetupPromptPreviewTimer = null;
   var adminCategorySelectAll = false;
   var TEACHER_MESSAGE_TITLE = "담임 선생님께 전하는 한마디";
   var DEFAULT_SUBJECT_FILTER_OPTIONS = [
@@ -4836,7 +4739,11 @@
 
   function filterSheetAnalysisByClass(sheet, classKey) {
     if (!sheet) return null;
-    if (!classKey || normalizeSheetClassKey(classKey) === normalizeSheetClassKey(sheet.sheetName)) {
+    if (
+      !classKey ||
+      classKey === CLASS_VIEW_ALL ||
+      normalizeSheetClassKey(classKey) === normalizeSheetClassKey(sheet.sheetName)
+    ) {
       return sheet;
     }
     var rows = (sheet.rows || []).filter(function (row) {
@@ -5087,7 +4994,12 @@
     adminSetupClasses = ordered;
   }
 
+  function isAllClassesViewActive() {
+    return activeClassFilter === CLASS_VIEW_ALL;
+  }
+
   function ensureActiveClassTabValid() {
+    if (isAllClassesViewActive()) return;
     var tabs = getClassTabsConfig();
     if (!tabs.length) return;
     var activeOk = tabs.some(function (cls) {
@@ -5398,29 +5310,6 @@
     });
   }
 
-  function getAdminSetupPromptValue() {
-    var input = document.getElementById("adminAnalysisPrompt");
-    return coerceText(input && input.value);
-  }
-
-  function updateAdminSetupPromptCount() {
-    var input = document.getElementById("adminAnalysisPrompt");
-    var countEl = document.getElementById("adminSetupPromptCount");
-    if (!input || !countEl) return;
-    var len = coerceText(input.value).length;
-    countEl.textContent = len + "자";
-  }
-
-  function updateAdminSetupPromptLivePreview() {
-    var live = document.getElementById("adminSetupPromptLive");
-    var prompt = getAdminSetupPromptValue();
-    if (live) {
-      live.textContent = prompt
-        ? prompt
-        : "프롬프트를 입력하면 여기에 미리보기가 표시됩니다.";
-    }
-  }
-
   function persistAdminSetupDraftFromDom() {
     syncAdminCategoriesFromDom();
     sessionStorage.setItem(
@@ -5430,7 +5319,6 @@
         url: adminSetupUrl,
         ts: Date.now(),
         editId: adminSetupEditId,
-        analysisPrompt: getAdminSetupPromptValue(),
         categories: adminSetupCategories,
         categorySelectAll: adminCategorySelectAll,
       })
@@ -5443,11 +5331,9 @@
     document.body.classList.toggle("admin-setup-step-preview", adminSetupStep === "preview");
     var configureActions = document.getElementById("adminSetupActionsConfigure");
     var previewActions = document.getElementById("adminSetupActionsPreview");
-    var promptBlock = document.querySelector(".admin-setup-prompt");
     var categorySection = document.querySelector(".admin-setup-section");
     if (configureActions) configureActions.hidden = adminSetupStep !== "configure";
     if (previewActions) previewActions.hidden = adminSetupStep !== "preview";
-    if (promptBlock) promptBlock.hidden = adminSetupStep === "preview";
     if (categorySection) categorySection.hidden = adminSetupStep === "preview";
     var titleEl = document.getElementById("adminSetupTitle");
     if (titleEl) {
@@ -5460,31 +5346,6 @@
     if (confirmBtn) {
       confirmBtn.textContent = adminSetupEditId ? "변경 사항 게시" : "게시";
     }
-  }
-
-  function renderAdminSetupPromptBanner() {
-    if (!adminSetupMode || adminSetupStep !== "preview") return "";
-    var prompt = getAdminSetupPromptValue();
-    return (
-      '<div class="admin-setup-prompt-banner" role="status" aria-live="polite">' +
-      "<strong>분석 프롬프트 (미리보기)</strong>" +
-      "<p>" +
-      esc(prompt || "(미입력)") +
-      "</p></div>"
-    );
-  }
-
-  function scheduleAdminSetupPreviewRefresh() {
-    if (adminSetupPromptPreviewTimer) clearTimeout(adminSetupPromptPreviewTimer);
-    adminSetupPromptPreviewTimer = setTimeout(function () {
-      adminSetupPromptPreviewTimer = null;
-      updateAdminSetupPromptLivePreview();
-      persistAdminSetupDraftFromDom();
-      if (adminSetupMode && adminSetupStep === "preview" && lastMultiResult) {
-        var id = parseSpreadsheetId(adminSetupUrl);
-        renderResults(getActiveAnalysis(), id, lastMultiResult);
-      }
-    }, 200);
   }
 
   function enterAdminSetupPreview() {
@@ -5511,18 +5372,6 @@
     if (resultsEl) resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  (function bindAdminSetupPromptField() {
-    var input = document.getElementById("adminAnalysisPrompt");
-    if (!input || input.dataset.bound === "1") return;
-    input.dataset.bound = "1";
-    input.addEventListener("input", function () {
-      updateAdminSetupPromptCount();
-      scheduleAdminSetupPreviewRefresh();
-    });
-    updateAdminSetupPromptCount();
-    updateAdminSetupPromptLivePreview();
-  })();
-
   function confirmAdminSetup() {
     if (!adminSetupLabel || !adminSetupUrl) return;
     syncAdminCategoriesFromDom();
@@ -5547,7 +5396,6 @@
       label: SurveyForm.normalizeDisplayText(adminSetupLabel) || adminSetupLabel,
       url: adminSetupUrl,
       tab: preferredTab,
-      analysisPrompt: getAdminSetupPromptValue(),
       classes: registryClasses,
       categorySelectAll: adminCategorySelectAll,
       categories: adminSetupCategories.map(function (c, i) {
@@ -5682,17 +5530,6 @@
       try {
         if (draftRaw) draft = JSON.parse(draftRaw);
       } catch (e) { /* ignore */ }
-      var promptInput = document.getElementById("adminAnalysisPrompt");
-      if (promptInput) {
-        var params = new URLSearchParams(location.search);
-        var promptFromUrl = params.get("prompt") || "";
-        var promptValue =
-          (draft && draft.analysisPrompt ? String(draft.analysisPrompt) : "") ||
-          promptFromUrl ||
-          "";
-        promptInput.value = coerceText(promptValue);
-        updateAdminSetupPromptCount();
-      }
       adminSetupCategories = deriveCategoriesFromAnalysis(lastMultiResult);
       if (draft && draft.categories && draft.categories.length) {
         adminSetupCategories = mergeSavedCategoryPrefs(
@@ -6042,6 +5879,7 @@
   }
 
   function isClassTabActive(cls, hostSheet) {
+    if (isAllClassesViewActive()) return false;
     if (!hostSheet || activeSheetView !== hostSheet.sheetName) return false;
     var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
     var hostKey = normalizeSheetClassKey(hostSheet.sheetName);
@@ -6060,11 +5898,22 @@
     (lastMultiResult.sheets || []).forEach(function (s) {
       if (!isListSheetTab(s.sheetName)) sheetByName[s.sheetName] = s;
     });
+    var tabCount = classTabs.length + 1;
     var html =
       '<nav class="class-picker-bar" aria-label="반 선택">' +
       '<div class="class-picker-bar__grid" role="tablist" style="--class-tab-count:' +
-      esc(String(classTabs.length)) +
+      esc(String(tabCount)) +
       '">';
+    html +=
+      '<button type="button" class="class-select-option class-tab class-tab--all' +
+      (isAllClassesViewActive() ? " active" : "") +
+      '" data-sheet="' +
+      esc(sheet.sheetName) +
+      '" data-class="' +
+      esc(CLASS_VIEW_ALL) +
+      '" data-view-all="1" role="tab" aria-selected="' +
+      (isAllClassesViewActive() ? "true" : "false") +
+      '">전체보기</button>';
     classTabs.forEach(function (cls) {
       var hostSheet = resolveHostSheetForClass(cls, sheetByName) || sheet;
       var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
@@ -6089,6 +5938,7 @@
   }
 
   function getClassLabelFromFilter() {
+    if (activeClassFilter === CLASS_VIEW_ALL) return "전체";
     if (!activeClassFilter) return activeSheetView || "";
     var m = String(activeClassFilter).match(/(\d+)/);
     return m ? m[1] + "반" : activeClassFilter;
@@ -6097,7 +5947,7 @@
   function getMissingStudentsForActiveClass(sheet) {
     if (!sheet || !sheet.participation || !sheet.participation.missingStudents) return [];
     var list = sheet.participation.missingStudents;
-    if (!activeClassFilter) return list.slice();
+    if (!activeClassFilter || activeClassFilter === CLASS_VIEW_ALL) return list.slice();
     return list.filter(function (s) {
       var sk = normalizeSheetClassKey(s.반 || "");
       return sk === activeClassFilter || sk.indexOf(activeClassFilter) >= 0;
@@ -6316,7 +6166,7 @@
   function renderParticipationBanner(data, classLabel) {
     var p = data.participation;
     var label =
-      activeClassFilter ||
+      getClassLabelFromFilter() ||
       classLabel ||
       (data.meta && data.meta.sheetName) ||
       activeSheetView ||
@@ -6537,7 +6387,7 @@
 
   function shouldPrintOneStudentPerPage() {
     if (activeSubjectView === "teacher") return false;
-    if (!activeClassFilter) return false;
+    if (!activeClassFilter || activeClassFilter === CLASS_VIEW_ALL) return false;
     return (activeSubjectView || "all") === "all";
   }
 
@@ -6585,7 +6435,7 @@
     ensureActiveSubjectViewValid();
 
     var chromeHtml = renderResultsChrome();
-    var bodyHtml = renderAdminSetupPromptBanner() + renderCategoryPickerBar();
+    var bodyHtml = renderCategoryPickerBar();
     if (!sheet) {
       bodyHtml += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
       el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
@@ -6607,7 +6457,11 @@
       return;
     }
 
-    bodyHtml += renderClassStudentList(analysis);
+    if (isAllClassesViewActive()) {
+      bodyHtml += renderSurveyByClass(sheet);
+    } else {
+      bodyHtml += renderClassStudentList(analysis);
+    }
 
     el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
     el.classList.add("visible");
@@ -6635,7 +6489,11 @@
           return;
         }
         activeSheetView = btn.getAttribute("data-sheet");
-        activeClassFilter = btn.getAttribute("data-class") || null;
+        if (btn.getAttribute("data-view-all") === "1") {
+          activeClassFilter = CLASS_VIEW_ALL;
+        } else {
+          activeClassFilter = btn.getAttribute("data-class") || null;
+        }
         renderResults(null, spreadsheetId, lastMultiResult);
         syncViewUrl();
       });
@@ -6693,15 +6551,12 @@
   if (adminSetupPreviewBtn) {
     adminSetupPreviewBtn.addEventListener("click", enterAdminSetupPreview);
   }
-  var adminSetupEditPromptBtn = document.getElementById("adminSetupEditPromptBtn");
-  if (adminSetupEditPromptBtn) {
-    adminSetupEditPromptBtn.addEventListener("click", function () {
+  var adminSetupBackToConfigureBtn = document.getElementById("adminSetupBackToConfigureBtn");
+  if (adminSetupBackToConfigureBtn) {
+    adminSetupBackToConfigureBtn.addEventListener("click", function () {
       applyAdminSetupStep("configure");
-      var promptInput = document.getElementById("adminAnalysisPrompt");
-      if (promptInput) {
-        promptInput.focus();
-        document.getElementById("adminSetupPanel").scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      var panel = document.getElementById("adminSetupPanel");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -6737,10 +6592,6 @@
     }
     adminSetupEditId =
       params.get("editId") || (draft && draft.editId ? draft.editId : null);
-    var promptParam = coerceText(params.get("prompt") || "");
-    var analysisPrompt =
-      promptParam ||
-      (draft && draft.analysisPrompt ? String(draft.analysisPrompt) : "");
     sessionStorage.setItem(
       ADMIN_SETUP_DRAFT_KEY,
       JSON.stringify({
@@ -6750,7 +6601,6 @@
         editId: adminSetupEditId,
         categories: draft && draft.categories ? draft.categories : null,
         classes: draft && draft.classes ? draft.classes : null,
-        analysisPrompt: analysisPrompt,
         categorySelectAll: adminCategorySelectAll,
       })
     );
