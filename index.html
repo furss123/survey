@@ -3083,6 +3083,63 @@
     return { 반: null, 번호: null, 이름: text };
   }
 
+  function parseClassNumberFromText(value) {
+    var text = coerceText(value);
+    if (!text) return null;
+    var m = text.match(/(?:^|[^0-9])([1-8])\s*반(?:[^0-9]|$)/);
+    if (m) return parseInt(m[1], 10);
+    var p = parseStudentId(text);
+    if (p.반 != null && p.반 >= 1 && p.반 <= 8) return p.반;
+    return null;
+  }
+
+  function parseStudentNumberFromText(value) {
+    var text = coerceText(value);
+    if (!text) return null;
+    if (/\d+\s*반/.test(text) && !/\d+\s*번/.test(text)) return null;
+    var numMatch = text.match(/(?:^|[^0-9])(\d{1,2})\s*번(?:[^0-9]|$)/);
+    if (numMatch) return parseInt(numMatch[1], 10);
+    var p = parseStudentId(text);
+    if (p.번호 != null && p.번호 >= 1 && p.번호 <= 99) return p.번호;
+    var clean = text.replace(/[^\d]/g, "");
+    if (/^\d{1,2}$/.test(clean)) return parseInt(clean, 10);
+    return null;
+  }
+
+  function parseStudentNameFromText(value) {
+    var text = coerceText(value);
+    if (!text) return "";
+    // 반/번호 표기 제거 후 이름 토큰만 추출
+    text = text
+      .replace(/\[[^\]]+\]/g, " ")
+      .replace(/\d+\s*학년/g, " ")
+      .replace(/\d+\s*반/g, " ")
+      .replace(/\d+\s*번/g, " ")
+      .replace(/\d{3,5}/g, " ")
+      .replace(/[()\-_/.,]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!text) return "";
+    var tokens = text.split(" ").filter(Boolean);
+    for (var i = 0; i < tokens.length; i++) {
+      var t = tokens[i];
+      if (/^[가-힣a-zA-Z]{2,20}$/.test(t)) return t;
+    }
+    return "";
+  }
+
+  function inferStudentIdentityFromCells(cells) {
+    var out = { 반: null, 번호: null, 이름: "" };
+    (cells || []).forEach(function (cell) {
+      var text = coerceText(cell);
+      if (!text || text.length > 40) return;
+      if (out.반 == null) out.반 = parseClassNumberFromText(text);
+      if (out.번호 == null) out.번호 = parseStudentNumberFromText(text);
+      if (!out.이름) out.이름 = parseStudentNameFromText(text);
+    });
+    return out;
+  }
+
   function extractStudentFromSelectorCells(raw, selectorIndices) {
     var merged = { 반: null, 번호: null, 이름: null };
     (selectorIndices || []).forEach(function (idx) {
@@ -3430,6 +3487,10 @@
       if (!classVal && fromSelectors.반 != null) classVal = fromSelectors.반 + "반";
       if (numberVal == null && fromSelectors.번호 != null) numberVal = fromSelectors.번호;
       if (!nameVal && fromSelectors.이름) nameVal = fromSelectors.이름;
+      var inferred = inferStudentIdentityFromCells(cells);
+      if (!classVal && inferred.반 != null) classVal = inferred.반 + "반";
+      if (numberVal == null && inferred.번호 != null) numberVal = inferred.번호;
+      if (!nameVal && inferred.이름) nameVal = inferred.이름;
       if (!studentId && fromSelectors.반 != null && fromSelectors.번호 != null) {
         var gradeHint = sidParsed.grade != null ? sidParsed.grade : 1;
         studentId = formatStudentIdFromParsed({
