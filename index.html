@@ -2574,7 +2574,7 @@
   function hasProfileContent(text) {
     var s = String(text || "").trim();
     if (!s) return false;
-    return PROFILE_PATTERN.test(s) || PROFILE_MARKERS_RE.test(s);
+    return PROFILE_PATTERN.test(s) || PROFILE_MARKERS_RE.test(s) || hasBracketTopicContent(s);
   }
 
   function longestCellText(cells) {
@@ -2617,6 +2617,47 @@
       }
     }
     return fields;
+  }
+
+  /** 학생 프로필용 [1반][12][이름] — 설문 주제 [시기][방법] 과 구분 */
+  function isProfileBracketTopic(title) {
+    var t = String(title || "").trim();
+    if (!t) return true;
+    if (/^\d+반$/.test(t)) return true;
+    if (/^\d{1,3}$/.test(t)) return true;
+    if (/학생\s*프로필/i.test(t)) return true;
+    return false;
+  }
+
+  /** 한 셀에 [시기] … [방법] … 형태로 적힌 응답을 질문 주제별 섹션으로 분리 */
+  function parseBracketTopicSections(text) {
+    var s = String(text || "").trim();
+    if (!s || !/\[[^\]]+\]/.test(s)) return [];
+    if (PROFILE_PATTERN.test(s)) return [];
+    var parts = s.split(/(?=\[[^\]]+\])/).map(function (p) { return p.trim(); }).filter(Boolean);
+    var sections = [];
+    for (var i = 0; i < parts.length; i++) {
+      var m = parts[i].match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
+      if (!m) continue;
+      var title = m[1].trim();
+      if (isProfileBracketTopic(title)) continue;
+      var body = m[2].trim();
+      if (!body) continue;
+      sections.push({
+        title: title,
+        body: body,
+        fields: parseSectionFields(body),
+      });
+    }
+    return sections.filter(isMeaningfulSection);
+  }
+
+  function hasBracketTopicContent(text) {
+    var secs = parseBracketTopicSections(text);
+    if (secs.length >= 2) return true;
+    if (secs.length !== 1) return false;
+    var s = String(text || "").trim();
+    return /^\[[^\]]+\]/.test(s) && !PROFILE_PATTERN.test(s);
   }
 
   /** 과목 블록 제목에서 과목명만 추출 (예: 국어, 수학, 통합과학) */
@@ -2664,6 +2705,8 @@
     var body = stripProfileHeader(text, meta);
     if (!body) return [];
     body = body.replace(/^👤\s*/, "").trim();
+    var bracketSecs = parseBracketTopicSections(body);
+    if (bracketSecs.length) return bracketSecs;
     var sections = [];
     var chunks = body.split(SECTION_START_RE).map(function (c) { return c.trim(); }).filter(Boolean);
     var surveyParent = "";
@@ -3029,6 +3072,13 @@
       if (isSkippableCategoryHeader(title, colIdx)) return;
       var body = coerceText(cells[colIdx]);
       if (!body) return;
+      var bracketSecs = parseBracketTopicSections(body);
+      if (bracketSecs.length > 1) {
+        bracketSecs.forEach(function (sec) {
+          sections.push(sec);
+        });
+        return;
+      }
       var sec = {
         title: categoryDisplayLabel(title) || coerceText(title) || "응답",
         body: body,
@@ -3332,6 +3382,9 @@
       var profileText = longestCellText(cells);
       if (hasProfileContent(profileText)) {
         return enrichRowWithProfile(row, profileText, extractProfileMeta(profileText));
+      }
+      if (!rowHasSections(row) && hasBracketTopicContent(profileText)) {
+        row.sections = parseBracketTopicSections(profileText);
       }
       return row;
     });
