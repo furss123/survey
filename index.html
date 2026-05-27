@@ -914,6 +914,33 @@
       color: var(--theme-heading-strong);
       line-height: 1.25;
     }
+    .survey-print-btn {
+      flex: 0 0 auto;
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background: var(--theme-bg-panel);
+      color: var(--theme-heading);
+      cursor: pointer;
+      box-shadow: var(--shadow-xs);
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), transform 0.15s var(--ease);
+    }
+    .survey-print-btn:hover {
+      border-color: var(--border-accent);
+      background: var(--theme-query-card-hover);
+      transform: translateY(-1px);
+    }
+    .survey-print-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+    }
     .class-results-panel {
       width: 100%;
     }
@@ -1543,9 +1570,8 @@
       max-height: min(70vh, 368px);
       overflow-y: auto;
     }
-    /* 비핵심 보조 UI 제거 */
-    .view-tracker,
-    .page-chrome-actions {
+    /* 스크롤 추적 패널 비표시 (인쇄·우측 도구는 유지) */
+    .view-tracker {
       display: none !important;
       visibility: hidden !important;
     }
@@ -2116,10 +2142,43 @@
         break-inside: avoid;
         margin-bottom: 0;
         min-height: 0;
+        max-height: 277mm;
+        overflow: hidden;
+        box-sizing: border-box;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card:last-child {
         page-break-after: auto;
         break-after: auto;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .student-response-body,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .category-block,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .preview {
+        font-size: var(--print-font-pt, 10pt) !important;
+        line-height: var(--print-line-height, 1.38) !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .category-block {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .cat-body,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .cat-field {
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card.print-fit-scaled
+        .student-response-body {
+        transform: scale(var(--print-scale, 1));
+        transform-origin: top left;
+        width: calc(100% / var(--print-scale, 1));
+        max-width: calc(100% / var(--print-scale, 1));
+      }
+      body.print-fit-measuring #results {
+        width: 190mm;
+        max-width: 190mm;
+      }
+      body.print-fit-measuring .student-card {
+        max-width: 190mm;
       }
       /* 담임선생님께!: 반 전원 한 페이지 압축 그리드 */
       body.is-printing-results.print-teacher-mode .student-cards-list {
@@ -2328,17 +2387,11 @@
         </svg>
         <span>맨 아래</span>
       </button>
-      <button type="button" class="page-action-btn" id="fabPrint" title="인쇄">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V3h12v6M6 18H4v-6h16v6h-2M6 14h12v7H6z"/>
-        </svg>
-        <span>인쇄</span>
-      </button>
     </nav>
   </aside>
 
   <footer class="site-footer no-print" id="siteFooterRoot">
-    <div class="site-footer-inner">남악고등학교 1학년 설문 결과 · <span>survey</span></div>
+    <div class="site-footer-inner">Created by HyoT. Copyright © 2026 남악고등학교 HyoT. All rights reserved.</div>
   </footer>
 
   <script src="scripts/survey-form-shared.js?v=20260528b"></script>
@@ -4861,6 +4914,7 @@
   }
 
   function ensureClassSelectionForResults() {
+    if (isAllClassesViewActive()) return;
     var classTabs = getClassTabsConfig();
     if (!classTabs.length || !lastMultiResult) return;
     var sheetByName = {};
@@ -5609,6 +5663,123 @@
     return 500;
   }
 
+  function dedupeMissingStudents(list) {
+    var seen = {};
+    return (list || []).filter(function (student) {
+      var key =
+        String(student.학번 || "") +
+        "|" +
+        String(student.번호 != null ? student.번호 : "") +
+        "|" +
+        String(student.이름 || "");
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+
+  function buildClassGroupsFromAllSheets(multi) {
+    if (!multi || !multi.sheets) return [];
+    var sheets = multi.sheets.filter(function (s) {
+      return !isListSheetTab(s.sheetName);
+    });
+    if (!sheets.length) return [];
+
+    if (sheets.length === 1) {
+      return buildClassGroupsFromSheet(sheets[0]);
+    }
+
+    var byKey = {};
+    var order = [];
+    sheets.forEach(function (sheet) {
+      var groups;
+      if (isClassLikeSheetName(sheet.sheetName)) {
+        var m = String(sheet.sheetName).match(/(\d+)\s*반/);
+        var label = m ? m[1] + "반" : sheet.sheetName;
+        var key = normalizeSheetClassKey(label);
+        var rows = (sheet.rows || []).slice().sort(compareRowsByStudentId);
+        var missing =
+          sheet.participation && sheet.participation.missingStudents
+            ? sheet.participation.missingStudents.slice()
+            : [];
+        missing.sort(function (a, b) {
+          return (a.번호 || 9999) - (b.번호 || 9999);
+        });
+        groups = [
+          {
+            classKey: key,
+            label: label,
+            rows: rows,
+            missing: missing,
+            participated: rows.length,
+            total: rows.length + missing.length,
+          },
+        ];
+      } else {
+        groups = buildClassGroupsFromSheet(sheet);
+      }
+      groups.forEach(function (g) {
+        var key = g.classKey || normalizeSheetClassKey(g.label);
+        if (!byKey[key]) {
+          byKey[key] = {
+            classKey: key,
+            label: g.label,
+            rows: [],
+            missing: [],
+          };
+          order.push(key);
+        }
+        byKey[key].rows = byKey[key].rows.concat(g.rows || []);
+        byKey[key].missing = byKey[key].missing.concat(g.missing || []);
+      });
+    });
+
+    return order
+      .map(function (key) {
+        var g = byKey[key];
+        g.rows.sort(compareRowsByStudentId);
+        g.missing = dedupeMissingStudents(g.missing);
+        g.missing.sort(function (a, b) {
+          return (a.번호 || 9999) - (b.번호 || 9999);
+        });
+        g.participated = g.rows.length;
+        g.total = g.participated + g.missing.length;
+        return g;
+      })
+      .sort(function (a, b) {
+        return parseClassOrder(a.label) - parseClassOrder(b.label);
+      });
+  }
+
+  function resolveSheetForClassGroup(group, multi) {
+    if (!group || !multi || !multi.sheets) return getActiveSheetAnalysis();
+    var key = group.classKey || normalizeSheetClassKey(group.label);
+    var sheets = multi.sheets.filter(function (s) {
+      return !isListSheetTab(s.sheetName);
+    });
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      if (normalizeSheetClassKey(sheet.sheetName) === key) return sheet;
+      if (
+        isClassLikeSheetName(sheet.sheetName) &&
+        normalizeSheetClassKey(sheet.sheetName) === key
+      ) {
+        return sheet;
+      }
+    }
+    for (var j = 0; j < sheets.length; j++) {
+      var s = sheets[j];
+      if (
+        (s.rows || []).some(function (row) {
+          return rowMatchesClassFilter(row, key);
+        })
+      ) {
+        return s;
+      }
+    }
+    return sheets[0] || getActiveSheetAnalysis();
+  }
+
   function buildClassGroupsFromSheet(sheet) {
     if (!sheet) return [];
     var groupsMap = {};
@@ -5874,7 +6045,10 @@
       '<button type="button" class="survey-back-btn" id="surveyBackBtn">← 설문 목록</button>' +
       '<h2 class="survey-view-title">' +
       esc(label) +
-      "</h2></div>"
+      '</h2><button type="button" class="survey-print-btn" id="surveyPrintBtn" title="인쇄" aria-label="인쇄">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">' +
+      '<path stroke-linecap="round" stroke-linejoin="round" d="M6 9V3h12v6M6 18H4v-6h16v6h-2M6 14h12v7H6z"/>' +
+      "</svg></button></div>"
     );
   }
 
@@ -6141,15 +6315,20 @@
   }
 
   function renderSurveyByClass(sheet) {
-    if (!sheet) return "";
-    var groups = buildClassGroupsFromSheet(sheet);
+    var multi = lastMultiResult;
+    var groups = isAllClassesViewActive()
+      ? buildClassGroupsFromAllSheets(multi)
+      : buildClassGroupsFromSheet(sheet);
     if (!groups.length) {
       return '<p class="student-cards-empty">반별로 표시할 응답이 없습니다.</p>';
     }
     var html = '<div class="survey-by-class">';
     html += renderClassJumpNav(groups);
     groups.forEach(function (group) {
-      html += renderClassSection(group, sheet);
+      var hostSheet = isAllClassesViewActive()
+        ? resolveSheetForClassGroup(group, multi)
+        : sheet;
+      html += renderClassSection(group, hostSheet);
     });
     html += "</div>";
     return html;
@@ -6387,8 +6566,79 @@
 
   function shouldPrintOneStudentPerPage() {
     if (activeSubjectView === "teacher") return false;
-    if (!activeClassFilter || activeClassFilter === CLASS_VIEW_ALL) return false;
     return (activeSubjectView || "all") === "all";
+  }
+
+  function getPrintablePageHeightPx() {
+    return Math.round((277 * 96) / 25.4);
+  }
+
+  function clearStudentCardsPrintFit() {
+    document.querySelectorAll("#results .student-card").forEach(function (card) {
+      card.classList.remove("print-fit-applied", "print-fit-scaled");
+      card.style.removeProperty("--print-font-pt");
+      card.style.removeProperty("--print-line-height");
+      card.style.removeProperty("--print-scale");
+    });
+  }
+
+  function prepareStudentCardsPrintFit() {
+    clearStudentCardsPrintFit();
+    if (!shouldPrintOneStudentPerPage()) return;
+    var cards = document.querySelectorAll("#results .student-card");
+    if (!cards.length) return;
+
+    document.body.classList.add("print-fit-measuring");
+    var pageBudget = getPrintablePageHeightPx();
+
+    cards.forEach(function (card) {
+      var header = card.querySelector(".student-response-header");
+      var headerH = header ? header.offsetHeight : 0;
+      var budget = pageBudget - headerH - 28;
+      if (budget < 120) budget = 120;
+
+      var fontPt = 11;
+      var lineH = 1.42;
+      var minFontPt = 7;
+      var minLineH = 1.16;
+      var fits = false;
+
+      while (fontPt >= minFontPt && lineH >= minLineH) {
+        card.style.setProperty("--print-font-pt", fontPt + "pt");
+        card.style.setProperty("--print-line-height", String(lineH));
+        if (card.scrollHeight <= budget) {
+          fits = true;
+          break;
+        }
+        if (lineH > minLineH + 0.01) {
+          lineH = Math.round((lineH - 0.04) * 100) / 100;
+        } else {
+          fontPt = Math.round((fontPt - 0.35) * 10) / 10;
+        }
+      }
+
+      if (!fits && card.scrollHeight > budget) {
+        var scale = Math.min(1, (budget / card.scrollHeight) * 0.97);
+        scale = Math.max(0.78, scale);
+        card.style.setProperty("--print-scale", String(scale));
+        card.classList.add("print-fit-scaled");
+      }
+      card.classList.add("print-fit-applied");
+    });
+
+    document.body.classList.remove("print-fit-measuring");
+  }
+
+  function runSurveyPrint() {
+    var results = document.getElementById("results");
+    if (!results || !results.classList.contains("visible")) {
+      alert("먼저 시트를 조회한 뒤 인쇄해 주세요.");
+      return;
+    }
+    syncResultsPrintState(results);
+    prepareStudentCardsPrintFit();
+    setPrintMode(true);
+    window.print();
   }
 
   function setPrintMode(enabled) {
@@ -6403,6 +6653,7 @@
     else {
       var list = document.querySelector("#results .student-cards-list");
       if (list) list.style.removeProperty("--teacher-print-cols");
+      if (!enabled) clearStudentCardsPrintFit();
     }
   }
 
@@ -6446,8 +6697,24 @@
       return;
     }
 
-    var s = sheet.summary;
-    if (!s.총응답 && !(sheet.participation && sheet.participation.missingCount)) {
+    var hasData = false;
+    if (isAllClassesViewActive() && lastMultiResult) {
+      hasData = lastMultiResult.sheets.some(function (s) {
+        if (isListSheetTab(s.sheetName)) return false;
+        return (
+          (s.summary && s.summary.총응답) ||
+          (s.participation && s.participation.missingCount) ||
+          (s.rows && s.rows.length)
+        );
+      });
+    } else {
+      var s = sheet.summary;
+      hasData =
+        (s && s.총응답) ||
+        (sheet.participation && sheet.participation.missingCount) ||
+        (sheet.rows && sheet.rows.length);
+    }
+    if (!hasData) {
       bodyHtml += '<p class="student-cards-empty">이 설문에 분석할 데이터가 없습니다.</p>';
       el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
       el.classList.add("visible");
@@ -6478,6 +6745,11 @@
       backBtn.addEventListener("click", function () {
         showHomeView();
       });
+    }
+    var printBtn = document.getElementById("surveyPrintBtn");
+    if (printBtn && printBtn.dataset.bound !== "1") {
+      printBtn.dataset.bound = "1";
+      printBtn.addEventListener("click", runSurveyPrint);
     }
     el.querySelectorAll(".class-select-option").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -6661,21 +6933,14 @@
   });
   window.addEventListener("beforeprint", function () {
     var results = document.getElementById("results");
-    if (results && results.classList.contains("visible")) setPrintMode(true);
+    if (results && results.classList.contains("visible")) {
+      prepareStudentCardsPrintFit();
+      setPrintMode(true);
+    }
   });
   window.addEventListener("afterprint", function () {
     setPrintMode(false);
-  });
-
-  document.getElementById("fabPrint").addEventListener("click", function () {
-    var results = document.getElementById("results");
-    if (!results.classList.contains("visible")) {
-      alert("먼저 시트를 조회한 뒤 인쇄해 주세요.");
-      return;
-    }
-    syncResultsPrintState(results);
-    setPrintMode(true);
-    window.print();
+    clearStudentCardsPrintFit();
   });
 
 })();
