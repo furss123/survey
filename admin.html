@@ -387,8 +387,12 @@
       background: var(--danger-bg);
     }
     .registry-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
       margin: 0;
       flex-shrink: 0;
+      justify-content: flex-end;
     }
     .admin-form label {
       display: block;
@@ -808,13 +812,12 @@
             <label for="adminAnalysisPromptInput">분석 관련 프롬프트</label>
             <textarea
               id="adminAnalysisPromptInput"
-              maxlength="500"
               rows="4"
               placeholder="예) 핵심 주제만 간단 요약, 위험 신호 문장은 별도 표시"
               aria-describedby="adminAnalysisPromptHint adminAnalysisPromptCount"
             ></textarea>
             <p class="admin-field-hint" id="adminAnalysisPromptHint">「미리보기·등록」으로 구성·미리보기 후 게시합니다. 목록에 있는 설문은 「변경 저장」으로 이름·주소·프롬프트만 빠르게 수정할 수 있습니다.</p>
-            <p class="admin-prompt-count" id="adminAnalysisPromptCount" aria-live="polite">0 / 500자</p>
+            <p class="admin-prompt-count" id="adminAnalysisPromptCount" aria-live="polite">0자</p>
             <div class="admin-actions">
               <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn" hidden>변경 저장</button>
               <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>
@@ -839,7 +842,7 @@
   </footer>
 
   <script src="scripts/admin-session.js?v=20260530"></script>
-  <script src="scripts/survey-form-shared.js?v=20260530"></script>
+  <script src="scripts/survey-form-shared.js?v=20260528b"></script>
   <script>
 (function () {
   "use strict";
@@ -907,16 +910,12 @@
   var urlClearOnNextFocus = true;
 
   function normalizeSurveyName(text) {
-    return String(text || "")
-      .replace(/\s+/g, " ")
-      .trim();
+    return SurveyForm.normalizeDisplayText(text);
   }
 
   function getSurveyNameInput() {
     return document.getElementById("adminSurveyName");
   }
-
-  var ANALYSIS_PROMPT_MAX = 500;
 
   function getAnalysisPromptInput() {
     return document.getElementById("adminAnalysisPromptInput");
@@ -924,13 +923,13 @@
 
   function getAnalysisPromptValue() {
     var input = getAnalysisPromptInput();
-    return coerceText(input && input.value).slice(0, ANALYSIS_PROMPT_MAX);
+    return coerceText(input && input.value);
   }
 
   function setAnalysisPromptValue(value) {
     var input = getAnalysisPromptInput();
     if (!input) return;
-    input.value = coerceText(value).slice(0, ANALYSIS_PROMPT_MAX);
+    input.value = coerceText(value);
     updateAnalysisPromptCount();
   }
 
@@ -939,7 +938,7 @@
     var countEl = document.getElementById("adminAnalysisPromptCount");
     if (!input || !countEl) return;
     var len = coerceText(input.value).length;
-    countEl.textContent = len + " / " + ANALYSIS_PROMPT_MAX + "자";
+    countEl.textContent = len + "자";
   }
 
   function bindAnalysisPromptField() {
@@ -1010,10 +1009,26 @@
 
   function parseTabsFromHtml(html) {
     var tabs = [];
+    var normTitle = SurveyForm.normalizeDisplayText.bind(SurveyForm);
     var re = /docs-sheet-tab[^>]*data-sheet-id="(\d+)"[^>]*aria-label="([^"]+)"/g;
     var m;
     while ((m = re.exec(html)) !== null) {
-      tabs.push({ gid: m[1], title: m[2] });
+      tabs.push({ gid: m[1], title: normTitle(m[2]) });
+    }
+    if (tabs.length) return tabs;
+    var captionRe = /docs-sheet-tab-caption">([^<]+)</g;
+    while ((m = captionRe.exec(html)) !== null) {
+      tabs.push({ gid: null, title: normTitle(m[1]) });
+    }
+    if (tabs.length) return tabs;
+    var re2 = /"sheetId":(\d+)[^}]*"title":"((?:\\.|[^"\\])*)"/g;
+    while ((m = re2.exec(html)) !== null) {
+      tabs.push({ gid: m[1], title: normTitle(m[2]) });
+    }
+    if (tabs.length) return tabs;
+    var re3 = /"gid":(\d+),"name":"((?:\\.|[^"\\])*)"/g;
+    while ((m = re3.exec(html)) !== null) {
+      tabs.push({ gid: m[1], title: normTitle(m[2]) });
     }
     return tabs;
   }
@@ -1029,10 +1044,11 @@
         var html = await res.text();
         var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
         if (titleMatch) {
-          docTitle = titleMatch[1]
-            .replace(/\s*-\s*Google\s*Sheets.*$/i, "")
-            .replace(/\s*-\s*Google\s*스프레드시트.*$/i, "")
-            .trim();
+          docTitle = SurveyForm.normalizeDisplayText(
+            titleMatch[1]
+              .replace(/\s*-\s*Google\s*Sheets.*$/i, "")
+              .replace(/\s*-\s*Google\s*스프레드시트.*$/i, "")
+          );
         }
         tabTitles = parseTabsFromHtml(html).map(function (t) {
           return t.title;
@@ -1200,9 +1216,9 @@
     });
     if (idx < 0) throw new Error("수정할 시트를 찾을 수 없습니다.");
     registry[idx] = Object.assign({}, registry[idx], {
-      label: label,
+      label: SurveyForm.normalizeDisplayText(label) || label,
       url: url,
-      analysisPrompt: coerceText(analysisPrompt || "").slice(0, 500),
+      analysisPrompt: coerceText(analysisPrompt || ""),
     });
     registry = normalizeSheetRegistry(registry);
     saveSheetRegistry(registry);
@@ -1343,7 +1359,8 @@
           encodeURIComponent(entry.label) +
           "&url=" +
           encodeURIComponent(entry.url) +
-          (configPrompt ? "&prompt=" + encodeURIComponent(configPrompt) : "");
+          "&editId=" +
+          encodeURIComponent(entry.id);
       });
     });
     listEl.querySelectorAll("[data-edit-id]").forEach(function (btn) {
@@ -1482,7 +1499,6 @@
       encodeURIComponent(label) +
       "&url=" +
       encodeURIComponent(url);
-    if (analysisPrompt) setupUrl += "&prompt=" + encodeURIComponent(analysisPrompt);
     if (editingSheetId) setupUrl += "&editId=" + encodeURIComponent(editingSheetId);
     location.href = setupUrl;
   });

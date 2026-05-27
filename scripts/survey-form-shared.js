@@ -112,6 +112,75 @@
     return v == null ? "" : String(v).trim();
   }
 
+  function countHangulChars(text) {
+    return (String(text || "").match(/[\uAC00-\uD7A3]/g) || []).length;
+  }
+
+  function decodeHtmlEntities(text) {
+    var s = String(text || "");
+    s = s
+      .replace(/\\u([0-9a-fA-F]{4})/g, function (_, hex) {
+        return String.fromCharCode(parseInt(hex, 16));
+      })
+      .replace(/\\x([0-9a-fA-F]{2})/g, function (_, hex) {
+        return String.fromCharCode(parseInt(hex, 16));
+      });
+    s = s
+      .replace(/&#x([0-9a-fA-F]+);/gi, function (_, hex) {
+        return String.fromCharCode(parseInt(hex, 16));
+      })
+      .replace(/&#(\d+);/g, function (_, num) {
+        return String.fromCharCode(parseInt(num, 10));
+      });
+    if (typeof document !== "undefined" && /&[#a-zA-Z0-9]+;/.test(s)) {
+      var ta = document.createElement("textarea");
+      ta.innerHTML = s;
+      s = ta.value;
+    }
+    return s;
+  }
+
+  function repairUtf8FromLatin1(text) {
+    var s = String(text || "");
+    if (!s) return s;
+    try {
+      var bytes = new Uint8Array(s.length);
+      for (var i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i) & 0xff;
+      var repaired = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+      if (repaired && countHangulChars(repaired) > countHangulChars(s)) return repaired;
+    } catch (e) { /* ignore */ }
+    try {
+      var viaEscape = decodeURIComponent(escape(s));
+      if (viaEscape && countHangulChars(viaEscape) > countHangulChars(s)) return viaEscape;
+    } catch (e2) { /* ignore */ }
+    return s;
+  }
+
+  function normalizeDisplayText(text) {
+    var s = coerceText(decodeHtmlEntities(text));
+    if (!s) return "";
+    s = repairUtf8FromLatin1(s);
+    return s.replace(/\s+/g, " ").trim();
+  }
+
+  function normalizeRegistryEntry(entry) {
+    if (!entry) return entry;
+    var out = Object.assign({}, entry);
+    if (out.label != null) out.label = normalizeDisplayText(out.label) || out.label;
+    if (out.analysisPrompt != null) {
+      out.analysisPrompt = normalizeDisplayText(out.analysisPrompt);
+    }
+    if (Array.isArray(out.categories)) {
+      out.categories = out.categories.map(function (c) {
+        if (!c) return c;
+        return Object.assign({}, c, {
+          label: c.label != null ? normalizeDisplayText(c.label) || c.label : c.label,
+        });
+      });
+    }
+    return out;
+  }
+
   function hasSheetSource(entry) {
     if (!entry) return false;
     if (entry.sourceType === "md") return false;
@@ -129,6 +198,7 @@
 
   function ensureSurveyFullyPublic(entry) {
     if (!entry || !hasSheetSource(entry)) return entry;
+    entry = normalizeRegistryEntry(entry);
     var out = Object.assign({}, entry, {
       sourceType: "sheet",
       categorySelectAll: true,
@@ -173,7 +243,12 @@
       var raw = localStorage.getItem(REGISTRY_KEY);
       if (!raw) return [];
       var parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? dedupeRegistryEntries(parsed) : [];
+      if (!Array.isArray(parsed)) return [];
+      var list = dedupeRegistryEntries(parsed);
+      var normalized = list.map(normalizeRegistryEntry);
+      var changed = JSON.stringify(normalized) !== JSON.stringify(list);
+      if (changed) saveRegistry(normalized, { silent: true });
+      return changed ? normalized : list;
     } catch (e) {
       return [];
     }
@@ -274,7 +349,10 @@
     try {
       var res = await fetch(BUNDLED_REGISTRY_PATH + "?v=" + Date.now(), { cache: "no-store" });
       if (!res.ok) return [];
-      var data = await res.json();
+      var buf = await res.arrayBuffer();
+      var text = new TextDecoder("utf-8").decode(buf);
+      if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+      var data = JSON.parse(text);
       if (!Array.isArray(data)) {
         if (data && typeof data === "object" && data.id) data = [data];
         else return [];
@@ -672,6 +750,10 @@
     GRADE: GRADE,
     esc: esc,
     coerceText: coerceText,
+    normalizeDisplayText: normalizeDisplayText,
+    decodeHtmlEntities: decodeHtmlEntities,
+    repairUtf8FromLatin1: repairUtf8FromLatin1,
+    normalizeRegistryEntry: normalizeRegistryEntry,
     hasSheetSource: hasSheetSource,
     ensureSurveyFullyPublic: ensureSurveyFullyPublic,
     loadRegistry: loadRegistry,
