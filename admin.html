@@ -813,10 +813,10 @@
               placeholder="예) 핵심 주제만 간단 요약, 위험 신호 문장은 별도 표시"
               aria-describedby="adminAnalysisPromptHint adminAnalysisPromptCount"
             ></textarea>
-            <p class="admin-field-hint" id="adminAnalysisPromptHint">등록·수정 시 함께 저장됩니다. 「카테고리 구성」 화면에서도 확인·수정할 수 있습니다.</p>
+            <p class="admin-field-hint" id="adminAnalysisPromptHint">「설문 등록」으로 바로 추가하거나, 「카테고리 구성」에서 미리보기·표시 항목을 설정한 뒤 등록할 수 있습니다.</p>
             <p class="admin-prompt-count" id="adminAnalysisPromptCount" aria-live="polite">0 / 500자</p>
             <div class="admin-actions">
-              <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn" hidden>시트 추가</button>
+              <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn">설문 등록</button>
               <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>
             </div>
           </form>
@@ -1152,11 +1152,37 @@
     } else {
       editingSheetId = null;
       if (submitBtn) {
-        submitBtn.textContent = "시트 추가";
-        submitBtn.hidden = true;
+        submitBtn.textContent = "설문 등록";
+        submitBtn.hidden = false;
       }
       if (cancelBtn) cancelBtn.hidden = true;
     }
+  }
+
+  function registerNewSheet(label, url, analysisPrompt) {
+    var sheetId = parseSpreadsheetId(url);
+    var fullUrl = url.indexOf("http") >= 0 ? url : "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
+    var registry = loadSheetRegistry();
+    if (
+      registry.some(function (item) {
+        return item && item.id === sheetId;
+      })
+    ) {
+      throw new Error("이미 등록된 시트입니다. 목록에서 「수정」을 사용하세요.");
+    }
+    var entry = SurveyForm.ensureSurveyFullyPublic({
+      id: sheetId,
+      label: label,
+      url: fullUrl,
+      sourceType: "sheet",
+      analysisPrompt: coerceText(analysisPrompt || "").slice(0, ANALYSIS_PROMPT_MAX),
+      categorySelectAll: true,
+      surveyStatus: "active",
+      registeredAt: Date.now(),
+    });
+    registry.push(entry);
+    saveSheetRegistry(normalizeSheetRegistry(registry));
+    return entry;
   }
 
   function startEditSheet(id) {
@@ -1428,6 +1454,7 @@
 
   if (!AdminSession.require()) return;
 
+  setSheetFormMode("add");
   refreshAdminRegistryList({ sync: true, loadingMessage: "설문 목록 불러오는 중…" });
   bindSurveyNameField();
   bindAnalysisPromptField();
@@ -1494,10 +1521,6 @@
     var label = getSurveyNameValue();
     var analysisPrompt = getAnalysisPromptValue();
     var url = coerceText(document.getElementById("adminSheetUrl").value);
-    if (!editingSheetId) {
-      alert("새 시트는 주소 옆 「카테고리 구성」으로 미리보기·구성 후 등록해 주세요.");
-      return;
-    }
     if (!label || !url) {
       alert("설문 이름과 주소를 입력해 주세요.");
       return;
@@ -1508,28 +1531,45 @@
       alert(err.message || "구글 시트 주소 형식을 확인해 주세요.");
       return;
     }
-    if (editingSheetId) {
-      var submitBtn = document.getElementById("adminSheetSubmitBtn");
-      if (submitBtn) submitBtn.disabled = true;
-      setAdminRegistryStatus("시트 정보 저장 중…", "is-busy");
-      try {
+    var submitBtn = document.getElementById("adminSheetSubmitBtn");
+    if (submitBtn) submitBtn.disabled = true;
+    setAdminRegistryStatus(
+      editingSheetId ? "시트 정보 저장 중…" : "설문 등록 중…",
+      "is-busy"
+    );
+    try {
+      if (editingSheetId) {
         updateRegistryEntry(editingSheetId, label, url, analysisPrompt);
-      } catch (err) {
-        setAdminRegistryStatus(err.message || "시트 수정에 실패했습니다.", "is-warn");
-        if (submitBtn) submitBtn.disabled = false;
+        cancelEditSheet();
+        renderAdminRegistryList();
+        flashAdminRegistryGroups();
+        refreshAdminRegistryList({
+          sync: false,
+          message: "시트 정보를 수정했습니다.",
+          kind: "is-ok",
+        }).finally(function () {
+          if (submitBtn) submitBtn.disabled = false;
+        });
         return;
       }
-      cancelEditSheet();
+      registerNewSheet(label, url, analysisPrompt);
+      document.getElementById("adminSheetForm").reset();
+      surveyNameUserEdited = false;
+      surveyNameSuggested = "";
+      setAnalysisPromptValue("");
+      setSheetFormMode("add");
       renderAdminRegistryList();
       flashAdminRegistryGroups();
       refreshAdminRegistryList({
         sync: false,
-        message: "시트 정보를 수정했습니다.",
+        message: "설문을 등록했습니다.",
         kind: "is-ok",
       }).finally(function () {
         if (submitBtn) submitBtn.disabled = false;
       });
-      return;
+    } catch (err) {
+      setAdminRegistryStatus(err.message || "등록에 실패했습니다.", "is-warn");
+      if (submitBtn) submitBtn.disabled = false;
     }
   });
 
