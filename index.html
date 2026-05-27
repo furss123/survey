@@ -990,6 +990,11 @@
       gap: 10px;
       align-items: stretch;
     }
+    .class-picker-bar__grid--subjects {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--theme-border-light);
+    }
     .class-select-option {
       display: flex;
       flex-direction: column;
@@ -1961,6 +1966,64 @@
     body.admin-setup-mode .section-head-row .admin-entry-link {
       display: none;
     }
+    /* 학생 인쇄 1페이지 맞춤: 폰트·줄간격·여백만 조절 (다단·transform 축소 없음) */
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
+      padding: var(--print-card-pad, 10px 12px 0) !important;
+      max-height: none;
+      overflow: visible;
+      box-sizing: border-box;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-response-header {
+      margin-bottom: var(--print-header-mb, 8px) !important;
+      padding-bottom: var(--print-header-pb, 8px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-num {
+      font-size: calc(var(--print-font-pt, 10pt) * 0.95) !important;
+      line-height: var(--print-line-height, 1.32) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-name {
+      font-size: calc(var(--print-font-pt, 10pt) * 1.12) !important;
+      line-height: var(--print-line-height, 1.32) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-id,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-class {
+      font-size: calc(var(--print-font-pt, 10pt) * 0.88) !important;
+      line-height: var(--print-line-height, 1.32) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-response-body {
+      padding-bottom: var(--print-body-pb, 10px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .category-blocks {
+      gap: var(--print-block-gap, 6px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .category-block {
+      padding: var(--print-block-pad, 8px 10px 6px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .category-block .cat-title {
+      font-size: calc(var(--print-font-pt, 10pt) * 0.92) !important;
+      line-height: var(--print-line-height, 1.32) !important;
+      margin-bottom: var(--print-title-mb, 4px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .category-block .cat-body,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .category-block .cat-field,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .preview,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .absent-note,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .subject-empty {
+      font-size: var(--print-font-pt, 10pt) !important;
+      line-height: var(--print-line-height, 1.32) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .cat-body,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .cat-field {
+      overflow-wrap: anywhere;
+      word-break: keep-all;
+    }
+    body.print-fit-measuring.print-one-student-per-page #results {
+      width: 190mm;
+      max-width: 190mm;
+    }
+    body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
+      max-width: 190mm;
+    }
     @media print {
       /* 화면이 다크모드여도 인쇄는 라이트 테마 */
       html {
@@ -2141,44 +2204,17 @@
         page-break-inside: avoid;
         break-inside: avoid;
         margin-bottom: 0;
-        min-height: 0;
-        max-height: 277mm;
-        overflow: hidden;
-        box-sizing: border-box;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card:last-child {
         page-break-after: auto;
         break-after: auto;
       }
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .student-response-body,
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .category-block,
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .preview {
-        font-size: var(--print-font-pt, 10pt) !important;
-        line-height: var(--print-line-height, 1.38) !important;
-      }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .category-block {
         page-break-inside: avoid;
         break-inside: avoid;
       }
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .cat-body,
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .cat-field {
-        overflow-wrap: anywhere;
-        word-break: keep-all;
-      }
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
-        .student-card.print-fit-scaled
-        .student-response-body {
-        transform: scale(var(--print-scale, 1));
-        transform-origin: top left;
-        width: calc(100% / var(--print-scale, 1));
-        max-width: calc(100% / var(--print-scale, 1));
-      }
-      body.print-fit-measuring #results {
-        width: 190mm;
-        max-width: 190mm;
-      }
-      body.print-fit-measuring .student-card {
-        max-width: 190mm;
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card-divider {
+        display: none !important;
       }
       /* 담임선생님께!: 반 전원 한 페이지 압축 그리드 */
       body.is-printing-results.print-teacher-mode .student-cards-list {
@@ -4526,15 +4562,16 @@
   var adminCategorySelectAll = false;
   var TEACHER_MESSAGE_TITLE = "담임 선생님께 전하는 한마디";
   var DEFAULT_SUBJECT_FILTER_OPTIONS = [
-    { id: "all", label: "모든 과목", enabled: true },
+    { id: "all", label: "전체보기", enabled: true },
     { id: "국어", label: "국어", enabled: true },
     { id: "수학", label: "수학", enabled: true },
     { id: "영어", label: "영어", enabled: true },
     { id: "한국사", label: "한국사", enabled: true },
     { id: "통합사회", label: "통합사회", enabled: true },
     { id: "통합과학", label: "통합과학", enabled: true },
-    { id: "teacher", label: "담임선생님께!", enabled: true },
+    { id: "teacher", label: "담임쌤께", enabled: true },
   ];
+  var EXPECTED_CLASS_BAN_COUNT = 8;
 
   function sortCategoriesByOrder(a, b) {
     if (a.id === "all") return -1;
@@ -4908,9 +4945,99 @@
     });
   }
 
+  function findSheetNameForClassNum(classNum, multi) {
+    if (!multi || !multi.sheets || !classNum) return "";
+    var want = normalizeSheetClassKey(classNum + "반");
+    for (var i = 0; i < multi.sheets.length; i++) {
+      var s = multi.sheets[i];
+      if (isListSheetTab(s.sheetName)) continue;
+      if (normalizeSheetClassKey(s.sheetName) === want) return s.sheetName;
+    }
+    var first = multi.sheets.filter(function (s) {
+      return !isListSheetTab(s.sheetName);
+    })[0];
+    return first ? first.sheetName : "";
+  }
+
+  function ensureClassTabs1Through8(tabs, multi) {
+    var byNum = {};
+    (tabs || []).forEach(function (cls) {
+      var m = String(cls.label || cls.classKey || "").match(/(\d+)\s*반/);
+      if (!m) return;
+      var n = parseInt(m[1], 10);
+      if (n >= 1 && n <= EXPECTED_CLASS_BAN_COUNT) byNum[n] = cls;
+    });
+    if (multi && multi.sheets) {
+      multi.sheets.forEach(function (sheet) {
+        if (isListSheetTab(sheet.sheetName)) return;
+        var sm = String(sheet.sheetName).match(/(\d+)\s*반/);
+        if (!sm) return;
+        var num = parseInt(sm[1], 10);
+        if (num < 1 || num > EXPECTED_CLASS_BAN_COUNT) return;
+        if (!byNum[num]) {
+          byNum[num] = {
+            id: "class-" + num,
+            sheetName: sheet.sheetName,
+            classKey: normalizeSheetClassKey(num + "반"),
+            label: num + "반",
+            enabled: true,
+            order: num - 1,
+            count: sheet.rows ? sheet.rows.length : 0,
+          };
+        } else if (!byNum[num].sheetName) {
+          byNum[num].sheetName = sheet.sheetName;
+        }
+      });
+    }
+    var result = [];
+    for (var i = 1; i <= EXPECTED_CLASS_BAN_COUNT; i++) {
+      if (byNum[i]) {
+        result.push(byNum[i]);
+      } else {
+        result.push({
+          id: "class-" + i,
+          sheetName: findSheetNameForClassNum(i, multi),
+          classKey: normalizeSheetClassKey(i + "반"),
+          label: i + "반",
+          enabled: true,
+          order: i - 1,
+          count: 0,
+        });
+      }
+    }
+    return result;
+  }
+
+  function ensureClassGroups1Through8(groups) {
+    var byNum = {};
+    (groups || []).forEach(function (g) {
+      var n = parseClassOrder(g.label || g.classKey);
+      if (n >= 1 && n <= EXPECTED_CLASS_BAN_COUNT) byNum[n] = g;
+    });
+    var result = [];
+    for (var i = 1; i <= EXPECTED_CLASS_BAN_COUNT; i++) {
+      if (byNum[i]) {
+        result.push(byNum[i]);
+      } else {
+        result.push({
+          classKey: normalizeSheetClassKey(i + "반"),
+          label: i + "반",
+          rows: [],
+          missing: [],
+          participated: 0,
+          total: 0,
+        });
+      }
+    }
+    return result;
+  }
+
   function getClassTabsConfig() {
     if (!lastMultiResult) return [];
-    return sortClassTabsByBanOrder(deriveClassesFromAnalysis(lastMultiResult));
+    return ensureClassTabs1Through8(
+      sortClassTabsByBanOrder(deriveClassesFromAnalysis(lastMultiResult)),
+      lastMultiResult
+    );
   }
 
   function ensureClassSelectionForResults() {
@@ -5686,7 +5813,7 @@
     if (!sheets.length) return [];
 
     if (sheets.length === 1) {
-      return buildClassGroupsFromSheet(sheets[0]);
+      return ensureClassGroups1Through8(buildClassGroupsFromSheet(sheets[0]));
     }
 
     var byKey = {};
@@ -5734,21 +5861,18 @@
       });
     });
 
-    return order
-      .map(function (key) {
-        var g = byKey[key];
-        g.rows.sort(compareRowsByStudentId);
-        g.missing = dedupeMissingStudents(g.missing);
-        g.missing.sort(function (a, b) {
-          return (a.번호 || 9999) - (b.번호 || 9999);
-        });
-        g.participated = g.rows.length;
-        g.total = g.participated + g.missing.length;
-        return g;
-      })
-      .sort(function (a, b) {
-        return parseClassOrder(a.label) - parseClassOrder(b.label);
+    var merged = order.map(function (key) {
+      var g = byKey[key];
+      g.rows.sort(compareRowsByStudentId);
+      g.missing = dedupeMissingStudents(g.missing);
+      g.missing.sort(function (a, b) {
+        return (a.번호 || 9999) - (b.번호 || 9999);
       });
+      g.participated = g.rows.length;
+      g.total = g.participated + g.missing.length;
+      return g;
+    });
+    return ensureClassGroups1Through8(merged);
   }
 
   function resolveSheetForClassGroup(group, multi) {
@@ -5985,23 +6109,18 @@
     }
   }
 
-  function renderCategoryPickerBar() {
-    var options = getCategoryPickerOptions();
-    if (!options.length) return "";
+  function renderSubjectFilterRow() {
+    if (isAllCategoriesDisplayMode()) return "";
+    var items = getCategoryPickerOptions();
+    if (!items.length) return "";
     ensureActiveSubjectViewValid();
     var view = activeSubjectView || "all";
-    var items = options.filter(function (o) {
-      return o.id === "all";
-    });
-    options.forEach(function (o) {
-      if (o.id !== "all") items.push(o);
-    });
     var html =
-      '<nav class="category-picker-bar class-picker-bar" aria-label="카테고리 선택">' +
-      '<div class="class-picker-bar__grid" role="tablist" style="--class-tab-count:' +
+      '<div class="class-picker-bar__grid class-picker-bar__grid--subjects" role="tablist" aria-label="과목 선택" style="--class-tab-count:' +
       esc(String(items.length)) +
       '">';
     items.forEach(function (opt) {
+      var label = opt.label || opt.id;
       var active = view === opt.id ? " active" : "";
       html +=
         '<button type="button" class="class-select-option category-tab' +
@@ -6011,10 +6130,10 @@
         '" role="tab" aria-selected="' +
         (active ? "true" : "false") +
         '">' +
-        esc(opt.label) +
+        esc(label) +
         "</button>";
     });
-    html += "</div></nav>";
+    html += "</div>";
     return html;
   }
 
@@ -6063,7 +6182,13 @@
   }
 
   function renderClassPickerBar() {
-    if (adminSetupMode) return "";
+    if (adminSetupMode) {
+      var subjectOnly = renderSubjectFilterRow();
+      if (!subjectOnly) return "";
+      return (
+        '<nav class="class-picker-bar" aria-label="과목 선택">' + subjectOnly + "</nav>"
+      );
+    }
     var classTabs = getClassTabsConfig();
     if (!classTabs.length) return "";
     var sheet = getActiveSheetAnalysis();
@@ -6074,8 +6199,8 @@
     });
     var tabCount = classTabs.length + 1;
     var html =
-      '<nav class="class-picker-bar" aria-label="반 선택">' +
-      '<div class="class-picker-bar__grid" role="tablist" style="--class-tab-count:' +
+      '<nav class="class-picker-bar" aria-label="반·과목 선택">' +
+      '<div class="class-picker-bar__grid class-picker-bar__grid--classes" role="tablist" aria-label="반 선택" style="--class-tab-count:' +
       esc(String(tabCount)) +
       '">';
     html +=
@@ -6092,7 +6217,6 @@
       var hostSheet = resolveHostSheetForClass(cls, sheetByName) || sheet;
       var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
       var tabLabel = cls.label || classKey || hostSheet.sheetName;
-      var hostKey = normalizeSheetClassKey(hostSheet.sheetName);
       var active = isClassTabActive(cls, hostSheet);
       html +=
         '<button type="button" class="class-select-option class-tab' +
@@ -6107,7 +6231,9 @@
         esc(tabLabel) +
         "</button>";
     });
-    html += "</div></nav>";
+    html += "</div>";
+    html += renderSubjectFilterRow();
+    html += "</nav>";
     return html;
   }
 
@@ -6151,22 +6277,6 @@
     if (!rows.length && !getMissingStudentsForActiveClass(sheet).length) {
       html += '<p class="student-cards-empty">이 반에 표시할 응답이 없습니다.</p>';
     }
-    return html;
-  }
-
-  function renderClassJumpNav(groups) {
-    if (!groups || groups.length < 2) return "";
-    var html = '<nav class="class-jump-nav" aria-label="반 바로가기">';
-    html += '<span class="class-jump-nav__label">반별 바로가기</span>';
-    groups.forEach(function (g) {
-      html +=
-        '<a class="class-jump-link" href="#class-' +
-        esc(g.classKey) +
-        '">' +
-        esc(g.label) +
-        "</a>";
-    });
-    html += "</nav>";
     return html;
   }
 
@@ -6323,7 +6433,6 @@
       return '<p class="student-cards-empty">반별로 표시할 응답이 없습니다.</p>';
     }
     var html = '<div class="survey-by-class">';
-    html += renderClassJumpNav(groups);
     groups.forEach(function (group) {
       var hostSheet = isAllClassesViewActive()
         ? resolveSheetForClassGroup(group, multi)
@@ -6565,21 +6674,115 @@
   }
 
   function shouldPrintOneStudentPerPage() {
-    if (activeSubjectView === "teacher") return false;
-    return (activeSubjectView || "all") === "all";
+    return activeSubjectView !== "teacher";
   }
 
   function getPrintablePageHeightPx() {
     return Math.round((277 * 96) / 25.4);
   }
 
+  var PRINT_FIT_SPACING_PROPS = [
+    "--print-font-pt",
+    "--print-line-height",
+    "--print-block-gap",
+    "--print-block-pad",
+    "--print-card-pad",
+    "--print-header-mb",
+    "--print-header-pb",
+    "--print-body-pb",
+    "--print-title-mb",
+  ];
+
   function clearStudentCardsPrintFit() {
     document.querySelectorAll("#results .student-card").forEach(function (card) {
-      card.classList.remove("print-fit-applied", "print-fit-scaled");
-      card.style.removeProperty("--print-font-pt");
-      card.style.removeProperty("--print-line-height");
-      card.style.removeProperty("--print-scale");
+      card.classList.remove("print-fit-applied");
+      PRINT_FIT_SPACING_PROPS.forEach(function (prop) {
+        card.style.removeProperty(prop);
+      });
     });
+    document.body.classList.remove("print-fit-measuring");
+  }
+
+  function applyStudentCardPrintFitVars(card, fontPt, lineH, compactTier) {
+    var tier = compactTier || 0;
+    card.style.setProperty("--print-font-pt", fontPt + "pt");
+    card.style.setProperty("--print-line-height", String(lineH));
+    if (tier >= 2) {
+      card.style.setProperty("--print-block-gap", "3px");
+      card.style.setProperty("--print-block-pad", "4px 6px 3px");
+      card.style.setProperty("--print-card-pad", "6px 8px 0");
+      card.style.setProperty("--print-header-mb", "4px");
+      card.style.setProperty("--print-header-pb", "4px");
+      card.style.setProperty("--print-body-pb", "6px");
+      card.style.setProperty("--print-title-mb", "2px");
+    } else if (tier >= 1) {
+      card.style.setProperty("--print-block-gap", "5px");
+      card.style.setProperty("--print-block-pad", "6px 8px 5px");
+      card.style.setProperty("--print-card-pad", "8px 10px 0");
+      card.style.setProperty("--print-header-mb", "6px");
+      card.style.setProperty("--print-header-pb", "6px");
+      card.style.setProperty("--print-body-pb", "8px");
+      card.style.setProperty("--print-title-mb", "3px");
+    } else {
+      card.style.setProperty("--print-block-gap", "7px");
+      card.style.setProperty("--print-block-pad", "8px 10px 6px");
+      card.style.setProperty("--print-card-pad", "10px 12px 0");
+      card.style.setProperty("--print-header-mb", "8px");
+      card.style.setProperty("--print-header-pb", "8px");
+      card.style.setProperty("--print-body-pb", "10px");
+      card.style.setProperty("--print-title-mb", "4px");
+    }
+  }
+
+  function studentCardFitsPage(card, pageBudget) {
+    return card.scrollHeight <= pageBudget;
+  }
+
+  function fitStudentCardToOnePage(card, pageBudget) {
+    var minFontPt = 4.75;
+    var minLineH = 1.04;
+    var maxFontPt = 11;
+    var maxLineH = 1.42;
+    var bestFont = minFontPt;
+    var bestLine = minLineH;
+    var bestTier = 2;
+
+    for (var tier = 0; tier <= 2; tier++) {
+      var lineH = maxLineH;
+      while (lineH + 0.001 >= minLineH) {
+        var lo = minFontPt;
+        var hi = maxFontPt;
+        var chosen = minFontPt;
+        while (hi - lo > 0.12) {
+          var mid = Math.round(((lo + hi) / 2) * 20) / 20;
+          applyStudentCardPrintFitVars(card, mid, lineH, tier);
+          if (studentCardFitsPage(card, pageBudget)) {
+            chosen = mid;
+            lo = mid + 0.12;
+          } else {
+            hi = mid - 0.12;
+          }
+        }
+        for (var tryFont = chosen; tryFont + 0.001 >= minFontPt; tryFont = Math.round((tryFont - 0.15) * 20) / 20) {
+          applyStudentCardPrintFitVars(card, tryFont, lineH, tier);
+          if (studentCardFitsPage(card, pageBudget)) {
+            chosen = tryFont;
+            break;
+          }
+        }
+        applyStudentCardPrintFitVars(card, chosen, lineH, tier);
+        if (studentCardFitsPage(card, pageBudget)) {
+          bestFont = chosen;
+          bestLine = lineH;
+          bestTier = tier;
+          applyStudentCardPrintFitVars(card, bestFont, bestLine, bestTier);
+          return;
+        }
+        lineH = Math.round((lineH - 0.03) * 100) / 100;
+      }
+    }
+
+    applyStudentCardPrintFitVars(card, minFontPt, minLineH, 2);
   }
 
   function prepareStudentCardsPrintFit() {
@@ -6588,41 +6791,11 @@
     var cards = document.querySelectorAll("#results .student-card");
     if (!cards.length) return;
 
-    document.body.classList.add("print-fit-measuring");
-    var pageBudget = getPrintablePageHeightPx();
+    document.body.classList.add("print-fit-measuring", "print-one-student-per-page");
+    var pageBudget = getPrintablePageHeightPx() - 6;
 
     cards.forEach(function (card) {
-      var header = card.querySelector(".student-response-header");
-      var headerH = header ? header.offsetHeight : 0;
-      var budget = pageBudget - headerH - 28;
-      if (budget < 120) budget = 120;
-
-      var fontPt = 11;
-      var lineH = 1.42;
-      var minFontPt = 7;
-      var minLineH = 1.16;
-      var fits = false;
-
-      while (fontPt >= minFontPt && lineH >= minLineH) {
-        card.style.setProperty("--print-font-pt", fontPt + "pt");
-        card.style.setProperty("--print-line-height", String(lineH));
-        if (card.scrollHeight <= budget) {
-          fits = true;
-          break;
-        }
-        if (lineH > minLineH + 0.01) {
-          lineH = Math.round((lineH - 0.04) * 100) / 100;
-        } else {
-          fontPt = Math.round((fontPt - 0.35) * 10) / 10;
-        }
-      }
-
-      if (!fits && card.scrollHeight > budget) {
-        var scale = Math.min(1, (budget / card.scrollHeight) * 0.97);
-        scale = Math.max(0.78, scale);
-        card.style.setProperty("--print-scale", String(scale));
-        card.classList.add("print-fit-scaled");
-      }
+      fitStudentCardToOnePage(card, pageBudget);
       card.classList.add("print-fit-applied");
     });
 
@@ -6636,8 +6809,8 @@
       return;
     }
     syncResultsPrintState(results);
-    prepareStudentCardsPrintFit();
     setPrintMode(true);
+    prepareStudentCardsPrintFit();
     window.print();
   }
 
@@ -6686,7 +6859,7 @@
     ensureActiveSubjectViewValid();
 
     var chromeHtml = renderResultsChrome();
-    var bodyHtml = renderCategoryPickerBar();
+    var bodyHtml = "";
     if (!sheet) {
       bodyHtml += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
       el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
@@ -6934,8 +7107,9 @@
   window.addEventListener("beforeprint", function () {
     var results = document.getElementById("results");
     if (results && results.classList.contains("visible")) {
-      prepareStudentCardsPrintFit();
+      syncResultsPrintState(results);
       setPrintMode(true);
+      prepareStudentCardsPrintFit();
     }
   });
   window.addEventListener("afterprint", function () {
