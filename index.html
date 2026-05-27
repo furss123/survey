@@ -511,6 +511,58 @@
     }
     .home-list-status.is-ok { color: #047857; }
     .home-list-status.is-busy { color: var(--theme-heading); }
+
+    /* 상단 로딩 게이지 (1%~100%) */
+    .data-loading-overlay {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 0;
+      z-index: 4000;
+      padding: 10px 16px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.92);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      backdrop-filter: blur(2px);
+    }
+    html:not([data-theme="dark"]) .data-loading-overlay {
+      background: rgba(238, 242, 247, 0.92);
+      border-bottom-color: rgba(148, 163, 184, 0.55);
+    }
+    .data-loading-overlay[hidden] { display: none !important; }
+    .data-loading-overlay__text {
+      color: #e2e8f0;
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: -0.01em;
+    }
+    html:not([data-theme="dark"]) .data-loading-overlay__text {
+      color: #0f172a;
+    }
+    .data-loading-overlay__sub {
+      color: rgba(226, 232, 240, 0.85);
+      font-weight: 700;
+      font-size: 0.78rem;
+    }
+    html:not([data-theme="dark"]) .data-loading-overlay__sub {
+      color: rgba(71, 85, 105, 0.9);
+    }
+    .data-loading-overlay__bar {
+      width: min(760px, 92vw);
+      height: 5px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(148, 163, 184, 0.25);
+    }
+    .data-loading-overlay__bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--theme-btn-top) 0%, var(--school-accent) 100%);
+      transition: width 0.15s linear;
+    }
     #surveyListGroups.is-refreshing {
       opacity: 0.55;
       pointer-events: none;
@@ -2139,6 +2191,14 @@
       </button>
     </div>
   </header>
+
+  <div class="data-loading-overlay" id="dataLoadingOverlay" hidden aria-live="polite" aria-label="로딩 상태">
+    <div class="data-loading-overlay__text" id="dataLoadingOverlayText">로딩 중…</div>
+    <div class="data-loading-overlay__sub" id="dataLoadingOverlaySub">1%</div>
+    <div class="data-loading-overlay__bar" aria-hidden="true">
+      <div class="data-loading-overlay__bar-fill" id="dataLoadingOverlayFill"></div>
+    </div>
+  </div>
 
   <div id="adminSetupPanel" class="admin-setup-panel no-print" hidden>
     <div class="admin-setup-inner">
@@ -3814,6 +3874,75 @@
     if (kind) el.classList.add(kind);
   }
 
+  var dataLoadingOverlayToken = 0;
+  var dataLoadingOverlayTimer = null;
+  var dataLoadingOverlayCap = 100;
+  var dataLoadingOverlayPercent = 1;
+
+  function showDataLoadingOverlay(message, initialPercent, capPercent) {
+    var overlay = document.getElementById("dataLoadingOverlay");
+    var text = document.getElementById("dataLoadingOverlayText");
+    var sub = document.getElementById("dataLoadingOverlaySub");
+    var fill = document.getElementById("dataLoadingOverlayFill");
+    if (!overlay || !text || !sub || !fill) return;
+
+    var token = ++dataLoadingOverlayToken;
+    if (dataLoadingOverlayTimer) window.clearInterval(dataLoadingOverlayTimer);
+    dataLoadingOverlayTimer = null;
+    dataLoadingOverlayCap = capPercent == null ? 99 : capPercent;
+    dataLoadingOverlayPercent = initialPercent == null ? 1 : initialPercent;
+
+    text.textContent = message || "로딩 중…";
+    sub.textContent = String(Math.max(1, Math.min(100, dataLoadingOverlayPercent))) + "%";
+    fill.style.width = String(Math.max(1, Math.min(100, dataLoadingOverlayPercent))) + "%";
+
+    overlay.hidden = false;
+
+    dataLoadingOverlayTimer = window.setInterval(function () {
+      if (token !== dataLoadingOverlayToken) {
+        if (dataLoadingOverlayTimer) window.clearInterval(dataLoadingOverlayTimer);
+        dataLoadingOverlayTimer = null;
+        return;
+      }
+      if (dataLoadingOverlayPercent < dataLoadingOverlayCap) {
+        // 부드럽게 증가 (결정형이지만 네트워크 지연에서 "멈춘 느낌"을 줄이기 위함)
+        var next = Math.min(dataLoadingOverlayCap, dataLoadingOverlayPercent + Math.max(1, Math.round(dataLoadingOverlayCap * 0.02)));
+        dataLoadingOverlayPercent = Math.max(1, next);
+        sub.textContent = String(dataLoadingOverlayPercent) + "%";
+        fill.style.width = String(dataLoadingOverlayPercent) + "%";
+      }
+    }, 120);
+  }
+
+  function setDataLoadingOverlayCap(capPercent) {
+    if (capPercent == null) return;
+    dataLoadingOverlayCap = Math.max(1, Math.min(100, capPercent));
+  }
+
+  function setDataLoadingOverlayProgress(percent) {
+    var overlay = document.getElementById("dataLoadingOverlay");
+    var sub = document.getElementById("dataLoadingOverlaySub");
+    var fill = document.getElementById("dataLoadingOverlayFill");
+    if (!overlay || !sub || !fill) return;
+    dataLoadingOverlayPercent = Math.max(1, Math.min(100, Math.round(Number(percent) || 1)));
+    sub.textContent = String(dataLoadingOverlayPercent) + "%";
+    fill.style.width = String(dataLoadingOverlayPercent) + "%";
+  }
+
+  function hideDataLoadingOverlaySoon() {
+    var overlay = document.getElementById("dataLoadingOverlay");
+    if (!overlay) return;
+    try {
+      if (dataLoadingOverlayTimer) window.clearInterval(dataLoadingOverlayTimer);
+      dataLoadingOverlayTimer = null;
+    } catch (err) { /* ignore */ }
+
+    setDataLoadingOverlayProgress(100);
+    window.setTimeout(function () {
+      if (overlay) overlay.hidden = true;
+    }, 250);
+  }
+
   function flashHomeSurveyList() {
     var groups = document.getElementById("surveyListGroups");
     if (!groups) return;
@@ -3833,6 +3962,7 @@
     if (groups) groups.classList.add("is-refreshing");
     if (refreshBtn) refreshBtn.disabled = true;
     setHomeListStatus(options.loadingMessage || "목록 새로고침 중…", "is-busy");
+    showDataLoadingOverlay(options.loadingMessage || "목록 새로고침 중…", 1, 35);
     renderSheetButtonGrid();
     try {
       var merged =
@@ -3841,9 +3971,13 @@
           : await SurveyForm.refreshRegistryFromServer();
       if (token !== homeSurveyListRefreshToken) return;
       merged = SurveyForm.filterSheetEntriesOnly(merged);
+      setDataLoadingOverlayProgress(35);
+      setDataLoadingOverlayCap(75);
       saveSheetRegistry(merged);
       SurveyForm.saveRegistry(merged);
       renderSheetButtonGrid();
+      setDataLoadingOverlayProgress(75);
+      setDataLoadingOverlayCap(98);
       var time = new Date().toLocaleTimeString("ko-KR", {
         hour: "2-digit",
         minute: "2-digit",
@@ -3855,6 +3989,7 @@
         "is-ok"
       );
       flashHomeSurveyList();
+      hideDataLoadingOverlaySoon();
     } catch (err) {
       if (token === homeSurveyListRefreshToken) {
         renderSheetButtonGrid();
@@ -3862,6 +3997,7 @@
           (err && err.message) || "목록을 불러오지 못했습니다.",
           ""
         );
+        hideDataLoadingOverlaySoon();
       }
     } finally {
       if (token === homeSurveyListRefreshToken) {
@@ -4013,11 +4149,17 @@
     setSheetButtonsDisabled(true);
     var prevLabel = triggerBtn ? triggerBtn.textContent : "";
     if (triggerBtn) triggerBtn.textContent = "분석 중…";
+    showDataLoadingOverlay("설문 데이터 불러오는 중…", 1, 25);
+    setDataLoadingOverlayCap(25);
 
     try {
       var id = parseSpreadsheetId(entry.url);
       var sheetInputs = await fetchAllSheetsGviz(id);
+      setDataLoadingOverlayProgress(25);
+      setDataLoadingOverlayCap(60);
       var masterRoster = await fetchClassRosterFromMaster();
+      setDataLoadingOverlayProgress(45);
+      setDataLoadingOverlayCap(85);
       var hasData = sheetInputs.some(function (s) {
         return s.values && s.values.length;
       });
@@ -4043,8 +4185,11 @@
         })
       );
       renderResults(getActiveAnalysis(), id, lastMultiResult);
+      setDataLoadingOverlayProgress(90);
+      setDataLoadingOverlayCap(98);
       syncViewUrl();
       document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
+      hideDataLoadingOverlaySoon();
     } catch (err) {
       showHomeView();
       if (errorEl) {
@@ -4052,6 +4197,7 @@
         errorEl.hidden = false;
       }
       setFabStackVisible(false);
+      hideDataLoadingOverlaySoon();
     } finally {
       analysisInFlight = false;
       setSheetButtonsDisabled(false);
