@@ -398,7 +398,7 @@
     }
     .sheet-btn-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: 1fr;
       gap: var(--space-3);
       width: 100%;
     }
@@ -406,9 +406,10 @@
       display: flex;
       flex-direction: row;
       align-items: center;
-      justify-content: flex-start;
-      gap: 10px;
+      justify-content: space-between;
+      gap: 12px;
       width: 100%;
+      box-sizing: border-box;
       min-height: 3.25rem;
       padding: 14px 18px;
       border: 1px solid var(--theme-border-light);
@@ -440,8 +441,17 @@
       font-size: var(--text-md);
       font-weight: 700;
       color: var(--theme-heading-strong);
-      flex: 1;
+      flex: 1 1 auto;
+      min-width: 0;
       text-align: left;
+    }
+    .sheet-launch-btn__date {
+      flex: 0 0 auto;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--theme-text-muted);
+      text-align: right;
+      white-space: nowrap;
     }
     .sheet-launch-btn__tag {
       font-size: 0.7rem;
@@ -1873,6 +1883,48 @@
       align-items: center;
       justify-content: center;
     }
+    .admin-setup-prompt-live {
+      margin: 8px 0 0;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px dashed var(--theme-border);
+      background: var(--theme-bg-muted);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+      color: var(--theme-text-muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .admin-setup-prompt-live:empty {
+      display: none;
+    }
+    .admin-setup-prompt-banner {
+      margin: 0 0 var(--space-4);
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--theme-border-light);
+      background: var(--theme-bg-muted);
+    }
+    .admin-setup-prompt-banner strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: var(--text-sm);
+      color: var(--theme-heading);
+    }
+    .admin-setup-prompt-banner p {
+      margin: 0;
+      font-size: var(--text-sm);
+      line-height: 1.55;
+      color: var(--theme-text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    body.admin-setup-mode.admin-setup-step-configure #results {
+      display: none !important;
+    }
+    body.admin-setup-mode.admin-setup-step-configure .admin-setup-section--preview-only {
+      display: none;
+    }
     body.admin-setup-mode .site-header-text {
       gap: 4pt;
     }
@@ -2234,14 +2286,20 @@
           rows="4"
           placeholder="예) 핵심 키워드 3개만 요약, 위험신호 문장은 별도 표시"
         ></textarea>
-        <p class="admin-setup-prompt-hint" id="adminSetupPromptHint">등록·수정 시 함께 저장됩니다. (최대 500자)</p>
+        <p class="admin-setup-prompt-hint" id="adminSetupPromptHint">프롬프트를 바꾸면 아래 미리보기 문구가 즉시 갱신됩니다. (최대 500자)</p>
         <p class="admin-setup-prompt-hint" id="adminSetupPromptCount" aria-live="polite">0 / 500자</p>
+        <div class="admin-setup-prompt-live" id="adminSetupPromptLive" aria-live="polite"></div>
       </div>
       <div class="admin-setup-section">
         <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
       </div>
-      <div class="admin-setup-actions">
-        <button type="button" class="admin-btn admin-btn-primary" id="adminSetupConfirm">메인에 등록</button>
+      <div class="admin-setup-actions" id="adminSetupActionsConfigure">
+        <button type="button" class="admin-btn admin-btn-primary" id="adminSetupPreviewBtn">미리보기</button>
+        <a href="admin.html" class="admin-btn">관리자로 돌아가기</a>
+      </div>
+      <div class="admin-setup-actions admin-setup-section--preview-only" id="adminSetupActionsPreview" hidden>
+        <button type="button" class="admin-btn admin-btn-primary" id="adminSetupConfirm">게시</button>
+        <button type="button" class="admin-btn" id="adminSetupEditPromptBtn">프롬프트 수정</button>
         <a href="admin.html" class="admin-btn">관리자로 돌아가기</a>
       </div>
     </div>
@@ -2344,8 +2402,8 @@
     <div class="site-footer-inner">남악고등학교 1학년 설문 결과 · <span>survey</span></div>
   </footer>
 
-  <script src="scripts/survey-form-shared.js?v=20260529"></script>
-  <script src="scripts/admin-session.js?v=20260529"></script>
+  <script src="scripts/survey-form-shared.js?v=20260530"></script>
+  <script src="scripts/admin-session.js?v=20260530"></script>
   <script>
 (function () {
   var btn = document.getElementById("homeAdminEntryBtn");
@@ -4216,12 +4274,27 @@
     });
   }
 
+  function formatSurveyListDate(entry) {
+    var raw = entry && (entry.registeredAt || entry.updatedAt || entry.completedAt);
+    if (!raw) return "";
+    var d = new Date(typeof raw === "number" ? raw : Date.parse(raw));
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
+
   function buildSurveyLaunchButtonHtml(entry) {
+    var dateText = formatSurveyListDate(entry);
     return (
       '<button type="button" class="sheet-launch-btn sheet-launch-btn--survey" data-sheet-id="' +
       esc(entry.id) +
       '"><span class="sheet-launch-btn__label">' +
       esc(entry.label || "설문") +
+      '</span><span class="sheet-launch-btn__date">' +
+      esc(dateText || "—") +
       "</span></button>"
     );
   }
@@ -4355,6 +4428,8 @@
   var adminSetupCategories = [];
   var adminSetupClasses = [];
   var adminSetupEditId = null;
+  var adminSetupStep = "configure";
+  var adminSetupPromptPreviewTimer = null;
   var adminCategorySelectAll = false;
   var TEACHER_MESSAGE_TITLE = "담임 선생님께 전하는 한마디";
   var DEFAULT_SUBJECT_FILTER_OPTIONS = [
@@ -5186,6 +5261,11 @@
     });
   }
 
+  function getAdminSetupPromptValue() {
+    var input = document.getElementById("adminAnalysisPrompt");
+    return coerceText(input && input.value).slice(0, 500);
+  }
+
   function updateAdminSetupPromptCount() {
     var input = document.getElementById("adminAnalysisPrompt");
     var countEl = document.getElementById("adminSetupPromptCount");
@@ -5194,12 +5274,116 @@
     countEl.textContent = len + " / 500자";
   }
 
+  function updateAdminSetupPromptLivePreview() {
+    var live = document.getElementById("adminSetupPromptLive");
+    var prompt = getAdminSetupPromptValue();
+    if (live) {
+      live.textContent = prompt
+        ? prompt
+        : "프롬프트를 입력하면 여기에 미리보기가 표시됩니다.";
+    }
+  }
+
+  function persistAdminSetupDraftFromDom() {
+    syncAdminCategoriesFromDom();
+    sessionStorage.setItem(
+      ADMIN_SETUP_DRAFT_KEY,
+      JSON.stringify({
+        label: adminSetupLabel,
+        url: adminSetupUrl,
+        ts: Date.now(),
+        editId: adminSetupEditId,
+        analysisPrompt: getAdminSetupPromptValue(),
+        categories: adminSetupCategories,
+        categorySelectAll: adminCategorySelectAll,
+      })
+    );
+  }
+
+  function applyAdminSetupStep(step) {
+    adminSetupStep = step === "preview" ? "preview" : "configure";
+    document.body.classList.toggle("admin-setup-step-configure", adminSetupStep === "configure");
+    document.body.classList.toggle("admin-setup-step-preview", adminSetupStep === "preview");
+    var configureActions = document.getElementById("adminSetupActionsConfigure");
+    var previewActions = document.getElementById("adminSetupActionsPreview");
+    var promptBlock = document.querySelector(".admin-setup-prompt");
+    var categorySection = document.querySelector(".admin-setup-section");
+    if (configureActions) configureActions.hidden = adminSetupStep !== "configure";
+    if (previewActions) previewActions.hidden = adminSetupStep !== "preview";
+    if (promptBlock) promptBlock.hidden = adminSetupStep === "preview";
+    if (categorySection) categorySection.hidden = adminSetupStep === "preview";
+    var titleEl = document.getElementById("adminSetupTitle");
+    if (titleEl) {
+      titleEl.textContent =
+        (adminSetupEditId ? "[수정] " : "") +
+        adminSetupLabel +
+        (adminSetupStep === "configure" ? " · 구성" : " · 미리보기");
+    }
+    var confirmBtn = document.getElementById("adminSetupConfirm");
+    if (confirmBtn) {
+      confirmBtn.textContent = adminSetupEditId ? "변경 사항 게시" : "게시";
+    }
+  }
+
+  function renderAdminSetupPromptBanner() {
+    if (!adminSetupMode || adminSetupStep !== "preview") return "";
+    var prompt = getAdminSetupPromptValue();
+    return (
+      '<div class="admin-setup-prompt-banner" role="status" aria-live="polite">' +
+      "<strong>분석 프롬프트 (미리보기)</strong>" +
+      "<p>" +
+      esc(prompt || "(미입력)") +
+      "</p></div>"
+    );
+  }
+
+  function scheduleAdminSetupPreviewRefresh() {
+    if (adminSetupPromptPreviewTimer) clearTimeout(adminSetupPromptPreviewTimer);
+    adminSetupPromptPreviewTimer = setTimeout(function () {
+      adminSetupPromptPreviewTimer = null;
+      updateAdminSetupPromptLivePreview();
+      persistAdminSetupDraftFromDom();
+      if (adminSetupMode && adminSetupStep === "preview" && lastMultiResult) {
+        var id = parseSpreadsheetId(adminSetupUrl);
+        renderResults(getActiveAnalysis(), id, lastMultiResult);
+      }
+    }, 200);
+  }
+
+  function enterAdminSetupPreview() {
+    if (!lastMultiResult) {
+      alert("시트 데이터를 먼저 불러온 뒤 미리보기를 사용해 주세요.");
+      return;
+    }
+    syncAdminCategoriesFromDom();
+    if (
+      !adminCategorySelectAll &&
+      !adminSetupCategories.some(function (c) {
+        return c.enabled && c.id !== "all";
+      })
+    ) {
+      alert("표시할 카테고리를 하나 이상 선택하거나 「전체 선택」을 체크해 주세요.");
+      return;
+    }
+    persistAdminSetupDraftFromDom();
+    applyAdminSetupStep("preview");
+    var id = parseSpreadsheetId(adminSetupUrl);
+    renderResults(getActiveAnalysis(), id, lastMultiResult);
+    syncViewUrl();
+    var resultsEl = document.getElementById("results");
+    if (resultsEl) resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   (function bindAdminSetupPromptField() {
     var input = document.getElementById("adminAnalysisPrompt");
     if (!input || input.dataset.bound === "1") return;
     input.dataset.bound = "1";
-    input.addEventListener("input", updateAdminSetupPromptCount);
+    input.addEventListener("input", function () {
+      updateAdminSetupPromptCount();
+      scheduleAdminSetupPreviewRefresh();
+    });
     updateAdminSetupPromptCount();
+    updateAdminSetupPromptLivePreview();
   })();
 
   function confirmAdminSetup() {
@@ -5226,9 +5410,7 @@
       label: adminSetupLabel,
       url: adminSetupUrl,
       tab: preferredTab,
-      analysisPrompt: coerceText(
-        (document.getElementById("adminAnalysisPrompt") || {}).value
-      ).slice(0, 500),
+      analysisPrompt: getAdminSetupPromptValue(),
       classes: registryClasses,
       categorySelectAll: adminCategorySelectAll,
       categories: adminSetupCategories.map(function (c, i) {
@@ -5250,10 +5432,20 @@
       }
       registry[idx] = Object.assign({}, registry[idx], payload);
     } else {
+      var newId = parseSpreadsheetId(adminSetupUrl);
+      if (
+        registry.some(function (item) {
+          return item && item.id === newId;
+        })
+      ) {
+        alert("이미 등록된 시트입니다. 목록에서 수정해 주세요.");
+        return;
+      }
       registry.push(
         Object.assign(
           {
-            id: "sheet-" + Date.now(),
+            id: newId,
+            registeredAt: Date.now(),
           },
           payload
         )
@@ -5327,10 +5519,7 @@
         (adminSetupEditId ? "[수정] " : "") + label + " · 시트 구성 미리보기";
     }
     if (metaEl) metaEl.textContent = url;
-    var confirmBtn = document.getElementById("adminSetupConfirm");
-    if (confirmBtn) {
-      confirmBtn.textContent = adminSetupEditId ? "구성 저장" : "메인에 등록";
-    }
+    applyAdminSetupStep("configure");
     showResultsView();
 
     var errorEl = document.getElementById("error");
@@ -5405,10 +5594,13 @@
                 : activeClassFilter,
         })
       );
-      renderResults(getActiveAnalysis(), id, lastMultiResult);
+      updateAdminSetupPromptLivePreview();
+      applyAdminSetupStep("configure");
+      document.getElementById("results").classList.remove("visible");
+      document.getElementById("results").innerHTML = "";
+      setFabStackVisible(false);
       syncViewUrl();
-      setFabStackVisible(true);
-      document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("adminSetupPanel").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       alert(err.message || "시트 분석에 실패했습니다.");
       location.href = "admin.html";
@@ -6256,7 +6448,7 @@
     ensureActiveSubjectViewValid();
 
     var chromeHtml = renderResultsChrome();
-    var bodyHtml = renderCategoryPickerBar();
+    var bodyHtml = renderAdminSetupPromptBanner() + renderCategoryPickerBar();
     if (!sheet) {
       bodyHtml += '<p class="student-cards-empty">조회할 설문을 선택해 주세요.</p>';
       el.innerHTML = wrapResultsHtml(chromeHtml, bodyHtml);
@@ -6360,6 +6552,21 @@
   document.getElementById("adminSetupConfirm").addEventListener("click", function () {
     confirmAdminSetup();
   });
+  var adminSetupPreviewBtn = document.getElementById("adminSetupPreviewBtn");
+  if (adminSetupPreviewBtn) {
+    adminSetupPreviewBtn.addEventListener("click", enterAdminSetupPreview);
+  }
+  var adminSetupEditPromptBtn = document.getElementById("adminSetupEditPromptBtn");
+  if (adminSetupEditPromptBtn) {
+    adminSetupEditPromptBtn.addEventListener("click", function () {
+      applyAdminSetupStep("configure");
+      var promptInput = document.getElementById("adminAnalysisPrompt");
+      if (promptInput) {
+        promptInput.focus();
+        document.getElementById("adminSetupPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }
 
   (function initAdminSetupFromQuery() {
     var params = new URLSearchParams(location.search);
