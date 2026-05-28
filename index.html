@@ -995,6 +995,12 @@
       padding-top: 10px;
       border-top: 1px solid var(--theme-border-light);
     }
+    .student-survey-report__subject--solo {
+      margin-top: 0;
+    }
+    .student-survey-report__subject--solo .student-survey-report__fields {
+      margin-top: 0;
+    }
     .class-select-option {
       display: flex;
       flex-direction: column;
@@ -4976,7 +4982,7 @@
       if (!hasData) throw new Error("시트에 데이터가 없습니다. 공개 공유 설정을 확인하세요.");
       sheetsData[id] = sheetInputs;
       lastMultiResult = analyzeAllSheets(sheetInputs, masterRoster);
-      activeSubjectView = "all";
+      activeSubjectView = null;
       activeClassFilter = null;
       var launchSheets = lastMultiResult.sheets.filter(function (s) {
         return !isListSheetTab(s.sheetName);
@@ -6252,7 +6258,7 @@
         });
       }
       renderAdminSetupPanels();
-      activeSubjectView = "all";
+      activeSubjectView = null;
       activeClassFilter = null;
       var setupSheets = lastMultiResult.sheets.filter(function (s) {
         return !isListSheetTab(s.sheetName);
@@ -6420,29 +6426,18 @@
     return simplifySectionTitle(sec.title || "") === TEACHER_MESSAGE_TITLE;
   }
 
-  function buildSubjectOptionsFromCategoryColumns(cols) {
-    var opts = [{ id: "all", label: "과목 전체", enabled: true, order: 0 }];
-    (cols || []).forEach(function (col, idx) {
-      opts.push({
-        id: col.id,
-        label: col.label,
-        enabled: true,
-        order: idx + 1,
-      });
-    });
-    return opts;
-  }
-
   function getSubjectIdsFromCategoryColumns(multi) {
     var cols = getSheetCategoryColumns(multi);
     if (!cols.length) return null;
-    return cols
+    var fromCols = cols
       .map(function (c) {
         return c.id;
       })
       .filter(function (id) {
-        return id && id !== "teacher";
+        return id && CORE_RESULTS_SUBJECT_IDS.indexOf(id) >= 0;
       });
+    if (fromCols.length) return fromCols;
+    return null;
   }
 
   function sectionMatchesSubjectFilter(sec, subjectId) {
@@ -6475,12 +6470,30 @@
   }
 
   function getResultsSubjectPickerOptions() {
-    if (isAllCategoriesDisplayMode()) return [];
     var cols = getSheetCategoryColumns(lastMultiResult);
-    if (cols.length) return buildSubjectOptionsFromCategoryColumns(cols);
-    return DEFAULT_SUBJECT_FILTER_OPTIONS.filter(function (o) {
-      return o.enabled !== false;
-    }).sort(sortCategoriesByOrder);
+    var ordered = [];
+    if (cols.length) {
+      cols.forEach(function (col) {
+        if (
+          col.id &&
+          CORE_RESULTS_SUBJECT_IDS.indexOf(col.id) >= 0 &&
+          ordered.indexOf(col.id) < 0
+        ) {
+          ordered.push(col.id);
+        }
+      });
+    }
+    CORE_RESULTS_SUBJECT_IDS.forEach(function (id) {
+      if (ordered.indexOf(id) < 0) ordered.push(id);
+    });
+    return ordered.map(function (id, idx) {
+      return {
+        id: id,
+        label: subjectDisplayLabel(id) || id,
+        enabled: true,
+        order: idx,
+      };
+    });
   }
 
   function getEnabledCategoryFilterIds() {
@@ -6504,9 +6517,6 @@
   }
 
   function rowHasVisibleSections(row) {
-    if (isAllCategoriesDisplayMode()) {
-      return (row.sections || []).some(isMeaningfulSection);
-    }
     return (row.sections || []).some(function (sec) {
       if (!isMeaningfulSection(sec)) return false;
       var view = activeSubjectView || "all";
@@ -6578,18 +6588,16 @@
       activeSubjectView = "all";
       return;
     }
-    var current = activeSubjectView || "all";
-    if (
-      !opts.some(function (o) {
+    var current = activeSubjectView || "";
+    var valid =
+      current &&
+      opts.some(function (o) {
         return o.id === current;
-      })
-    ) {
-      activeSubjectView = "all";
-    }
+      });
+    if (!valid) activeSubjectView = opts[0].id;
   }
 
   function renderSubjectFilterRow() {
-    if (isAllCategoriesDisplayMode()) return "";
     var items = getResultsSubjectPickerOptions();
     if (!items.length) return "";
     ensureActiveSubjectViewValid();
@@ -6782,6 +6790,7 @@
     "teacher",
   ];
   var SURVEY_SUBJECT_IDS = ["국어", "수학", "영어", "한국사", "통합사회", "통합과학"];
+  var CORE_RESULTS_SUBJECT_IDS = SURVEY_SUBJECT_IDS.slice();
 
   function formatFieldLabelFromSheet(key) {
     return String(key || "")
@@ -6881,6 +6890,7 @@
       return html;
     }
 
+    var singleSubjectMode = filter && filter !== "all" && filter !== "teacher";
     var anyContent = false;
     order.forEach(function (subjId) {
       var data = bySubject[subjId];
@@ -6891,8 +6901,13 @@
       }
       anyContent = true;
       var displayName = subjectDisplayLabel(subjId) || subjId;
-      html += '<section class="student-survey-report__subject">';
-      html += '<h4 class="student-survey-report__subject-name">' + esc(displayName) + "</h4>";
+      html +=
+        '<section class="student-survey-report__subject' +
+        (singleSubjectMode ? " student-survey-report__subject--solo" : "") +
+        '">';
+      if (!singleSubjectMode) {
+        html += '<h4 class="student-survey-report__subject-name">' + esc(displayName) + "</h4>";
+      }
       if (hasFields) {
         html += '<div class="student-survey-report__fields">';
         data.fields.forEach(function (f) {
