@@ -4982,7 +4982,7 @@
       if (!hasData) throw new Error("시트에 데이터가 없습니다. 공개 공유 설정을 확인하세요.");
       sheetsData[id] = sheetInputs;
       lastMultiResult = analyzeAllSheets(sheetInputs, masterRoster);
-      activeSubjectView = null;
+      activeSubjectView = "all";
       activeClassFilter = null;
       var launchSheets = lastMultiResult.sheets.filter(function (s) {
         return !isListSheetTab(s.sheetName);
@@ -6258,7 +6258,7 @@
         });
       }
       renderAdminSetupPanels();
-      activeSubjectView = null;
+      activeSubjectView = "all";
       activeClassFilter = null;
       var setupSheets = lastMultiResult.sheets.filter(function (s) {
         return !isListSheetTab(s.sheetName);
@@ -6486,14 +6486,15 @@
     CORE_RESULTS_SUBJECT_IDS.forEach(function (id) {
       if (ordered.indexOf(id) < 0) ordered.push(id);
     });
-    return ordered.map(function (id, idx) {
+    var subjectOpts = ordered.map(function (id, idx) {
       return {
         id: id,
         label: subjectDisplayLabel(id) || id,
         enabled: true,
-        order: idx,
+        order: idx + 1,
       };
     });
+    return [{ id: "all", label: "전과목", enabled: true, order: 0 }].concat(subjectOpts);
   }
 
   function getEnabledCategoryFilterIds() {
@@ -6594,7 +6595,7 @@
       opts.some(function (o) {
         return o.id === current;
       });
-    if (!valid) activeSubjectView = opts[0].id;
+    if (!valid) activeSubjectView = "all";
   }
 
   function renderSubjectFilterRow() {
