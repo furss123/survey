@@ -592,15 +592,6 @@
       text-align: center;
     }
     .home-section-empty[hidden] { display: none !important; }
-    .home-list-status {
-      margin: 8px 0 0;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--theme-text-muted);
-    }
-    .home-list-status.is-ok { color: #047857; }
-    .home-list-status.is-busy { color: var(--theme-heading); }
-
     #surveyListGroups.is-refreshing {
       opacity: 0.55;
       pointer-events: none;
@@ -612,12 +603,6 @@
     @keyframes home-list-flash {
       0% { box-shadow: 0 0 0 0 rgba(74, 122, 176, 0.45); }
       100% { box-shadow: 0 0 0 10px rgba(74, 122, 176, 0); }
-    }
-    .survey-list-hint {
-      margin: -4px 0 10px;
-      font-size: var(--text-sm);
-      color: var(--theme-text-muted);
-      line-height: 1.45;
     }
     .active-survey-panel {
       padding: var(--space-5);
@@ -2456,10 +2441,8 @@
               class="admin-entry-btn admin-entry-link"
             >관리자</a>
           </div>
-          <p id="homeListStatus" class="home-list-status" role="status" aria-live="polite"></p>
           <div id="surveyListGroups">
             <section class="survey-list-group">
-              <p class="survey-list-hint">구글 시트로 연결된 설문입니다. 버튼을 누르면 결과를 조회합니다.</p>
               <div id="sheetButtonGrid" class="sheet-btn-grid" role="group" aria-label="설문 조사 결과"></div>
               <p id="homeSectionEmpty" class="home-section-empty" hidden>등록된 설문이 없습니다.</p>
             </section>
@@ -4588,14 +4571,6 @@
 
   var homeSurveyListRefreshToken = 0;
 
-  function setHomeListStatus(text, kind) {
-    var el = document.getElementById("homeListStatus");
-    if (!el) return;
-    el.textContent = text || "";
-    el.classList.remove("is-ok", "is-busy");
-    if (kind) el.classList.add(kind);
-  }
-
   function flashHomeSurveyList() {
     var groups = document.getElementById("surveyListGroups");
     if (!groups) return;
@@ -4607,38 +4582,20 @@
     }, 600);
   }
 
-  function renderHomeSurveyListStatus(merged, message) {
-    var count = (merged || []).length;
-    if (message) {
-      setHomeListStatus(message, "is-ok");
-      return;
-    }
-    setHomeListStatus(
-      count ? "설문 " + count + "개" : "등록된 설문이 없습니다.",
-      count ? "is-ok" : ""
-    );
-  }
-
   async function refreshHomeSurveyList(options) {
     options = options || {};
     var token = ++homeSurveyListRefreshToken;
     var localMerged = SurveyForm.filterSheetEntriesOnly(loadSheetRegistry());
     renderSheetButtonGrid();
-    renderHomeSurveyListStatus(localMerged, options.message);
     if (options.sync === false) return;
     try {
       var merged = await SurveyForm.refreshRegistryFromServer({ silent: true });
       if (token !== homeSurveyListRefreshToken) return;
       merged = SurveyForm.filterSheetEntriesOnly(merged);
       renderSheetButtonGrid();
-      if (!options.message) {
-        renderHomeSurveyListStatus(merged, "");
-      }
       if (options.flash !== false) flashHomeSurveyList();
     } catch (err) {
-      if (token === homeSurveyListRefreshToken && !options.message) {
-        renderHomeSurveyListStatus(localMerged, "");
-      }
+      /* 로컬 목록 유지 */
     }
   }
 
