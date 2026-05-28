@@ -1225,6 +1225,33 @@
       border: 1px dashed var(--border-strong);
       border-radius: 12px;
     }
+    .subject-sectors {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+    }
+    .subject-sector {
+      width: 100%;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      overflow: hidden;
+    }
+    .subject-sector__title {
+      margin: 0;
+      padding: 10px 14px;
+      font-size: 0.9375rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--theme-heading);
+      background: linear-gradient(90deg, var(--bg-category) 0%, var(--bg-surface) 100%);
+      border-bottom: 2px solid var(--border-accent);
+    }
+    .subject-sector .category-blocks {
+      padding: 10px 12px 12px;
+      gap: 8px;
+    }
     .category-blocks {
       display: flex;
       flex-direction: column;
@@ -1274,7 +1301,8 @@
       margin-top: 5px;
       line-height: 1.55;
     }
-    .category-block .cat-field span {
+    .category-block .cat-field span,
+    .category-block .cat-field .cat-field__key {
       font-weight: 600;
       color: var(--text-subtle);
       margin-right: 4px;
@@ -2135,6 +2163,15 @@
         border-color: #b8c5d6 !important;
         color: #0f172a !important;
       }
+      body.is-printing-results #results .subject-sector {
+        border-color: #b8c5d6 !important;
+        background: #fff !important;
+      }
+      body.is-printing-results #results .subject-sector__title {
+        color: #1e3a5f !important;
+        background: #eef2f7 !important;
+        border-bottom-color: #3d6b9e !important;
+      }
       body.is-printing-results #results .category-block .cat-title {
         color: #1e3a5f !important;
       }
@@ -2872,7 +2909,8 @@
   function parseBracketTopicSections(text) {
     var s = String(text || "").trim();
     if (!s || !/\[[^\]]+\]/.test(s)) return [];
-    if (PROFILE_PATTERN.test(s)) return [];
+    if (/과목\s*\d+\s*\([^)]+\)/.test(s)) return [];
+    if (PROFILE_PATTERN.test(s) && !/과목\s*\d+\s*\(/.test(s) && s.length < 400) return [];
     var parts = s.split(/(?=\[[^\]]+\])/).map(function (p) { return p.trim(); }).filter(Boolean);
     var sections = [];
     for (var i = 0; i < parts.length; i++) {
@@ -2934,19 +2972,91 @@
       var subjMatch = part.match(/^(과목\s*\d+\s*\([^)]+\))/);
       if (!subjMatch) continue;
       var title = simplifySectionTitle(subjMatch[1].trim());
+      var subjectId = matchCategoryIdForTitle(title) || title;
       var bodyStart = part.slice(subjMatch[0].length).trim();
-      sections.push({ title: title, body: "", fields: parseSectionFields(bodyStart) });
+      sections.push({
+        title: title,
+        subject: subjectId,
+        body: "",
+        fields: parseSectionFields(bodyStart),
+      });
     }
     return sections;
+  }
+
+  /** Google Forms 영역별 설문: "과목 1 (국어)" 블록 단위 파싱 */
+  function parseSubjectBlocksFromText(body) {
+    var text = String(body || "").trim();
+    if (!text || !/과목\s*\d+\s*\([^)]+\)/.test(text)) return [];
+    var parts = text.split(/(?=과목\s*\d+\s*\([^)]+\))/).map(function (p) {
+      return p.trim();
+    }).filter(Boolean);
+    var sections = [];
+    parts.forEach(function (part) {
+      var m = part.match(/^과목\s*\d+\s*\(([^)]+)\)\s*([\s\S]*)$/);
+      if (!m) return;
+      var title = simplifySectionTitle(m[1].trim());
+      var subjectId = matchCategoryIdForTitle(title) || title;
+      var fields = parseSectionFields(m[2].trim());
+      var sec = {
+        title: title,
+        subject: subjectId,
+        body: fields.length ? "" : m[2].trim(),
+        fields: fields,
+      };
+      if (isMeaningfulSection(sec)) sections.push(sec);
+    });
+    return sections;
+  }
+
+  function annotateSectionsWithSubjects(sections) {
+    var out = [];
+    var currentSubject = "";
+    (sections || []).forEach(function (sec) {
+      if (!sec) return;
+      if (isTeacherMessageSection(sec)) {
+        out.push(Object.assign({}, sec, { subject: "teacher" }));
+        currentSubject = "teacher";
+        return;
+      }
+      var subj = sec.subject || matchCategoryIdForTitle(sec.title || "") || "";
+      var titleSimple = simplifySectionTitle(sec.title || "");
+      var known = ["국어", "수학", "영어", "한국사", "통합사회", "통합과학"];
+      if (known.indexOf(titleSimple) >= 0 || known.indexOf(subj) >= 0) {
+        currentSubject = known.indexOf(titleSimple) >= 0 ? titleSimple : subj;
+        out.push(Object.assign({}, sec, { subject: currentSubject, title: titleSimple }));
+        return;
+      }
+      if (sec.fields && sec.fields.length && currentSubject) {
+        out.push(Object.assign({}, sec, { subject: currentSubject }));
+        return;
+      }
+      if (currentSubject && !sec.subject) {
+        out.push(Object.assign({}, sec, { subject: currentSubject }));
+      } else {
+        out.push(sec);
+      }
+    });
+    return out;
   }
 
   function parseSections(text, meta) {
     var body = stripProfileHeader(text, meta);
     if (!body) return [];
     body = body.replace(/^👤\s*/, "").trim();
-    var bracketSecs = parseBracketTopicSections(body);
-    if (bracketSecs.length) return bracketSecs;
     var sections = [];
+    var beforeSubjects = body.split(/(?=과목\s*\d+\s*\([^)]+\))/)[0] || "";
+    if (/💌/.test(beforeSubjects)) {
+      var teacherChunk = beforeSubjects.match(/💌[\s\S]*/);
+      if (teacherChunk) sections.push(parseTeacherSection(teacherChunk[0]));
+    }
+    var subjectBlocks = parseSubjectBlocksFromText(body);
+    if (subjectBlocks.length) {
+      return annotateSectionsWithSubjects(sections.concat(subjectBlocks));
+    }
+    var bracketSecs = parseBracketTopicSections(body);
+    if (bracketSecs.length) return annotateSectionsWithSubjects(bracketSecs);
+    sections = [];
     var chunks = body.split(SECTION_START_RE).map(function (c) { return c.trim(); }).filter(Boolean);
     var surveyParent = "";
     for (var ci = 0; ci < chunks.length; ci++) {
@@ -2983,7 +3093,7 @@
         });
       }
     }
-    return sections.filter(isMeaningfulSection);
+    return annotateSectionsWithSubjects(sections.filter(isMeaningfulSection));
   }
 
   function parseProfileCategories(text, meta) {
@@ -3035,18 +3145,35 @@
 
   function isProfileSheetFormat(rawValues) {
     if (!rawValues || !rawValues.length) return false;
-    var sampleRows = rawValues.slice(0, Math.min(8, rawValues.length));
-    var hits = 0, checked = 0;
+    var sampleRows = rawValues.slice(0, Math.min(12, rawValues.length));
+    var hits = 0;
+    var checked = 0;
     for (var i = 0; i < sampleRows.length; i++) {
       var cells = sampleRows[i] || [];
       var joined = cells.map(function (c) { return String(c || "").trim(); }).join(" ");
       var longest = longestCellText(cells);
       var text = longest.length > joined.length * 0.55 ? longest : joined;
-      if (!text) continue;
+      if (!text || text.length < 80) continue;
+      if (i === 0 && !hasProfileContent(text) && !/과목\s*\d+\s*\(/.test(text)) continue;
       checked += 1;
-      if (hasProfileContent(text)) hits += 1;
+      if (hasProfileContent(text) || /과목\s*\d+\s*\([^)]+\)/.test(text)) hits += 1;
     }
-    return checked > 0 && hits >= Math.ceil(checked / 2);
+    if (checked > 0 && hits >= Math.ceil(checked / 2)) return true;
+    var colCount = Math.max.apply(
+      null,
+      rawValues.slice(0, 5).map(function (r) {
+        return (r && r.length) || 0;
+      }).concat([0])
+    );
+    if (colCount <= 2) {
+      var dataHits = 0;
+      rawValues.slice(0, 10).forEach(function (row) {
+        var t = longestCellText(row || []);
+        if (t.length > 120 && (PROFILE_PATTERN.test(t) || /과목\s*\d+\s*\(/.test(t))) dataHits += 1;
+      });
+      return dataHits >= 2;
+    }
+    return false;
   }
 
   function normalizeProfileSheet(rawValues) {
@@ -3059,7 +3186,7 @@
       var meta = extractProfileMeta(text);
       if (!meta && !hasProfileContent(text)) return null;
       if (!meta) meta = { 반: "(미입력)", 번호: rowIndex + 1, 이름: "" };
-      var sections = parseSections(text, meta);
+      var sections = annotateSectionsWithSubjects(parseSections(text, meta));
       return {
         id: rowIndex + 1,
         반: meta.반,
@@ -3348,21 +3475,72 @@
     return colIdx === SURVEY_COL_STUDENT_ID || colIdx === SURVEY_COL_NAME;
   }
 
+  function columnSubjectKey(headerTitle) {
+    var raw = coerceText(headerTitle);
+    if (!raw) return "";
+    var id = matchCategoryIdForTitle(raw);
+    if (id && id !== "teacher") return id;
+    if (/💌|선생님께/.test(raw)) return "teacher";
+    var label = simplifySectionTitle(categoryDisplayLabel(raw) || raw);
+    var known = ["국어", "수학", "영어", "한국사", "통합사회", "통합과학"];
+    if (known.indexOf(label) >= 0) return label;
+    return "";
+  }
+
+  function enrichSheetRowsFromRoster(sheet, roster) {
+    if (!sheet || !roster || !roster.length) return;
+    var entries = rosterEntriesForSheet(roster, sheet.sheetName);
+    if (!entries.length) return;
+    var byKey = {};
+    var byNum = {};
+    entries.forEach(function (entry) {
+      var key = participationMatchKey(entry, sheet.sheetName);
+      if (key) byKey[key] = entry;
+      if (entry.번호 != null) byNum[Number(entry.번호)] = entry;
+    });
+    (sheet.rows || []).forEach(function (row) {
+      if (!row.이름) {
+        var match =
+          byKey[participationMatchKey(row, sheet.sheetName)] ||
+          (row.번호 != null ? byNum[Number(row.번호)] : null);
+        if (match && match.이름) row.이름 = match.이름;
+      }
+      if ((!row.반 || row.반 === "(미입력)") && isClassLikeSheetName(sheet.sheetName)) {
+        var banMatch = String(sheet.sheetName).match(/(\d+)\s*반/);
+        row.반 = banMatch ? banMatch[1] + "반" : sheet.sheetName;
+      }
+    });
+  }
+
   function enrichRowWithTableCategories(row, headerRow, cells) {
     var sections = [];
     headerRow.forEach(function (title, colIdx) {
       if (isSkippableCategoryHeader(title, colIdx)) return;
       var body = coerceText(cells[colIdx]);
       if (!body) return;
+      var subjectKey = columnSubjectKey(title);
       var bracketSecs = parseBracketTopicSections(body);
       if (bracketSecs.length > 1) {
         bracketSecs.forEach(function (sec) {
-          sections.push(sec);
+          sections.push(
+            Object.assign({}, sec, {
+              subject: subjectKey || sec.subject || "",
+            })
+          );
         });
+        return;
+      }
+      if (bracketSecs.length === 1) {
+        sections.push(
+          Object.assign({}, bracketSecs[0], {
+            subject: subjectKey || bracketSecs[0].subject || "",
+          })
+        );
         return;
       }
       var sec = {
         title: categoryDisplayLabel(title) || coerceText(title) || "응답",
+        subject: subjectKey || "",
         body: body,
         fields: parseSectionFields(body),
       };
@@ -3771,7 +3949,7 @@
     var cached = loadCachedClassRoster();
     if (cached && cached.length) return cached;
 
-    var probeTitles = ["1반", "명단", "list"];
+    var probeTitles = ["list", "명단", "1반"];
     for (var i = 0; i < probeTitles.length; i++) {
       try {
         var values = await fetchSheetValuesGviz(getClassRosterSpreadsheetId(), { title: probeTitles[i] });
@@ -3855,12 +4033,26 @@
     };
   }
 
-  function participationMatchKey(entry) {
+  function participationMatchKey(entry, sheetName) {
     if (!entry) return "";
     var num = entry.번호 != null ? Number(entry.번호) : 0;
     if (!num || num <= 0) return "";
     var ban = entry.반 && entry.반 !== "(미입력)" ? normalizeSheetClassKey(entry.반) : "";
+    if (!ban && sheetName && isClassLikeSheetName(sheetName)) {
+      ban = normalizeSheetClassKey(sheetName);
+    }
+    if (!ban && entry.시트 && isClassLikeSheetName(entry.시트)) {
+      ban = normalizeSheetClassKey(entry.시트);
+    }
     return ban ? ban + ":" + num : String(num);
+  }
+
+  function isParticipationPresent(entry, present, sheetName) {
+    var key = participationMatchKey(entry, sheetName);
+    if (key && present[key]) return true;
+    var num = entry && entry.번호 != null ? Number(entry.번호) : 0;
+    if (num > 0 && present["#" + num]) return true;
+    return false;
   }
 
   function computeSheetParticipation(rows, rosterOrMax, referenceSheetName, rosterSource, sheetName) {
@@ -3870,12 +4062,12 @@
         : rosterOrMax.slice();
       var present = {};
       (rows || []).forEach(function (r) {
-        var key = participationMatchKey(r);
+        var key = participationMatchKey(r, sheetName);
         if (key) present[key] = true;
+        if (r.번호 != null && r.번호 > 0) present["#" + Number(r.번호)] = true;
       });
       var missingStudents = rosterSlice.filter(function (entry) {
-        var key = participationMatchKey(entry);
-        return key && !present[key];
+        return !isParticipationPresent(entry, present, sheetName);
       });
       return {
         referenceSheetName: referenceSheetName || "list",
@@ -3926,18 +4118,32 @@
       if (isListSheetTab(item.sheetName)) listInput = item;
       else responseInputs.push(item);
     });
-    var fullRoster =
-      externalRoster && externalRoster.length
+    var listRoster = listInput ? parseListRoster(listInput.values) : [];
+    var fullRoster = listRoster.length
+      ? listRoster
+      : externalRoster && externalRoster.length
         ? externalRoster
-        : listInput
-          ? parseListRoster(listInput.values)
-          : [];
-    var rosterSource =
-      externalRoster && externalRoster.length
+        : [];
+    var rosterSource = listRoster.length
+      ? "list"
+      : externalRoster && externalRoster.length
         ? "master-roster"
-        : listInput
-          ? "list"
-          : "responses";
+        : "responses";
+    if (listRoster.length && externalRoster && externalRoster.length) {
+      var rosterKeys = {};
+      listRoster.forEach(function (e) {
+        var k = participationMatchKey(e, e.반 || "");
+        if (k) rosterKeys[k] = e;
+      });
+      externalRoster.forEach(function (e) {
+        var k = participationMatchKey(e, e.반 || "");
+        if (k && !rosterKeys[k]) rosterKeys[k] = e;
+      });
+      fullRoster = Object.keys(rosterKeys).map(function (k) {
+        return rosterKeys[k];
+      });
+      rosterSource = "list+master";
+    }
 
     var sheetAnalyses = responseInputs.map(function (item) {
       var analysis = analyzeSheetData(item.values);
@@ -3978,6 +4184,7 @@
           rosterSource,
           sheet.sheetName
         );
+        enrichSheetRowsFromRoster(sheet, fullRoster);
       } else {
         sheet.participation = computeSheetParticipation(
           sheet.rows,
@@ -4844,9 +5051,35 @@
       rows,
       Object.assign({}, sheet.meta || {}, { classFilter: classKey })
     );
+    var participation = sheet.participation;
+    var meta = lastMultiResult && lastMultiResult.participationMeta;
+    if (meta && meta.roster && meta.roster.length) {
+      participation = computeSheetParticipation(
+        rows,
+        meta.roster,
+        meta.referenceSheetName,
+        meta.rosterSource,
+        classKey
+      );
+    } else if (participation) {
+      participation = Object.assign({}, participation, {
+        participated: rows.length,
+        missingCount: Math.max(0, (participation.maxExpected || 0) - rows.length),
+        missingStudents: (participation.missingStudents || []).filter(function (s) {
+          return !rows.some(function (r) {
+            return r.번호 != null && s.번호 != null && Number(r.번호) === Number(s.번호);
+          });
+        }),
+        missingNumbers: (participation.missingNumbers || []).filter(function (num) {
+          return !rows.some(function (r) {
+            return r.번호 != null && Number(r.번호) === Number(num);
+          });
+        }),
+      });
+    }
     return Object.assign({}, sheet, payload, {
       rows: rows,
-      participation: sheet.participation,
+      participation: participation,
     });
   }
 
@@ -5768,8 +6001,39 @@
     return SurveyForm.esc(s);
   }
 
+  function resolveSheetByClassKey(classKey, multi) {
+    if (!classKey || classKey === CLASS_VIEW_ALL || !multi || !multi.sheets) return null;
+    var target = normalizeSheetClassKey(classKey);
+    var sheets = multi.sheets.filter(function (s) {
+      return !isListSheetTab(s.sheetName);
+    });
+    for (var i = 0; i < sheets.length; i++) {
+      if (normalizeSheetClassKey(sheets[i].sheetName) === target) return sheets[i];
+    }
+    for (var j = 0; j < sheets.length; j++) {
+      var sheet = sheets[j];
+      if (
+        (sheet.rows || []).some(function (row) {
+          return rowMatchesClassFilter(row, target);
+        })
+      ) {
+        return sheet;
+      }
+    }
+    return null;
+  }
+
   function getActiveSheetAnalysis() {
-    if (!lastMultiResult || !activeSheetView) return null;
+    if (!lastMultiResult) return null;
+    if (
+      activeClassFilter &&
+      activeClassFilter !== CLASS_VIEW_ALL &&
+      !isAllClassesViewActive()
+    ) {
+      var byClass = resolveSheetByClassKey(activeClassFilter, lastMultiResult);
+      if (byClass) return byClass;
+    }
+    if (!activeSheetView) return null;
     return (
       lastMultiResult.sheets.find(function (s) {
         return s.sheetName === activeSheetView;
@@ -5788,6 +6052,36 @@
     if (m) return parseInt(m[1], 10);
     if (String(classLabel || "").indexOf("미지정") >= 0) return 999;
     return 500;
+  }
+
+  function filterMissingNotInRows(rows, missing, sheetName) {
+    var present = {};
+    (rows || []).forEach(function (r) {
+      var key = participationMatchKey(r, sheetName);
+      if (key) present[key] = true;
+      if (r.번호 != null && r.번호 > 0) present["#" + Number(r.번호)] = true;
+    });
+    return (missing || []).filter(function (student) {
+      return !isParticipationPresent(student, present, sheetName);
+    });
+  }
+
+  function resolveStudentDisplayName(row, sheetName, classKey) {
+    if (!row) return "";
+    var name = row.이름 || (row._raw && row._raw.이름) || "";
+    if (name) return name;
+    var meta = lastMultiResult && lastMultiResult.participationMeta;
+    if (!meta || !meta.roster || !meta.roster.length || row.번호 == null) return "";
+    var rosterKey =
+      classKey && classKey !== CLASS_VIEW_ALL
+        ? classKey
+        : sheetName || row.반 || "";
+    var entries = rosterEntriesForSheet(meta.roster, rosterKey);
+    var num = Number(row.번호);
+    var found = entries.find(function (entry) {
+      return Number(entry.번호) === num;
+    });
+    return found && found.이름 ? String(found.이름) : "";
   }
 
   function dedupeMissingStudents(list) {
@@ -5825,10 +6119,13 @@
         var label = m ? m[1] + "반" : sheet.sheetName;
         var key = normalizeSheetClassKey(label);
         var rows = (sheet.rows || []).slice().sort(compareRowsByStudentId);
-        var missing =
+        var missing = filterMissingNotInRows(
+          rows,
           sheet.participation && sheet.participation.missingStudents
-            ? sheet.participation.missingStudents.slice()
-            : [];
+            ? sheet.participation.missingStudents
+            : [],
+          sheet.sheetName
+        );
         missing.sort(function (a, b) {
           return (a.번호 || 9999) - (b.번호 || 9999);
         });
@@ -5932,6 +6229,7 @@
           var sk = normalizeSheetClassKey(s.반 || "");
           return sk === g.classKey || sk.indexOf(g.classKey) >= 0 || g.classKey.indexOf(sk) >= 0;
         });
+        missing = filterMissingNotInRows(g.rows, missing, g.classKey || sheet.sheetName);
         missing.sort(function (a, b) {
           return (a.번호 || 9999) - (b.번호 || 9999);
         });
@@ -5948,9 +6246,13 @@
 
   function setActiveClassFromTab(cls) {
     if (!cls) return;
-    activeSheetView = cls.sheetName;
     var classKey = cls.classKey || normalizeSheetClassKey(cls.label);
-    var hostKey = normalizeSheetClassKey(cls.sheetName);
+    var resolved =
+      lastMultiResult && classKey
+        ? resolveSheetByClassKey(classKey, lastMultiResult)
+        : null;
+    activeSheetView = (resolved && resolved.sheetName) || cls.sheetName;
+    var hostKey = normalizeSheetClassKey(activeSheetView);
     activeClassFilter = classKey && classKey !== hostKey ? classKey : classKey || null;
   }
 
@@ -5983,6 +6285,10 @@
     if (subjectId === "teacher") return isTeacherMessageSection(sec);
     if (!subjectId || subjectId === "all") return !isTeacherMessageSection(sec);
     if (isTeacherMessageSection(sec)) return false;
+    if (sec.subject) {
+      if (sec.subject === subjectId) return true;
+      if (sec.subject === "teacher" && subjectId === "teacher") return true;
+    }
     var title = simplifySectionTitle(sec.title || "");
     if (matchCategoryIdForTitle(sec.title || "") === subjectId) return true;
     if (title === subjectId) return true;
@@ -6075,8 +6381,10 @@
     var specific = opts.filter(function (o) {
       return o.id !== "all";
     });
-    if (!specific.length) return [];
-    return opts.slice().sort(sortCategoriesByOrder);
+    if (specific.length) return opts.slice().sort(sortCategoriesByOrder);
+    return DEFAULT_SUBJECT_FILTER_OPTIONS.filter(function (o) {
+      return o.enabled !== false;
+    }).sort(sortCategoriesByOrder);
   }
 
   function onAdminSelectAllChanged(checked) {
@@ -6281,9 +6589,14 @@
   }
 
   function renderStudentResponseHeader(row) {
+    var sheet = getActiveSheetAnalysis();
     var classLabel = row.반 && row.반 !== "(미입력)" ? String(row.반) : "";
     var numLabel = row.번호 != null ? String(row.번호) + "번" : "";
-    var nameLabel = row.이름 || (row._raw && row._raw.이름) || "";
+    var nameLabel = resolveStudentDisplayName(
+      row,
+      sheet && sheet.sheetName,
+      activeClassFilter
+    );
     if (!classLabel && !numLabel && !nameLabel) return "";
     var html = '<header class="student-response-header"><div class="header-meta">';
     if (classLabel) html += '<span class="student-class">' + esc(classLabel) + "</span>";
@@ -6299,6 +6612,44 @@
     return html;
   }
 
+  var SUBJECT_SECTOR_ORDER = [
+    "국어",
+    "수학",
+    "영어",
+    "한국사",
+    "통합사회",
+    "통합과학",
+    TEACHER_MESSAGE_TITLE,
+    "teacher",
+  ];
+
+  function getSectionSubjectLabel(sec) {
+    if (!sec) return "";
+    if (sec.subject) return sec.subject === "teacher" ? TEACHER_MESSAGE_TITLE : sec.subject;
+    if (isTeacherMessageSection(sec)) return TEACHER_MESSAGE_TITLE;
+    var id = matchCategoryIdForTitle(sec.title || "");
+    if (id) return id === "teacher" ? TEACHER_MESSAGE_TITLE : id;
+    var simple = simplifySectionTitle(sec.title || "");
+    if (SUBJECT_SECTOR_ORDER.indexOf(simple) >= 0) return simple;
+    return "";
+  }
+
+  function getSectionTopicLabel(sec) {
+    if (!sec) return "";
+    if (isTeacherMessageSection(sec)) return "";
+    var subject = getSectionSubjectLabel(sec);
+    var title = simplifySectionTitle(sec.title || "");
+    if (subject && title && subject !== title) return title;
+    if (subject && title === subject) return "";
+    return title || "응답";
+  }
+
+  function subjectSectorSortIndex(label) {
+    var norm = label === "teacher" ? TEACHER_MESSAGE_TITLE : label;
+    var idx = SUBJECT_SECTOR_ORDER.indexOf(norm);
+    return idx >= 0 ? idx : 900;
+  }
+
   function renderCategoryBlocks(row, subjectFilter) {
     var sections = row.sections || [];
     var filtered = sections.filter(function (sec) {
@@ -6312,24 +6663,68 @@
     if (!filtered.length) {
       return '<p class="muted response-empty">작성된 상담 내용이 없습니다.</p>';
     }
-    var html = '<div class="category-blocks">';
+
+    var bySubject = {};
+    var subjectOrder = [];
     filtered.forEach(function (sec) {
-      var isTeacher = isTeacherMessageSection(sec);
-      html += '<div class="category-block' + (isTeacher ? " category-block--teacher" : "") + '">';
-      if (!isTeacher) {
-        html += '<div class="cat-title">' + esc(simplifySectionTitle(sec.title || "응답")) + "</div>";
-      } else {
-        html += '<div class="cat-title">' + esc(TEACHER_MESSAGE_TITLE) + "</div>";
+      var label = getSectionSubjectLabel(sec) || "기타";
+      if (label === "teacher") label = TEACHER_MESSAGE_TITLE;
+      if (!bySubject[label]) {
+        bySubject[label] = [];
+        subjectOrder.push(label);
       }
-      if (sec.body) {
-        html += '<div class="cat-body">' + esc(sec.body) + "</div>";
+      bySubject[label].push(sec);
+    });
+    subjectOrder.sort(function (a, b) {
+      return subjectSectorSortIndex(a) - subjectSectorSortIndex(b);
+    });
+
+    var showSubjectHeaders =
+      (subjectFilter || "all") === "all" &&
+      subjectOrder.length > 0 &&
+      (subjectOrder.length > 1 || subjectOrder[0] !== "기타");
+
+    var html = '<div class="subject-sectors">';
+    subjectOrder.forEach(function (subjectLabel) {
+      var isTeacher = subjectLabel === TEACHER_MESSAGE_TITLE;
+      if (showSubjectHeaders) {
+        html += '<section class="subject-sector' + (isTeacher ? " subject-sector--teacher" : "") + '">';
+        html +=
+          '<h3 class="subject-sector__title">' +
+          esc(isTeacher ? "담임쌤께" : subjectLabel) +
+          "</h3>";
       }
-      if (sec.fields && sec.fields.length) {
-        sec.fields.forEach(function (f) {
-          html += '<div class="cat-field"><span>' + esc(f.key) + "</span> " + esc(f.value) + "</div>";
-        });
-      }
+      html += '<div class="category-blocks">';
+      (bySubject[subjectLabel] || []).forEach(function (sec) {
+        var blockTeacher = isTeacher || isTeacherMessageSection(sec);
+        var topic = getSectionTopicLabel(sec);
+        html +=
+          '<div class="category-block' + (blockTeacher ? " category-block--teacher" : "") + '">';
+        if (topic) {
+          html += '<div class="cat-title">' + esc(topic) + "</div>";
+        } else if (!showSubjectHeaders && !blockTeacher) {
+          html +=
+            '<div class="cat-title">' + esc(simplifySectionTitle(sec.title || "응답")) + "</div>";
+        } else if (blockTeacher && !showSubjectHeaders) {
+          html += '<div class="cat-title">' + esc(TEACHER_MESSAGE_TITLE) + "</div>";
+        }
+        if (sec.body) {
+          html += '<div class="cat-body">' + esc(sec.body) + "</div>";
+        }
+        if (sec.fields && sec.fields.length) {
+          sec.fields.forEach(function (f) {
+            html +=
+              '<div class="cat-field"><span class="cat-field__key">' +
+              esc(f.key) +
+              "</span> " +
+              esc(f.value) +
+              "</div>";
+          });
+        }
+        html += "</div>";
+      });
       html += "</div>";
+      if (showSubjectHeaders) html += "</section>";
     });
     html += "</div>";
     return html;
@@ -6337,10 +6732,15 @@
 
   function renderStudentCard(row, hasCategories, opts) {
     opts = opts || {};
+    var sheet = getActiveSheetAnalysis();
     var classVal =
       row.반 && row.반 !== "(미입력)" ? String(row.반) : activeSheetView || "";
     var num = row.번호 != null ? String(row.번호) : "";
-    var name = row.이름 || (row._raw && row._raw.이름) || "";
+    var name = resolveStudentDisplayName(
+      row,
+      sheet && sheet.sheetName,
+      activeClassFilter
+    );
     var html = '<article class="student-card"';
     if (classVal) html += ' data-student-class="' + esc(classVal) + '"';
     if (num) html += ' data-student-num="' + esc(num) + '"';
@@ -6447,6 +6847,14 @@
     if (!student) return "";
     var num = student.번호 != null ? student.번호 + "번" : "";
     var name = student.이름 ? String(student.이름) : "";
+    if (!name && student.번호 != null) {
+      var sheet = getActiveSheetAnalysis();
+      name = resolveStudentDisplayName(
+        { 번호: student.번호, 반: student.반, 이름: "" },
+        sheet && sheet.sheetName,
+        activeClassFilter
+      );
+    }
     if (num && name) return num + " " + name;
     return num || name || "";
   }
