@@ -2125,17 +2125,18 @@
       align-items: center;
       min-height: 36px;
       border-radius: 8px;
-      background: rgba(15, 23, 42, 0.06);
-      border: 2px solid transparent;
-      transition: background 0.15s, border-color 0.15s;
+      background: var(--bg-surface, #ffffff);
+      border: 1px solid var(--theme-border-light, #dce4ee);
+      box-shadow: none;
     }
     .likert-scale__step.is-filled {
-      background: rgba(59, 130, 246, 0.12);
+      background: var(--bg-surface, #ffffff);
+      border-color: var(--theme-border-light, #dce4ee);
     }
     .likert-scale__step.is-selected {
-      border-color: var(--accent, #3b82f6);
-      background: rgba(59, 130, 246, 0.22);
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+      border: 2px solid var(--accent, #3d6b9e);
+      background: #eef4fb;
+      box-shadow: none;
     }
     .likert-scale__step-num {
       font-size: 0.95rem;
@@ -2145,11 +2146,14 @@
     #results .likert-scale__summary {
       display: none !important;
     }
-    html[data-theme="dark"] .likert-scale__step {
-      background: rgba(255, 255, 255, 0.06);
-    }
+    html[data-theme="dark"] .likert-scale__step,
     html[data-theme="dark"] .likert-scale__step.is-filled {
-      background: rgba(96, 165, 250, 0.18);
+      background: var(--theme-bg-panel);
+      border: 1px solid var(--theme-border-light);
+    }
+    html[data-theme="dark"] .likert-scale__step.is-selected {
+      background: rgba(96, 165, 250, 0.2);
+      border: 2px solid var(--border-accent);
     }
     .admin-category-config {
       margin-bottom: 0;
@@ -2629,15 +2633,16 @@
       color: #1e3a5f !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step {
-      background: #f4f8fc !important;
+      background: #ffffff !important;
       border: 1px solid #c5d4e6 !important;
       box-shadow: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step.is-filled {
-      background: #eef4fb !important;
+      background: #ffffff !important;
+      border: 1px solid #c5d4e6 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step.is-selected {
-      background: #ffffff !important;
+      background: #eef4fb !important;
       border: 2px solid #3d6b9e !important;
       box-shadow: none !important;
     }
@@ -3067,15 +3072,16 @@
         color: #1e3a5f !important;
       }
       body.is-printing-results #results .likert-scale__step {
-        background: #f4f8fc !important;
+        background: #ffffff !important;
         border: 1px solid #c5d4e6 !important;
         box-shadow: none !important;
       }
       body.is-printing-results #results .likert-scale__step.is-filled {
-        background: #eef4fb !important;
+        background: #ffffff !important;
+        border: 1px solid #c5d4e6 !important;
       }
       body.is-printing-results #results .likert-scale__step.is-selected {
-        background: #ffffff !important;
+        background: #eef4fb !important;
         border: 2px solid #3d6b9e !important;
         box-shadow: none !important;
       }
@@ -8886,7 +8892,6 @@
       html +=
         '<span class="likert-scale__step' +
         (i === s ? " is-selected" : "") +
-        (i <= s ? " is-filled" : "") +
         '"><span class="likert-scale__step-num">' +
         i +
         "</span></span>";

@@ -403,19 +403,18 @@
     font-size: 0.8125rem;
     color: #334155;
   }
-  html:not([data-theme="dark"]) .likert-scale__step {
+  html:not([data-theme="dark"]) .likert-scale__step,
+  html:not([data-theme="dark"]) .likert-scale__step.is-filled {
     min-height: 34px;
     border-radius: 6px;
-    background: #e8edf4;
-    border: 1px solid #b4c3d5;
-  }
-  html:not([data-theme="dark"]) .likert-scale__step.is-filled {
-    background: #dbeafe;
+    background: #ffffff;
+    border: 1px solid #dce4ee;
+    box-shadow: none;
   }
   html:not([data-theme="dark"]) .likert-scale__step.is-selected {
-    background: #bfdbfe;
-    border-color: #1e3a5f;
-    box-shadow: 0 0 0 1px rgba(30, 58, 95, 0.2);
+    background: #eef4fb;
+    border-color: #3d6b9e;
+    box-shadow: none;
     border-width: 2px;
   }
   html:not([data-theme="dark"]) .likert-scale__step-num {
