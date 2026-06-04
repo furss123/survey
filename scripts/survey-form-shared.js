@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 설문 목록: localStorage · 공개 data/sheet-registry.json (GitHub Pages)
  */
 (function (global) {
@@ -326,7 +326,16 @@
     });
     (local || []).forEach(function (entry) {
       if (!entry || !entry.id || isSurveyDeleted(entry.id)) return;
-      if (!byId[entry.id]) byId[entry.id] = entry;
+      var prev = byId[entry.id];
+      if (!prev) {
+        byId[entry.id] = entry;
+        return;
+      }
+      /* 같은 ID는 로컬(관리자 수정)이 서버 JSON보다 우선 — 새로고침 시 제목이 되돌아가지 않음 */
+      byId[entry.id] = Object.assign({}, prev, entry, {
+        label: coerceText(entry.label) ? entry.label : prev.label,
+        url: coerceText(entry.url) ? entry.url : prev.url,
+      });
     });
     return dedupeRegistryEntries(
       Object.keys(byId).map(function (id) {
@@ -780,3 +789,4 @@
     fetchGvizValues: fetchGvizValues,
   };
 })(typeof window !== "undefined" ? window : this);
+
