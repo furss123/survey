@@ -251,11 +251,11 @@
     color: #0f172a;
   }
   html:not([data-theme="dark"]) .survey-qa-multi-choice {
-    padding: 11px 13px 11px 15px;
-    border: 1px solid var(--theme-border);
-    border-left: 3px solid var(--school-navy-light, #3d6b9e);
-    border-radius: var(--radius-sm);
-    background: #eef4fb;
+    padding: 9px 12px;
+    border: 1px solid var(--theme-border-light, #dce4ee);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: none;
   }
   html:not([data-theme="dark"]) .survey-qa-multi-choice--typed {
     align-items: flex-start;
@@ -313,11 +313,11 @@
     color: var(--theme-text);
   }
   html[data-theme="dark"] .survey-qa-multi-choice {
-    padding: 10px 12px;
-    border-left-width: 2px;
-    border-left-color: var(--border-accent);
-    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    border: 1px solid var(--theme-border-light);
+    border-radius: 8px;
     background: var(--theme-bg-panel);
+    box-shadow: none;
   }
   html[data-theme="dark"] .survey-qa-multi-choice__type {
     font-weight: 600;

@@ -2019,15 +2019,16 @@
     .survey-qa-item__answer--multi {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
     .survey-qa-multi-choice {
       --multi-choice-line-height: 1.5;
       margin: 0;
-      padding: 10px 12px 10px 14px;
+      padding: 9px 12px;
       border-radius: 8px;
-      border-left: 3px solid var(--accent, #3b82f6);
-      background: rgba(59, 130, 246, 0.06);
+      border: 1px solid var(--theme-border-light, var(--border, #dce4ee));
+      background: var(--bg-surface, #ffffff);
+      box-shadow: none;
     }
     /* 복수 선택(유형 + 본문): Q1·Q5·Q11 등 — 유형·본문 사이 가운데점 없음 */
     .survey-qa-multi-choice--typed {
@@ -3438,7 +3439,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260606">
+  <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260609">
 </head>
 <body>
   <header class="site-header no-print">
