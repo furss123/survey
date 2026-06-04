@@ -2142,15 +2142,8 @@
       font-weight: 700;
       color: var(--theme-heading);
     }
-    .likert-scale__summary {
-      margin: 8px 0 0;
-      font-size: 0.8rem;
-      color: var(--theme-text-muted);
-      text-align: center;
-    }
-    .likert-scale__summary strong {
-      color: var(--accent, #3b82f6);
-      font-size: 1rem;
+    #results .likert-scale__summary {
+      display: none !important;
     }
     html[data-theme="dark"] .likert-scale__step {
       background: rgba(255, 255, 255, 0.06);
@@ -8898,7 +8891,7 @@
         i +
         "</span></span>";
     }
-    html += '</div><p class="likert-scale__summary">선택: <strong>' + s + "</strong> / 5</p></div>";
+    html += "</div></div>";
     return html;
   }
 
