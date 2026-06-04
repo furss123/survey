@@ -10,9 +10,9 @@ body.is-printing-results {
   --print-sheet-width: 170mm;
   --print-sheet-height: 257mm;
   --print-card-pad-top: 5mm;
-  --print-card-pad-right: 5mm;
+  --print-card-pad-right: 10mm;
   --print-card-pad-bottom: 4mm;
-  --print-card-pad-left: 5mm;
+  --print-card-pad-left: 10mm;
   --print-header-name-bump: 1.5pt;
   --print-qa-pad-y: 5px;
   --print-likert-track-inset-x: 0;
@@ -92,7 +92,7 @@ body.is-printing-results #results .student-print-title__name {
   font-weight: 700 !important;
 }
 
-/* ── 문항 목록: 쪽 안쪽 상·좌·우 5mm, 전폭 꽉 참 ── */
+/* ── 문항 목록: 쪽 안쪽 좌·우 10mm, 전폭 꽉 참 ── */
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card__print-fit,
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-body,
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive,
@@ -121,9 +121,9 @@ body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card,
 body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
   box-sizing: border-box !important;
   padding-top: var(--print-card-pad-top, 5mm) !important;
-  padding-right: var(--print-card-pad-right, 5mm) !important;
+  padding-right: var(--print-card-pad-right, 10mm) !important;
   padding-bottom: var(--print-card-pad-bottom, 4mm) !important;
-  padding-left: var(--print-card-pad-left, 5mm) !important;
+  padding-left: var(--print-card-pad-left, 10mm) !important;
   text-align: left !important;
 }
 
@@ -139,6 +139,18 @@ body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
   ) !important;
   box-sizing: border-box !important;
   transform-origin: top left !important;
+}
+
+/* 축소 시 우측 빈 여백 방지: 논리 너비를 scale 역수만큼 확장 */
+body.print-one-student-per-page:not(.print-teacher-mode)
+  #results
+  .student-card.print-fit-applied
+  > .student-card__print-fit,
+body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+  .student-card.print-fit-applied
+  > .student-card__print-fit {
+  width: calc(100% / var(--print-scale, 1)) !important;
+  max-width: none !important;
 }
 
 /* 문항·답변 좌측 정렬 */
@@ -516,8 +528,8 @@ body.print-one-student-per-page:not(.print-teacher-mode)
   body.is-printing-results #results .student-card {
     border: none !important;
     border-radius: 0 !important;
-    padding: var(--print-card-pad-top, 5mm) var(--print-card-pad-right, 5mm)
-      var(--print-card-pad-bottom, 4mm) var(--print-card-pad-left, 5mm) !important;
+    padding: var(--print-card-pad-top, 5mm) var(--print-card-pad-right, 10mm)
+      var(--print-card-pad-bottom, 4mm) var(--print-card-pad-left, 10mm) !important;
   }
 
   body.is-printing-results #results .class-section__head {

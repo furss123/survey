@@ -2316,15 +2316,15 @@
     body.admin-setup-mode .section-head-row .admin-entry-link {
       display: none;
     }
-    /* 학생 인쇄 1인1페이지: A4, 쪽테두리 20mm, 내용 안쪽 상·좌·우 5mm·전폭 */
+    /* 학생 인쇄 1인1페이지: A4, 쪽테두리 20mm, 내용 안쪽 좌·우 10mm·전폭 */
     body.print-one-student-per-page:not(.print-teacher-mode) {
       --print-page-margin: 20mm;
       --print-sheet-width: 170mm;
       --print-sheet-height: 257mm;
       --print-card-pad-top: 5mm;
-      --print-card-pad-right: 5mm;
+      --print-card-pad-right: 10mm;
       --print-card-pad-bottom: 4mm;
-      --print-card-pad-left: 5mm;
+      --print-card-pad-left: 10mm;
       --print-header-name-bump: 1.5pt;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results.visible {
