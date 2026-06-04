@@ -5635,6 +5635,34 @@
     adminSetupCategories = allCat ? [allCat].concat(ordered) : ordered;
   }
 
+  function updateAdminSetupPromptLivePreview() {
+    if (!adminSetupMode || !lastMultiResult) return;
+    adminSetupClasses = buildRegistryClassesFromMulti(lastMultiResult);
+    var metaEl = document.getElementById("adminSetupMeta");
+    if (metaEl) {
+      var sheets = (lastMultiResult.sheets || []).filter(function (s) {
+        return !isListSheetTab(s.sheetName);
+      });
+      var enabledCats = adminSetupCategories.filter(function (c) {
+        return c.id !== "all" && c.enabled !== false;
+      });
+      var parts = [];
+      if (adminSetupUrl) parts.push(adminSetupUrl);
+      parts.push(
+        "시트 탭 " +
+          sheets.length +
+          "개 · 표시 카테고리 " +
+          enabledCats.length +
+          "개"
+      );
+      metaEl.textContent = parts.join(" · ");
+    }
+    ensureActiveSubjectViewValid();
+    if (adminSetupStep === "preview") {
+      onAdminCategoryChanged();
+    }
+  }
+
   function onAdminCategoryChanged() {
     var opts = getSubjectFilterOptions();
     if (
@@ -7644,3 +7672,4 @@
   </script>
 </body>
 </html>
+
