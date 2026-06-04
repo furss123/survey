@@ -9,10 +9,11 @@ body.is-printing-results {
   --print-page-margin: 20mm;
   --print-sheet-width: 170mm;
   --print-sheet-height: 257mm;
-  --print-card-pad-top: 4mm;
-  --print-card-pad-right: 4mm;
+  --print-card-pad-top: 5mm;
+  --print-card-pad-right: 5mm;
   --print-card-pad-bottom: 4mm;
-  --print-card-pad-left: 4mm;
+  --print-card-pad-left: 5mm;
+  --print-header-name-bump: 1.5pt;
   --print-qa-pad-y: 5px;
   --print-likert-track-inset-x: 0;
   --print-ink: #243044;
@@ -49,17 +50,31 @@ body.is-printing-results #results .student-card {
 /* ── 학생 헤더 ── */
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-header,
 body.is-printing-results #results .student-response-header {
-  margin-bottom: 10px !important;
-  padding-bottom: 9px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 0 10px !important;
+  padding: 0 0 9px !important;
   border-bottom: 1px solid var(--print-line) !important;
+  box-sizing: border-box !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title,
 body.is-printing-results #results .student-print-title {
+  font-size: calc(var(--print-font-pt, 12pt) * 1.15 + var(--print-header-name-bump, 1.5pt)) !important;
   font-weight: 700 !important;
   letter-spacing: -0.02em !important;
   color: var(--print-ink) !important;
   line-height: 1.28 !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-header .student-num,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-header .student-name,
+body.is-printing-results #results .student-response-header .student-num,
+body.is-printing-results #results .student-response-header .student-name {
+  font-size: calc(var(--print-font-pt, 12pt) * 1.08 + var(--print-header-name-bump, 1.5pt)) !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title__class,
@@ -77,7 +92,7 @@ body.is-printing-results #results .student-print-title__name {
   font-weight: 700 !important;
 }
 
-/* ── 문항 목록: 쪽 안쪽 4mm 기준 전폭 꽉 참 ── */
+/* ── 문항 목록: 쪽 안쪽 상·좌·우 5mm, 전폭 꽉 참 ── */
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card__print-fit,
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-body,
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive,
@@ -105,10 +120,10 @@ body.is-printing-results #results .student-survey-report__teacher {
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card,
 body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
   box-sizing: border-box !important;
-  padding-top: var(--print-card-pad-top, 4mm) !important;
-  padding-right: var(--print-card-pad-right, 4mm) !important;
+  padding-top: var(--print-card-pad-top, 5mm) !important;
+  padding-right: var(--print-card-pad-right, 5mm) !important;
   padding-bottom: var(--print-card-pad-bottom, 4mm) !important;
-  padding-left: var(--print-card-pad-left, 4mm) !important;
+  padding-left: var(--print-card-pad-left, 5mm) !important;
   text-align: left !important;
 }
 
@@ -119,10 +134,11 @@ body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
   width: 100% !important;
   max-width: 100% !important;
   min-height: calc(
-    var(--print-sheet-height, 257mm) - var(--print-card-pad-top, 4mm) -
+    var(--print-sheet-height, 257mm) - var(--print-card-pad-top, 5mm) -
       var(--print-card-pad-bottom, 4mm)
   ) !important;
   box-sizing: border-box !important;
+  transform-origin: top left !important;
 }
 
 /* 문항·답변 좌측 정렬 */
@@ -500,8 +516,8 @@ body.print-one-student-per-page:not(.print-teacher-mode)
   body.is-printing-results #results .student-card {
     border: none !important;
     border-radius: 0 !important;
-    padding: var(--print-card-pad-top, 4mm) var(--print-card-pad-right, 4mm)
-      var(--print-card-pad-bottom, 4mm) var(--print-card-pad-left, 4mm) !important;
+    padding: var(--print-card-pad-top, 5mm) var(--print-card-pad-right, 5mm)
+      var(--print-card-pad-bottom, 4mm) var(--print-card-pad-left, 5mm) !important;
   }
 
   body.is-printing-results #results .class-section__head {

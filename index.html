@@ -2316,15 +2316,16 @@
     body.admin-setup-mode .section-head-row .admin-entry-link {
       display: none;
     }
-    /* 학생 인쇄 1인1페이지: A4, 쪽테두리 여백 20mm, 내용(테두리 안) 4mm·전폭 */
+    /* 학생 인쇄 1인1페이지: A4, 쪽테두리 20mm, 내용 안쪽 상·좌·우 5mm·전폭 */
     body.print-one-student-per-page:not(.print-teacher-mode) {
       --print-page-margin: 20mm;
       --print-sheet-width: 170mm;
       --print-sheet-height: 257mm;
-      --print-card-pad-top: 4mm;
-      --print-card-pad-right: 4mm;
+      --print-card-pad-top: 5mm;
+      --print-card-pad-right: 5mm;
       --print-card-pad-bottom: 4mm;
-      --print-card-pad-left: 4mm;
+      --print-card-pad-left: 5mm;
+      --print-header-name-bump: 1.5pt;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results.visible {
       width: 100% !important;
@@ -2350,10 +2351,10 @@
       width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
-      padding-top: var(--print-card-pad-top, 4mm) !important;
-      padding-right: var(--print-card-pad-right, 4mm) !important;
+      padding-top: var(--print-card-pad-top, 5mm) !important;
+      padding-right: var(--print-card-pad-right, 5mm) !important;
       padding-bottom: var(--print-card-pad-bottom, 4mm) !important;
-      padding-left: var(--print-card-pad-left, 4mm) !important;
+      padding-left: var(--print-card-pad-left, 5mm) !important;
       max-height: none;
       overflow: visible;
       box-sizing: border-box;
@@ -2368,7 +2369,7 @@
       display: block !important;
       width: 100% !important;
       transform: scale(var(--print-scale, 1));
-      transform-origin: top center;
+      transform-origin: top left;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card.print-fit-applied {
       overflow: hidden !important;
@@ -2404,14 +2405,21 @@
       padding-bottom: var(--print-header-pb, 8px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-num {
-      font-size: calc(var(--print-font-pt, 12pt) * 0.95) !important;
+      font-size: calc(
+        var(--print-font-pt, 12pt) * 0.95 + var(--print-header-name-bump, 1.5pt)
+      ) !important;
       line-height: var(--print-line-height, 1.32) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title {
-      font-size: calc(var(--print-font-pt, 12pt) * 1.15) !important;
+      font-size: calc(
+        var(--print-font-pt, 12pt) * 1.15 + var(--print-header-name-bump, 1.5pt)
+      ) !important;
       line-height: var(--print-line-height, 1.32) !important;
       color: #1e3a5f !important;
       gap: 0.3em 0.45em !important;
+      justify-content: flex-start !important;
+      width: 100% !important;
+      max-width: 100% !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title__class {
       color: #3d6b9e !important;
@@ -2422,7 +2430,9 @@
       color: #1e3a5f !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-name {
-      font-size: calc(var(--print-font-pt, 12pt) * 1.12) !important;
+      font-size: calc(
+        var(--print-font-pt, 12pt) * 1.12 + var(--print-header-name-bump, 1.5pt)
+      ) !important;
       line-height: var(--print-line-height, 1.32) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-id,
@@ -2772,7 +2782,7 @@
       .student-card.print-fit-applied
       > .student-card__print-fit {
       transform: scale(var(--print-scale, 1));
-      transform-origin: top center;
+      transform-origin: top left;
     }
     body.print-fit-measuring.print-one-student-per-page #results {
       width: var(--print-sheet-width, 170mm);
@@ -2955,7 +2965,7 @@
         .student-card.print-fit-applied
         > .student-card__print-fit {
         transform: scale(var(--print-scale, 1)) !important;
-        transform-origin: top center !important;
+        transform-origin: top left !important;
       }
       #results.visible .results-sticky-chrome,
       #results.visible .no-print {
@@ -2995,7 +3005,7 @@
         color: #1e3a5f !important;
       }
       body.is-printing-results #results .student-print-title {
-        font-size: 13pt !important;
+        font-size: calc(13pt + var(--print-header-name-bump, 1.5pt)) !important;
         font-weight: 800 !important;
         line-height: 1.32 !important;
         color: #1e3a5f !important;
@@ -3453,7 +3463,7 @@
     }
   </style>
   <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260611">
-  <link rel="stylesheet" href="styles/survey-print.css?v=20260618">
+  <link rel="stylesheet" href="styles/survey-print.css?v=20260619">
 </head>
 <body>
   <header class="site-header no-print">
@@ -9424,8 +9434,8 @@
   }
 
   function getPrintablePageHeightPx() {
-    /* 쪽 257mm − 내용 패딩 4mm×2 → 본문 높이 249mm */
-    return Math.round((249 * 96) / 25.4);
+    /* 쪽 257mm − 상 5mm − 하 4mm → 본문 높이 248mm */
+    return Math.round((248 * 96) / 25.4);
   }
 
   function getStudentCardPageBudgetPx(card) {
@@ -9541,10 +9551,10 @@
       Math.round((fontPt + PRINT_FONT_SIZE_BUMP_PT) * 20) / 20 + "pt"
     );
     card.style.setProperty("--print-line-height", String(lineH));
-    card.style.setProperty("--print-card-pad-top", "4mm");
+    card.style.setProperty("--print-card-pad-top", "5mm");
     card.style.setProperty("--print-card-pad-bottom", "4mm");
-    card.style.setProperty("--print-card-pad-left", "4mm");
-    card.style.setProperty("--print-card-pad-right", "4mm");
+    card.style.setProperty("--print-card-pad-left", "5mm");
+    card.style.setProperty("--print-card-pad-right", "5mm");
     card.classList.toggle("print-fit-compact-likert", tier >= 2);
     if (tier >= 4) {
       card.style.setProperty("--print-block-gap", "2px");
@@ -9671,7 +9681,7 @@
       scale = Math.round(scale * 1000) / 1000;
       card.style.setProperty("--print-scale", String(scale));
       shell.style.transform = "scale(" + scale + ")";
-      shell.style.transformOrigin = "top center";
+      shell.style.transformOrigin = "top left";
       h = Math.ceil(h * scale);
     }
     card.style.setProperty("height", h + "px");
