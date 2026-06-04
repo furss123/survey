@@ -6,10 +6,13 @@
 /* ── 토큰 ── */
 body.print-one-student-per-page:not(.print-teacher-mode),
 body.is-printing-results {
-  --print-page-margin-x: 15mm;
-  --print-sheet-width: 180mm;
-  --print-card-pad-left: 3mm;
+  --print-page-margin: 0;
+  --print-sheet-width: 210mm;
+  --print-sheet-height: 297mm;
+  --print-card-pad-top: 3mm;
   --print-card-pad-right: 3mm;
+  --print-card-pad-bottom: 3mm;
+  --print-card-pad-left: 3mm;
   --print-qa-pad-y: 5px;
   --print-likert-track-inset-x: 1.5mm;
   --print-ink: #243044;
@@ -101,8 +104,10 @@ body.is-printing-results #results .student-survey-report__teacher {
 /* ── 문항 카드: 전폭·좌우 대칭 테두리 ── */
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card,
 body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
-  padding-left: var(--print-card-pad-left, 3mm) !important;
+  padding-top: var(--print-card-pad-top, 3mm) !important;
   padding-right: var(--print-card-pad-right, 3mm) !important;
+  padding-bottom: var(--print-card-pad-bottom, 3mm) !important;
+  padding-left: var(--print-card-pad-left, 3mm) !important;
   text-align: left !important;
 }
 
@@ -474,14 +479,15 @@ body.print-one-student-per-page:not(.print-teacher-mode)
 
 @media print {
   @page {
-    margin: 18mm 15mm 13mm 15mm;
+    size: A4;
+    margin: var(--print-page-margin, 3mm);
   }
 
   body.is-printing-results #results .student-card {
     border: none !important;
     border-radius: 0 !important;
-    padding-left: 3mm !important;
-    padding-right: 3mm !important;
+    padding: var(--print-card-pad-top, 3mm) var(--print-card-pad-right, 3mm)
+      var(--print-card-pad-bottom, 3mm) var(--print-card-pad-left, 3mm) !important;
   }
 
   body.is-printing-results #results .class-section__head {
