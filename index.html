@@ -5580,34 +5580,29 @@
     return !!(currentLaunchEntry && currentLaunchEntry.categorySelectAll);
   }
 
-  function isLegacySubjectCategoryConfig(categories) {
-    if (!categories || !categories.length) return false;
-    var enabled = categories.filter(function (c) {
-      return c.enabled !== false && c.id !== "all";
-    });
-    if (!enabled.length) return false;
-    var subjectLike = enabled.filter(function (c) {
-      return (
-        CORE_RESULTS_SUBJECT_IDS.indexOf(c.id) >= 0 ||
-        c.id === "teacher" ||
-        DEFAULT_SUBJECT_FILTER_OPTIONS.some(function (o) {
-          return o.id === c.id;
-        })
-      );
-    });
-    return subjectLike.length >= 2 || subjectLike.length === enabled.length;
+  /** 새 UI(1~8반) 대상 시트 ID — SMART 학습종합검사 */
+  var CLASS_VIEW_DEFAULT_SHEET_IDS = ["1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM"];
+
+  function normalizeRegistryEntryId(entry) {
+    return String((entry && entry.id) || "").split("::")[0];
   }
 
+  function isDesignatedClassViewSurvey(entry) {
+    if (!entry) return false;
+    if (CLASS_VIEW_DEFAULT_SHEET_IDS.indexOf(normalizeRegistryEntryId(entry)) >= 0) {
+      return true;
+    }
+    var label = SurveyForm.normalizeDisplayText(entry.label || "");
+    return /SMART\s*학습종합검사/.test(label);
+  }
+
+  /** 기본값 subject — viewMode 없는 기존 설문은 과목 탭 UI 유지 */
   function getLaunchViewMode(entry) {
     if (!entry) return "subject";
-    if (entry.viewMode === "class" || entry.viewMode === "subject") return entry.viewMode;
-    if (entry.categorySelectAll === true) return "class";
-    if (entry.classes && entry.classes.length) {
-      if (!entry.categories || !entry.categories.length) return "class";
-      return isLegacySubjectCategoryConfig(entry.categories) ? "subject" : "class";
-    }
-    if (!entry.categories || !entry.categories.length) return "subject";
-    return isLegacySubjectCategoryConfig(entry.categories) ? "subject" : "class";
+    if (entry.viewMode === "subject") return "subject";
+    if (entry.viewMode === "class") return "class";
+    if (isDesignatedClassViewSurvey(entry)) return "class";
+    return "subject";
   }
 
   function usesClassBasedResultsPicker() {
@@ -6120,12 +6115,16 @@
         : lastMultiResult && lastMultiResult.sheets[0]
           ? lastMultiResult.sheets[0].sheetName
           : null;
+    var existingEntry = adminSetupEditId ? findRegistryEntry(adminSetupEditId) : null;
+    var resolvedViewMode = adminSetupEditId
+      ? (existingEntry && existingEntry.viewMode) || "subject"
+      : "class";
     var payload = {
       label: SurveyForm.normalizeDisplayText(adminSetupLabel) || adminSetupLabel,
       url: adminSetupUrl,
       tab: preferredTab,
       classes: registryClasses,
-      viewMode: adminCategorySelectAll ? "class" : "subject",
+      viewMode: resolvedViewMode,
       categorySelectAll: adminCategorySelectAll,
       categories: adminSetupCategories.map(function (c, i) {
         return {
