@@ -7291,6 +7291,45 @@
       .trim();
   }
 
+  function isPlaceholderSheetHeader(header) {
+    var h = formatAdaptiveQuestionTitle(header);
+    if (!h) return true;
+    if (/^col_?\d+$/i.test(h)) return true;
+    return false;
+  }
+
+  /** 시트 헤더 "4-1." → "Q4-1." 등 표시용 정규화 */
+  function normalizeQuestionHeaderDisplay(header) {
+    var q = formatAdaptiveQuestionTitle(header);
+    if (!q || isPlaceholderSheetHeader(header)) return "";
+    if (/^Q\s*\d/i.test(q)) {
+      return q.replace(/^Q\s+(\d)/i, "Q$1");
+    }
+    var m = q.match(/^(\d+)\s*([-–.])\s*(\d+)(.*)$/);
+    if (m) {
+      return (
+        "Q" +
+        m[1] +
+        m[2] +
+        m[3] +
+        (m[4] ? " " + m[4].replace(/^\.\s*/, "").trim() : "")
+      );
+    }
+    return q;
+  }
+
+  function questionOrderKey(question) {
+    var q = String(question || "");
+    var m = q.match(/Q\s*(\d+)\s*([-–.]?\s*)(\d+)?/i);
+    if (!m) return 99999;
+    var main = parseInt(m[1], 10);
+    var sub =
+      m[3] != null && String(m[3]).trim() !== ""
+        ? parseInt(String(m[3]).replace(/\D/g, ""), 10)
+        : 0;
+    return main * 100 + sub;
+  }
+
   function formatAdaptiveAnswerText(value) {
     return coerceText(value || "").trim();
   }
@@ -7311,7 +7350,10 @@
     var q = String(question || "");
     if (/Q\s*\d+\s*[-–.]\s*\d+/i.test(q)) return score;
     if (/Q\d+[-–.]\d+/i.test(q)) return score;
-    if (String(answer).trim().length <= 2 && q.length > 0) return score;
+    if (/^\d+[-–.]\d+/i.test(q)) return score;
+    if (String(answer).trim().length <= 2 && q.length > 0 && q.length <= 200) {
+      return score;
+    }
     return null;
   }
 
@@ -7342,41 +7384,59 @@
 
   function collectAdaptiveSurveyItems(row, sheet) {
     var items = [];
+    var seen = {};
     var headers = sheet && sheet.headers ? sheet.headers : [];
 
     function pushItem(question, answer, order) {
-      var q = formatAdaptiveQuestionTitle(question);
-      var a = formatAdaptiveAnswerText(answer);
-      if (!q && !a) return;
-      if (q && isInternalSurveyFieldTitle(q)) return;
-      items.push({ question: q, answer: a, order: order != null ? order : 99999 });
+      var q =
+        normalizeQuestionHeaderDisplay(question) ||
+        formatAdaptiveQuestionTitle(question);
+      if (!q || isPlaceholderSheetHeader(question)) return;
+      if (isInternalSurveyFieldTitle(q)) return;
+      if (seen[q]) return;
+      seen[q] = true;
+      items.push({
+        question: q,
+        answer: formatAdaptiveAnswerText(answer),
+        order: order != null ? order : 99999,
+        sortKey: questionOrderKey(q),
+      });
     }
 
-    if (row._raw && headers.length) {
+    function rawValueForHeader(h, colIdx) {
+      if (!row._raw) return "";
+      var rawKey = h || "col_" + colIdx;
+      if (rawKey in row._raw) return row._raw[rawKey];
+      var want = formatAdaptiveQuestionTitle(h);
+      var keys = Object.keys(row._raw);
+      for (var i = 0; i < keys.length; i++) {
+        if (formatAdaptiveQuestionTitle(keys[i]) === want) return row._raw[keys[i]];
+      }
+      return "";
+    }
+
+    if (headers.length) {
       headers.forEach(function (h, colIdx) {
         if (isSkippableCategoryHeader(h, colIdx)) return;
-        var key = h || "col_" + colIdx;
-        if (!(key in row._raw)) return;
-        var val = row._raw[key];
-        if (formatAdaptiveAnswerText(val) === "" && formatAdaptiveQuestionTitle(h) === "") return;
-        pushItem(h, val, colIdx);
+        var displayQ = normalizeQuestionHeaderDisplay(h);
+        if (!displayQ) return;
+        pushItem(displayQ, rawValueForHeader(h, colIdx), colIdx);
       });
     }
 
-    if (!items.length) {
-      (row.sections || []).forEach(function (sec, idx) {
-        if (!isMeaningfulSection(sec) || isTeacherMessageSection(sec)) return;
-        if (sec.fields && sec.fields.length) {
-          sec.fields.forEach(function (f, fi) {
-            pushItem(f.key || sec.title, f.value, idx * 100 + fi);
-          });
-        } else {
-          pushItem(sec.title, sec.body, idx);
-        }
-      });
-    }
+    (row.sections || []).forEach(function (sec, idx) {
+      if (!isMeaningfulSection(sec) || isTeacherMessageSection(sec)) return;
+      if (sec.fields && sec.fields.length) {
+        sec.fields.forEach(function (f, fi) {
+          pushItem(f.key || sec.title, f.value, 9000 + idx * 100 + fi);
+        });
+      } else {
+        pushItem(sec.title, sec.body, 9000 + idx);
+      }
+    });
 
     items.sort(function (a, b) {
+      if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
       return a.order - b.order;
     });
     return items;
