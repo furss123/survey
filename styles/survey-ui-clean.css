@@ -1,0 +1,332 @@
+/**
+ * Survey UI — 심플·가독성 (화면 전용, 인쇄·맞춤 규칙은 index.html 인라인 유지)
+ */
+@media screen {
+  :root {
+    --school-bg: #f4f6f9;
+    --school-border: #e2e8f0;
+    --school-border-light: #eef2f6;
+    --school-muted: #5c6b7a;
+    --shadow-xs: 0 1px 2px rgba(15, 36, 64, 0.03);
+    --shadow-sm: 0 2px 6px rgba(15, 36, 64, 0.05);
+    --shadow-md: 0 4px 14px rgba(15, 36, 64, 0.06);
+    --radius-sm: 10px;
+    --radius-md: 12px;
+    --radius-lg: 14px;
+    --theme-bg-page: var(--school-bg);
+    --theme-bg-muted: #f8fafc;
+    --theme-text-muted: #5c6b7a;
+    --theme-border: #e2e8f0;
+    --theme-border-light: #eef2f6;
+    --theme-query-card-bg: #fafbfc;
+    --theme-query-card-hover: #f4f7fa;
+    --theme-hover-bg: #f4f7fa;
+    --theme-hover-surface: #fafbfc;
+    --border-strong: #cbd5e1;
+    --ui-line-height: 1.62;
+    --ui-line-height-tight: 1.45;
+  }
+
+  html[data-theme="dark"] {
+    --school-bg: #0f1419;
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.32);
+    --theme-bg-muted: #1a2332;
+    --theme-text-muted: #94a3b8;
+    --theme-border: #334155;
+    --theme-border-light: #283548;
+    --theme-query-card-bg: #1a2332;
+    --theme-query-card-hover: #243044;
+    --theme-hover-surface: #1e293b;
+    --border-strong: #475569;
+  }
+
+  body {
+    line-height: var(--ui-line-height);
+    letter-spacing: -0.01em;
+  }
+
+  /* 헤더 */
+  .site-header-inner {
+    padding: 16px 20px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--theme-border-light);
+  }
+  .site-header-inner::before {
+    height: 2px;
+    opacity: 0.85;
+  }
+  .site-header-text h1 {
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .header-school {
+    font-weight: 600;
+  }
+  .header-subtitle {
+    font-weight: 600;
+    background: var(--theme-bg-muted);
+    border-color: var(--theme-border-light);
+  }
+  .school-logo-link:hover {
+    transform: none;
+    box-shadow: var(--shadow-xs);
+  }
+  .theme-toggle:hover {
+    transform: none;
+  }
+
+  /* 패널·섹션 */
+  .search-container,
+  .admin-setup-inner,
+  .panel-section {
+    border-color: var(--theme-border-light);
+    box-shadow: var(--shadow-sm);
+  }
+  .panel-section {
+    padding: 22px 24px;
+  }
+  .section-label {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 14px;
+    gap: 8px;
+  }
+  .section-label::before {
+    width: 2px;
+    height: 0.9em;
+    background: var(--border-accent);
+    border-radius: 1px;
+  }
+  .section-head-row .section-label {
+    margin-bottom: 0;
+  }
+
+  /* 메인 설문 목록 */
+  .sheet-launch-btn {
+    min-height: 3rem;
+    padding: 12px 16px;
+    border: 1px solid var(--theme-border-light);
+    border-left-width: 1px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: var(--text-md);
+    box-shadow: none;
+    background: var(--theme-bg-panel);
+  }
+  .sheet-launch-btn:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-accent);
+    background: var(--theme-query-card-hover);
+  }
+  .sheet-launch-btn__label {
+    font-weight: 600;
+    line-height: var(--ui-line-height-tight);
+  }
+  .sheet-launch-btn__date {
+    font-weight: 500;
+    color: var(--theme-text-muted);
+  }
+  .sheet-launch-btn.is-loading .sheet-launch-btn__label {
+    font-weight: 600;
+  }
+
+  /* 반·과목 선택 */
+  .class-picker-bar {
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--theme-border-light);
+  }
+  .class-select-option {
+    min-height: 2.75rem;
+    padding: 10px 8px;
+    border-width: 1px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-md);
+    font-weight: 600;
+    box-shadow: none;
+  }
+  .class-select-option:hover {
+    transform: none;
+    border-color: var(--border-accent);
+    background: var(--theme-query-card-hover);
+  }
+  .class-select-option.active {
+    border-color: var(--school-navy);
+    background: var(--school-navy);
+    color: #fff;
+    box-shadow: none;
+    font-weight: 600;
+  }
+  html[data-theme="dark"] .class-select-option.active {
+    background: var(--school-navy-light);
+    border-color: var(--school-navy-light);
+  }
+
+  /* 학생 카드 */
+  .student-card {
+    border-left-width: 1px;
+    border-radius: var(--radius-sm);
+    padding: 14px 16px 0;
+    box-shadow: none;
+  }
+  .class-section .student-card:hover {
+    transform: none;
+    border-left-color: var(--theme-border);
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-xs);
+    background: var(--theme-bg-panel);
+  }
+  .student-card-divider {
+    border-top-width: 1px;
+    border-top-color: var(--theme-border-light);
+  }
+  .student-response-header {
+    border-bottom-color: var(--theme-border-light);
+  }
+  .student-name {
+    font-weight: 700;
+  }
+  .student-num,
+  .student-class {
+    font-weight: 500;
+    color: var(--theme-text-muted);
+  }
+
+  /* Q&A */
+  .survey-qa-item {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--theme-bg-muted);
+    border: 1px solid var(--theme-border-light);
+  }
+  .survey-qa-item__question {
+    margin-bottom: 8px;
+    font-weight: 600;
+    line-height: var(--ui-line-height-tight);
+    color: var(--theme-heading-strong);
+  }
+  .survey-qa-item__answer-text,
+  .survey-qa-multi-choice__detail {
+    line-height: var(--ui-line-height);
+    color: var(--theme-text);
+  }
+  .survey-qa-multi-choice {
+    padding: 10px 12px;
+    border-left-width: 2px;
+    border-left-color: var(--border-accent);
+    border-radius: var(--radius-sm);
+    background: var(--theme-bg-panel);
+  }
+  .survey-qa-multi-choice__type {
+    font-weight: 600;
+    color: var(--theme-heading);
+  }
+
+  /* 과목·카테고리 블록 */
+  .subject-sector {
+    border-color: var(--theme-border-light);
+    border-radius: var(--radius-sm);
+  }
+  .subject-sector__title {
+    padding: 8px 12px;
+    font-size: var(--text-base);
+    font-weight: 600;
+    background: var(--theme-bg-muted);
+    border-bottom: 1px solid var(--theme-border-light);
+  }
+  .category-block {
+    border-color: var(--theme-border-light);
+  }
+  .category-block .cat-title {
+    font-weight: 600;
+  }
+  .survey-field-line__label {
+    font-weight: 600;
+    color: var(--theme-text-muted);
+  }
+
+  /* 반 섹션 헤드 */
+  .class-section__head {
+    box-shadow: none;
+  }
+
+  /* 버튼 */
+  .admin-btn,
+  .admin-entry-btn {
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+  }
+  .admin-btn-primary {
+    background: var(--school-navy);
+    border-color: var(--school-navy);
+  }
+  .admin-btn-primary:hover {
+    background: var(--school-navy-light);
+    border-color: var(--school-navy-light);
+  }
+  html[data-theme="dark"] .admin-btn-primary {
+    background: var(--school-navy-light);
+    border-color: var(--school-navy-light);
+  }
+
+  /* 관리자 목록 */
+  .admin-registry-list li {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--theme-border-light);
+    background: var(--theme-bg-panel);
+    box-shadow: none;
+  }
+  .admin-registry-list li strong {
+    font-weight: 600;
+    line-height: var(--ui-line-height-tight);
+  }
+  .admin-registry-list .registry-meta span {
+    color: var(--theme-text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+  .registry-section-title {
+    font-weight: 600;
+  }
+  .roster-summary,
+  .admin-field-hint,
+  .admin-registry-status {
+    line-height: 1.55;
+  }
+
+  /* Likert (화면) */
+  .likert-scale__legend {
+    font-size: var(--text-xs);
+  }
+  .likert-scale__step {
+    min-height: 32px;
+    border-radius: 6px;
+  }
+  .likert-scale__step.is-selected {
+    box-shadow: none;
+    border-width: 2px;
+  }
+
+  /* 빈 상태·힌트 */
+  .home-empty-hint,
+  .home-section-empty,
+  .student-cards-empty {
+    border-radius: var(--radius-sm);
+    line-height: 1.55;
+  }
+
+  .query-card {
+    box-shadow: none;
+    background: var(--theme-bg-muted);
+  }
+}
