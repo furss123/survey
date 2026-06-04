@@ -7733,6 +7733,7 @@
   }
 
   var MULTI_SELECT_TYPE_DASH_RE = /형\s*[-–—]\s*/;
+  /** SMART 등: 한 줄 소감·서술(Q13) — 쉼표가 있어도 복수 선택으로 나누지 않음 */
   var COMMA_MULTI_EXCLUDE_Q = 13;
 
   function getQuestionMainNumber(question) {
@@ -7744,8 +7745,65 @@
     return null;
   }
 
+  function getQuestionSubNumber(question) {
+    var q = String(question || "").trim();
+    var m = q.match(/Q\s*0*(\d+)\s*[-–.](\d+)/i);
+    if (m) return parseInt(m[2], 10);
+    m = q.match(/^(\d+)\s*[-–.](\d+)/);
+    if (m) return parseInt(m[2], 10);
+    return null;
+  }
+
   function isCommaMultiSelectExcludedQuestion(question) {
     return getQuestionMainNumber(question) === COMMA_MULTI_EXCLUDE_Q;
+  }
+
+  /** 4-1·7-1·12-1 등 척도(1~5) 문항 */
+  function isLikertStyleSubQuestion(question) {
+    var main = getQuestionMainNumber(question);
+    var sub = getQuestionSubNumber(question);
+    if (sub == null || main == null) return false;
+    return main === 4 || main === 7 || main === 12;
+  }
+
+  function questionTextImpliesMultiSelect(question) {
+    var q = String(question || "");
+    if (/복수\s*선택|복수선택/i.test(q)) return true;
+    if (/\d+\s*개\s*선택|개\s*선택\s*\)/i.test(q)) return true;
+    if (/최대\s*\d+\s*개/i.test(q)) return true;
+    if (/1\s*~\s*2\s*개|1~2\s*개/i.test(q)) return true;
+    if (/솔직하게\s*체크/i.test(q) && /복수|여러/i.test(q)) return true;
+    return false;
+  }
+
+  /**
+   * Google Form(나를 알고…/SMART 피드백) 기준 — 복수·다중 선택 문항만 목록 분리.
+   * Q2(1개), Q4·Q7·Q12(척도), Q9·Q13(서술)은 단일 답변.
+   */
+  var SMART_FORM_MULTI_MAIN_Q = { 1: 1, 3: 1, 5: 1, 6: 1, 8: 1, 10: 1, 11: 1 };
+
+  function isQuestionMultiSelectAllowed(question) {
+    if (!question) return false;
+    if (isCommaMultiSelectExcludedQuestion(question)) return false;
+    if (isLikertStyleSubQuestion(question)) return false;
+    var q = String(question || "");
+    var main = getQuestionMainNumber(question);
+    var sub = getQuestionSubNumber(question);
+    if (main === 2 && sub == null) return false;
+    if (main === 9 && sub == null) return false;
+    if (/(1\s*개\s*선택|한\s*줄\s*소감|직접\s*적어)/i.test(q)) return false;
+    if (questionTextImpliesMultiSelect(question)) return true;
+    if (
+      sub == null &&
+      main != null &&
+      SMART_FORM_MULTI_MAIN_Q[main] &&
+      typeof currentLaunchEntry !== "undefined" &&
+      currentLaunchEntry &&
+      isDesignatedClassViewSurvey(currentLaunchEntry)
+    ) {
+      return true;
+    }
+    return false;
   }
 
   /** 문장이 끝난 뒤 이어지는 쉼표(복수 선택 목록) */
@@ -7836,13 +7894,12 @@
   function parseMultiSelectAnswer(raw, question) {
     var text = String(raw || "").trim();
     if (!text || text === "—") return null;
+    if (!isQuestionMultiSelectAllowed(question)) return null;
     var normalizedComma = text.replace(/\uFF0C/g, ",");
 
-    if (!isCommaMultiSelectExcludedQuestion(question)) {
-      if (hasCommaAfterSentenceEnd(normalizedComma)) {
-        var forcedComma = splitCommaSeparatedRespectingQuotes(normalizedComma);
-        if (forcedComma.length >= 2) return forcedComma;
-      }
+    if (hasCommaAfterSentenceEnd(normalizedComma)) {
+      var forcedComma = splitCommaSeparatedRespectingQuotes(normalizedComma);
+      if (forcedComma.length >= 2) return forcedComma;
     }
 
     var byNewline = text
