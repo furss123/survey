@@ -2370,9 +2370,17 @@
       box-shadow: none !important;
       background: #ffffff !important;
     }
-    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card > * {
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card > .student-card__print-fit {
       position: relative !important;
       z-index: 1 !important;
+      display: block !important;
+      width: 100% !important;
+      transform: scale(var(--print-scale, 1));
+      transform-origin: top center;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card.print-fit-applied {
+      overflow: hidden !important;
+      max-height: var(--print-sheet-height) !important;
     }
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
       border: 1px solid #c5d4e6 !important;
@@ -2751,11 +2759,12 @@
       .likert-scale__legend {
       display: none !important;
     }
-    /* zoom은 화면 맞춤 측정용 — 실제 인쇄는 @media print에서 1로 고정(빈 페이지 방지) */
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode)
       #results
-      .student-card.print-fit-applied {
-      zoom: var(--print-zoom, 1);
+      .student-card.print-fit-applied
+      > .student-card__print-fit {
+      transform: scale(var(--print-scale, 1));
+      transform-origin: top center;
     }
     body.print-fit-measuring.print-one-student-per-page #results {
       width: 184mm;
@@ -2921,10 +2930,24 @@
       #results.visible * {
         visibility: visible !important;
       }
-      body.is-printing-results #results.visible .student-card.print-fit-applied,
-      #results.visible .student-card.print-fit-applied {
+      body.is-printing-results:not(.print-one-student-per-page) #results.visible .student-card.print-fit-applied,
+      body:not(.print-one-student-per-page) #results.visible .student-card.print-fit-applied {
         zoom: 1 !important;
         transform: none !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        #results.visible
+        .student-card.print-fit-applied {
+        overflow: hidden !important;
+        max-height: var(--print-sheet-height, 266mm) !important;
+        box-sizing: border-box !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        #results.visible
+        .student-card.print-fit-applied
+        > .student-card__print-fit {
+        transform: scale(var(--print-scale, 1)) !important;
+        transform-origin: top center !important;
       }
       #results.visible .results-sticky-chrome,
       #results.visible .no-print {
@@ -3132,11 +3155,13 @@
         width: 100% !important;
         max-width: 100% !important;
         min-height: var(--print-sheet-height, 266mm) !important;
+        max-height: var(--print-sheet-height, 266mm) !important;
         margin: 0 !important;
         border: none !important;
         border-radius: 0 !important;
-        overflow: visible !important;
+        overflow: hidden !important;
         box-decoration-break: clone !important;
+        box-sizing: border-box !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card::after {
         content: "" !important;
@@ -3152,7 +3177,7 @@
         pointer-events: none !important;
         z-index: 0 !important;
       }
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card > * {
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card > .student-card__print-fit {
         position: relative !important;
         z-index: 1 !important;
       }
@@ -3184,9 +3209,6 @@
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section__head,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .sheet-banner {
         display: none !important;
-      }
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
-        max-height: none;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-item,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-pair,
@@ -9367,6 +9389,40 @@
     return Math.round((266 * 96) / 25.4);
   }
 
+  function getStudentCardPageBudgetPx(card) {
+    return getPrintablePageHeightPx() - 4;
+  }
+
+  function ensureStudentCardPrintFitShell(card) {
+    if (!card || card.querySelector(":scope > .student-card__print-fit")) return;
+    var shell = document.createElement("div");
+    shell.className = "student-card__print-fit";
+    while (card.firstChild) shell.appendChild(card.firstChild);
+    card.appendChild(shell);
+  }
+
+  function removeStudentCardPrintFitShell(card) {
+    if (!card) return;
+    var shell = card.querySelector(":scope > .student-card__print-fit");
+    if (!shell) return;
+    while (shell.firstChild) card.insertBefore(shell.firstChild, shell);
+    shell.remove();
+  }
+
+  function resetStudentCardPrintScale(card) {
+    if (!card) return;
+    var shell = card.querySelector(":scope > .student-card__print-fit");
+    if (shell) {
+      shell.style.removeProperty("transform");
+      shell.style.removeProperty("width");
+      shell.style.removeProperty("transform-origin");
+    }
+    card.style.removeProperty("--print-scale");
+    card.style.removeProperty("--print-zoom");
+    card.style.removeProperty("height");
+    card.style.removeProperty("max-height");
+  }
+
   /** 인쇄 본문·Q&A 등 전체 글자 크기 가산 (1인1페이지 맞춤·줌 규칙은 그대로) */
   var PRINT_FONT_SIZE_BUMP_PT = 1.5;
 
@@ -9394,7 +9450,7 @@
     "--print-likert-legend-mb",
     "--print-likert-track-gap",
     "--print-likert-step-h",
-    "--print-zoom",
+    "--print-scale",
   ];
 
   var surveyPrintRestore = null;
@@ -9425,26 +9481,14 @@
     document.body.classList.remove("survey-print-detached");
   }
 
-  function copyPrintFitFromCard(source, target) {
-    if (!source || !target || source === target) return;
-    target.classList.toggle("print-fit-applied", source.classList.contains("print-fit-applied"));
-    target.classList.toggle(
-      "print-fit-compact-likert",
-      source.classList.contains("print-fit-compact-likert")
-    );
-    PRINT_FIT_SPACING_PROPS.forEach(function (prop) {
-      var val = source.style.getPropertyValue(prop);
-      if (val) target.style.setProperty(prop, val);
-      else target.style.removeProperty(prop);
-    });
-  }
-
   function clearStudentCardsPrintFit() {
     document.querySelectorAll("#results .student-card").forEach(function (card) {
       card.classList.remove("print-fit-applied", "print-fit-compact-likert");
       PRINT_FIT_SPACING_PROPS.forEach(function (prop) {
         card.style.removeProperty(prop);
       });
+      resetStudentCardPrintScale(card);
+      removeStudentCardPrintFitShell(card);
     });
     document.body.classList.remove("print-fit-measuring");
   }
@@ -9457,7 +9501,29 @@
     );
     card.style.setProperty("--print-line-height", String(lineH));
     card.classList.toggle("print-fit-compact-likert", tier >= 2);
-    if (tier >= 3) {
+    if (tier >= 4) {
+      card.style.setProperty("--print-block-gap", "2px");
+      card.style.setProperty("--print-block-pad", "3px 5px 2px");
+      card.style.setProperty("--print-card-pad-top", "5px");
+      card.style.setProperty("--print-card-pad-x", "7px");
+      card.style.setProperty("--print-header-mb", "3px");
+      card.style.setProperty("--print-header-pb", "3px");
+      card.style.setProperty("--print-body-pb", "4px");
+      card.style.setProperty("--print-title-mb", "1px");
+      card.style.setProperty("--print-qa-gap", "1px");
+      card.style.setProperty("--print-qa-pad", "3px 5px");
+      card.style.setProperty("--print-qa-q-mb", "1px");
+      card.style.setProperty("--print-report-gap", "1px");
+      card.style.setProperty("--print-frame-radius", "7px");
+      card.style.setProperty("--print-multi-wrap-pad", "3px 5px");
+      card.style.setProperty("--print-multi-row-gap", "3px");
+      card.style.setProperty("--print-multi-col-gap", "6px");
+      card.style.setProperty("--print-multi-pad", "1px 0 1px 8px");
+      card.style.setProperty("--print-likert-mt", "1px");
+      card.style.setProperty("--print-likert-legend-mb", "1px");
+      card.style.setProperty("--print-likert-track-gap", "2px");
+      card.style.setProperty("--print-likert-step-h", "15px");
+    } else if (tier >= 3) {
       card.style.setProperty("--print-block-gap", "3px");
       card.style.setProperty("--print-block-pad", "4px 6px 3px");
       card.style.setProperty("--print-card-pad-top", "6px");
@@ -9552,15 +9618,30 @@
     return card.scrollHeight <= pageBudget;
   }
 
-  function applyPrintZoomToFit(card, pageBudget) {
+  /** 인쇄 시 zoom은 페이지 높이에 반영되지 않아 transform+고정 높이로 1페이지 강제 */
+  function applyPrintScaleToFit(card, pageBudget) {
+    ensureStudentCardPrintFitShell(card);
+    var shell = card.querySelector(":scope > .student-card__print-fit");
+    if (!shell) return 1;
+    shell.style.transform = "none";
+    shell.style.width = "100%";
+    shell.style.removeProperty("transform-origin");
+    card.style.removeProperty("--print-scale");
     card.style.removeProperty("--print-zoom");
-    if (card.scrollHeight <= pageBudget) return;
-    var scale = Math.max(0.86, Math.min(1, (pageBudget - 2) / card.scrollHeight));
-    card.style.setProperty("--print-zoom", String(Math.round(scale * 1000) / 1000));
-    if (card.scrollHeight > pageBudget) {
-      scale = Math.max(0.86, (pageBudget - 2) / card.scrollHeight);
-      card.style.setProperty("--print-zoom", String(Math.round(scale * 1000) / 1000));
+
+    var h = card.scrollHeight;
+    var scale = 1;
+    if (h > pageBudget) {
+      scale = Math.max(0.68, (pageBudget - 2) / h);
+      scale = Math.round(scale * 1000) / 1000;
+      card.style.setProperty("--print-scale", String(scale));
+      shell.style.transform = "scale(" + scale + ")";
+      shell.style.transformOrigin = "top center";
+      h = Math.ceil(h * scale);
     }
+    card.style.setProperty("height", h + "px");
+    card.style.setProperty("max-height", pageBudget + "px");
+    return scale;
   }
 
   function largestFontThatFits(card, pageBudget, lineH, tier, minFontPt, maxFontPt) {
@@ -9596,14 +9677,15 @@
   }
 
   function fitStudentCardToOnePage(card, pageBudget) {
-    var minFontPt = 6;
-    var minLineH = 1.1;
+    var minFontPt = 5.5;
+    var minLineH = 1.08;
     var maxFontPt = 10.75;
     var maxLineH = 1.38;
 
-    card.style.removeProperty("--print-zoom");
+    resetStudentCardPrintScale(card);
+    ensureStudentCardPrintFitShell(card);
 
-    for (var tier = 0; tier <= 3; tier++) {
+    for (var tier = 0; tier <= 4; tier++) {
       var lineH = maxLineH;
       while (lineH + 0.001 >= minLineH) {
         var fontPt = largestFontThatFits(card, pageBudget, lineH, tier, minFontPt, maxFontPt);
@@ -9615,7 +9697,7 @@
     }
 
     applyStudentCardPrintFitVars(card, minFontPt, minLineH, 3);
-    applyPrintZoomToFit(card, pageBudget);
+    applyPrintScaleToFit(card, pageBudget);
   }
 
   var surveyPrintFitToken = "";
@@ -9649,23 +9731,13 @@
     if (!cards.length) return;
 
     document.body.classList.add("print-fit-measuring");
-    var pageBudget = getPrintablePageHeightPx() - 8;
-    var tallest = cards[0];
-    var maxHeight = 0;
     var i;
     for (i = 0; i < cards.length; i++) {
-      cards[i].style.removeProperty("--print-zoom");
-      applyStudentCardPrintFitVars(cards[i], 10.75, 1.38, 0);
-      var h = cards[i].scrollHeight;
-      if (h > maxHeight) {
-        maxHeight = h;
-        tallest = cards[i];
-      }
-    }
-    fitStudentCardToOnePage(tallest, pageBudget);
-    tallest.classList.add("print-fit-applied");
-    for (i = 0; i < cards.length; i++) {
-      copyPrintFitFromCard(tallest, cards[i]);
+      resetStudentCardPrintScale(cards[i]);
+      ensureStudentCardPrintFitShell(cards[i]);
+      var pageBudget = getStudentCardPageBudgetPx(cards[i]);
+      fitStudentCardToOnePage(cards[i], pageBudget);
+      applyPrintScaleToFit(cards[i], pageBudget);
       cards[i].classList.add("print-fit-applied");
     }
 
