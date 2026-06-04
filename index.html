@@ -1682,82 +1682,106 @@
     .view-tracker {
       position: fixed;
       z-index: 999;
-      width: 170px;
-      padding: 16px 14px;
+      width: 152px;
+      padding: 12px 12px 11px;
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 12px;
       background: var(--bg-surface);
       box-shadow: var(--shadow-md);
       color: var(--text);
-      max-height: min(70vh, 368px);
-      overflow-y: auto;
-    }
-    /* 스크롤 추적 패널 비표시 (인쇄·우측 도구는 유지) */
-    .view-tracker {
-      display: none !important;
-      visibility: hidden !important;
     }
     .view-tracker[hidden] { display: none !important; }
-    .view-tracker-head {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      margin-bottom: 14px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--theme-border-light);
-      font-size: 0.79rem;
-      font-weight: 700;
-      color: var(--theme-heading);
-      letter-spacing: -0.01em;
-    }
-    .view-tracker-head svg {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-      stroke: var(--theme-icon);
-    }
-    .view-tracker-fields { margin: 0; }
-    .view-tracker-row {
-      display: grid;
-      grid-template-columns: 60px 1fr;
-      gap: 5px 7px;
-      align-items: center;
-      margin-bottom: 9px;
-    }
-    .view-tracker-row:last-of-type { margin-bottom: 0; }
-    .view-tracker-row dt {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin: 0;
+    .view-tracker-label {
+      margin: 0 0 8px;
       font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+    .view-tracker-current {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+      line-height: 1.35;
+      color: var(--theme-heading);
+      word-break: keep-all;
+    }
+    .view-tracker-class {
+      margin: 4px 0 0;
+      font-size: 0.78rem;
       font-weight: 600;
       color: var(--text-muted);
     }
-    .view-tracker-icon {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-      stroke: var(--text-muted);
-    }
-    .view-tracker-row dd {
-      margin: 0;
-      font-size: 0.93rem;
-      font-weight: 700;
-      color: var(--text);
-      word-break: keep-all;
-    }
+    .view-tracker-class:empty { display: none; }
     .view-tracker-status {
-      margin: 12px 0 0;
-      padding: 5px 9px;
-      border-radius: 7px;
+      margin: 8px 0 0;
+      padding: 4px 8px;
+      border-radius: 6px;
       background: var(--badge-pending-bg);
       color: var(--danger-text);
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 700;
       text-align: center;
     }
     .view-tracker-status[hidden] { display: none !important; }
+    .view-tracker-jump {
+      margin: 11px 0 0;
+      padding-top: 11px;
+      border-top: 1px solid var(--theme-border-light);
+    }
+    .view-tracker-jump-label {
+      display: block;
+      margin: 0 0 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .view-tracker-jump-row {
+      display: flex;
+      gap: 5px;
+      align-items: stretch;
+    }
+    .view-tracker-jump-input {
+      flex: 1;
+      min-width: 0;
+      width: 0;
+      padding: 6px 8px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: var(--bg-muted);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      box-sizing: border-box;
+    }
+    .view-tracker-jump-input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      border-color: var(--border-accent);
+    }
+    .view-tracker-jump-btn {
+      flex-shrink: 0;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--theme-btn-top) 0%, var(--theme-btn-bottom) 100%);
+      color: var(--chip-active-text);
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .view-tracker-jump-btn:hover { filter: brightness(1.06); }
+    .view-tracker-jump-hint {
+      margin: 6px 0 0;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--danger-text);
+      line-height: 1.3;
+    }
+    .view-tracker-jump-hint[hidden] { display: none !important; }
     .page-chrome-actions {
       --page-chrome-btn-w: 54px;
       --page-chrome-btn-h: calc(72px - 2mm);
@@ -1849,15 +1873,16 @@
       color: var(--theme-text-muted);
       text-align: center;
     }
-    @media (min-width: 1100px) {
+    @media (min-width: 1024px) {
       .view-tracker:not([hidden]) {
-        left: max(12px, calc((100vw - var(--content-max)) / 2 - 190px));
+        display: block !important;
+        left: max(10px, calc((100vw - var(--content-max)) / 2 - 172px));
         top: 50%;
         right: auto;
         transform: translateY(-50%);
       }
     }
-    @media (max-width: 1099px) {
+    @media (max-width: 1023px) {
       .view-tracker { display: none !important; }
     }
     @media (max-width: 720px) {
@@ -2496,6 +2521,12 @@
         --error-text: #b91c1c;
       }
       .admin-setup-panel { display: none !important; }
+      .view-tracker,
+      .page-chrome-actions,
+      .no-print {
+        display: none !important;
+        visibility: hidden !important;
+      }
       @page { size: A4; margin: 18mm 13mm 13mm 13mm; }
       body { padding: 0 !important; background: #fff !important; color: #0f172a !important; }
       body.is-printing-results * { visibility: hidden; }
@@ -2895,46 +2926,28 @@
     </main>
   </div>
 
-  <aside class="view-tracker" id="viewTracker" hidden aria-live="polite" aria-label="현재 보고 있는 학생">
-    <div class="view-tracker-head">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
-        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" stroke="currentColor"/>
-        <circle cx="12" cy="12" r="3" stroke="currentColor"/>
-      </svg>
-      <span>지금 보는 학생</span>
-    </div>
-    <dl class="view-tracker-fields">
-      <div class="view-tracker-row">
-        <dt>
-          <svg class="view-tracker-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
-            <path d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" stroke="currentColor"/>
-            <path d="M9 22V12h6v10" stroke="currentColor"/>
-          </svg>
-          <span>반</span>
-        </dt>
-        <dd id="viewTrackerClass">—</dd>
-      </div>
-      <div class="view-tracker-row">
-        <dt>
-          <svg class="view-tracker-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
-            <path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18" stroke="currentColor"/>
-          </svg>
-          <span>번호</span>
-        </dt>
-        <dd id="viewTrackerNum">—</dd>
-      </div>
-      <div class="view-tracker-row">
-        <dt>
-          <svg class="view-tracker-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="8" r="4" stroke="currentColor"/>
-            <path d="M6 21v-1a6 6 0 0112 0v1" stroke="currentColor"/>
-          </svg>
-          <span>이름</span>
-        </dt>
-        <dd id="viewTrackerName">—</dd>
-      </div>
-    </dl>
+  <aside class="view-tracker no-print" id="viewTracker" hidden aria-live="polite" aria-label="현재 보고 있는 학생">
+    <p class="view-tracker-label">지금 보는 학생</p>
+    <p class="view-tracker-current" id="viewTrackerCurrent">—</p>
+    <p class="view-tracker-class" id="viewTrackerClass"></p>
     <p class="view-tracker-status" id="viewTrackerStatus" hidden>미참여</p>
+    <form class="view-tracker-jump" id="viewTrackerJumpForm" autocomplete="off">
+      <label class="view-tracker-jump-label" for="viewTrackerJumpInput">번호로 이동</label>
+      <div class="view-tracker-jump-row">
+        <input
+          class="view-tracker-jump-input"
+          id="viewTrackerJumpInput"
+          type="number"
+          min="1"
+          step="1"
+          inputmode="numeric"
+          placeholder="번호"
+          aria-label="이동할 학생 번호"
+        />
+        <button type="submit" class="view-tracker-jump-btn">이동</button>
+      </div>
+      <p class="view-tracker-jump-hint" id="viewTrackerJumpHint" hidden></p>
+    </form>
   </aside>
 
   <aside class="page-chrome-actions no-print" id="pageChromeActions" aria-label="페이지 도구" hidden>
@@ -8470,28 +8483,93 @@
   var scrollStudentObserver = null;
   var scrollStudentRatioMap = null;
 
+  function formatViewTrackerLine(card) {
+    if (!card) return "—";
+    var num = card.getAttribute("data-student-num");
+    var name = card.getAttribute("data-student-name") || "";
+    if (num && name) return num + "번 · " + name;
+    if (num) return num + "번";
+    if (name) return name;
+    return "—";
+  }
+
+  function getJumpableStudentCards() {
+    var results = document.getElementById("results");
+    if (!results) return [];
+    return Array.prototype.slice.call(
+      results.querySelectorAll(
+        ".student-card[data-student-num]:not(.student-card--absent)"
+      )
+    );
+  }
+
+  function scrollToStudentCard(card) {
+    if (!card) return false;
+    var top = card.getBoundingClientRect().top + window.scrollY - 80;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    updateViewTracker(card);
+    return true;
+  }
+
+  function jumpToStudentByNumber(numRaw) {
+    var hint = document.getElementById("viewTrackerJumpHint");
+    var n = parseInt(String(numRaw || "").trim(), 10);
+    if (!n || n < 1) {
+      if (hint) {
+        hint.textContent = "번호를 입력해 주세요.";
+        hint.hidden = false;
+      }
+      return false;
+    }
+    var target = getJumpableStudentCards().find(function (card) {
+      return parseInt(card.getAttribute("data-student-num"), 10) === n;
+    });
+    if (!target) {
+      if (hint) {
+        hint.textContent = n + "번 학생을 찾을 수 없습니다.";
+        hint.hidden = false;
+      }
+      return false;
+    }
+    if (hint) hint.hidden = true;
+    return scrollToStudentCard(target);
+  }
+
+  function bindViewTrackerJump() {
+    var form = document.getElementById("viewTrackerJumpForm");
+    if (!form || form.dataset.bound === "1") return;
+    form.dataset.bound = "1";
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var input = document.getElementById("viewTrackerJumpInput");
+      jumpToStudentByNumber(input && input.value);
+    });
+    var input = document.getElementById("viewTrackerJumpInput");
+    if (input) {
+      input.addEventListener("input", function () {
+        var hint = document.getElementById("viewTrackerJumpHint");
+        if (hint) hint.hidden = true;
+      });
+    }
+  }
+
   function updateViewTracker(card) {
     var panel = document.getElementById("viewTracker");
+    var currentEl = document.getElementById("viewTrackerCurrent");
     var classEl = document.getElementById("viewTrackerClass");
-    var numEl = document.getElementById("viewTrackerNum");
-    var nameEl = document.getElementById("viewTrackerName");
     var statusEl = document.getElementById("viewTrackerStatus");
-    if (!panel || !classEl || !numEl || !nameEl) return;
+    if (!panel || !currentEl || !classEl) return;
     if (!card) {
       panel.hidden = true;
-      classEl.textContent = "—";
-      numEl.textContent = "—";
-      nameEl.textContent = "—";
+      currentEl.textContent = "—";
+      classEl.textContent = "";
       if (statusEl) statusEl.hidden = true;
       return;
     }
     var cls = card.getAttribute("data-student-class") || activeSheetView || "";
-    var num = card.getAttribute("data-student-num");
-    var name = card.getAttribute("data-student-name") || "";
     panel.hidden = false;
-    classEl.textContent = cls || "—";
-    numEl.textContent = num ? num + "번" : "—";
-    nameEl.textContent = name || "—";
+    currentEl.textContent = formatViewTrackerLine(card);
+    classEl.textContent = cls ? cls + "반" : "";
     if (statusEl) {
       statusEl.hidden = !card.classList.contains("student-card--absent");
     }
@@ -8547,6 +8625,7 @@
       scrollStudentObserver.observe(card);
     });
     updateViewTracker(cards[0]);
+    bindViewTrackerJump();
   }
 
   function setFabStackVisible(show) {
@@ -8983,6 +9062,7 @@
   }
 
   initTheme();
+  bindViewTrackerJump();
   var themeToggleEl = document.getElementById("themeToggle");
   if (themeToggleEl) {
     themeToggleEl.addEventListener("click", function () {
