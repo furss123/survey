@@ -958,6 +958,44 @@
       height: 22px;
       stroke: currentColor;
     }
+    .survey-print-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.36);
+      backdrop-filter: blur(3px);
+    }
+    .survey-print-loading[hidden] {
+      display: none !important;
+    }
+    .survey-print-loading__spinner {
+      width: 52px;
+      height: 52px;
+      border: 4px solid rgba(255, 255, 255, 0.45);
+      border-top-color: var(--accent, #3d6b9e);
+      border-radius: 50%;
+      animation: survey-print-spin 0.72s linear infinite;
+      box-shadow: 0 2px 16px rgba(15, 23, 42, 0.12);
+    }
+    @keyframes survey-print-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    html[data-theme="dark"] .survey-print-loading {
+      background: rgba(2, 6, 23, 0.62);
+    }
+    html[data-theme="dark"] .survey-print-loading__spinner {
+      border-color: rgba(148, 163, 184, 0.35);
+      border-top-color: var(--border-accent, #60a5fa);
+    }
+    body.survey-print-loading-active {
+      overflow: hidden;
+    }
     .class-results-panel {
       width: 100%;
     }
@@ -2352,9 +2390,9 @@
       max-width: 100% !important;
       margin: 0 !important;
       padding-top: var(--print-card-pad-top, 5mm) !important;
-      padding-right: var(--print-card-pad-right, 5mm) !important;
+      padding-right: var(--print-card-pad-right, 10mm) !important;
       padding-bottom: var(--print-card-pad-bottom, 4mm) !important;
-      padding-left: var(--print-card-pad-left, 5mm) !important;
+      padding-left: var(--print-card-pad-left, 10mm) !important;
       max-height: none;
       overflow: visible;
       box-sizing: border-box;
@@ -3463,7 +3501,7 @@
     }
   </style>
   <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260611">
-  <link rel="stylesheet" href="styles/survey-print.css?v=20260619">
+  <link rel="stylesheet" href="styles/survey-print.css?v=20260620">
 </head>
 <body>
   <header class="site-header no-print">
@@ -3595,6 +3633,16 @@
   <footer class="site-footer no-print" id="siteFooterRoot">
     <div class="site-footer-inner">Created by HyoT. Copyright © 2026 남악고등학교 HyoT. All rights reserved.</div>
   </footer>
+
+  <div
+    id="surveyPrintLoading"
+    class="survey-print-loading no-print"
+    hidden
+    aria-hidden="true"
+    aria-live="polite"
+  >
+    <div class="survey-print-loading__spinner" role="status" aria-label="인쇄 준비 중"></div>
+  </div>
 
   <script src="scripts/korean-orthography.js?v=20260608"></script>
   <script src="scripts/survey-form-shared.js?v=20260611"></script>
@@ -9553,8 +9601,8 @@
     card.style.setProperty("--print-line-height", String(lineH));
     card.style.setProperty("--print-card-pad-top", "5mm");
     card.style.setProperty("--print-card-pad-bottom", "4mm");
-    card.style.setProperty("--print-card-pad-left", "5mm");
-    card.style.setProperty("--print-card-pad-right", "5mm");
+    card.style.setProperty("--print-card-pad-left", "10mm");
+    card.style.setProperty("--print-card-pad-right", "10mm");
     card.classList.toggle("print-fit-compact-likert", tier >= 2);
     if (tier >= 4) {
       card.style.setProperty("--print-block-gap", "2px");
@@ -9680,9 +9728,12 @@
       scale = Math.max(0.68, (pageBudget - 2) / h);
       scale = Math.round(scale * 1000) / 1000;
       card.style.setProperty("--print-scale", String(scale));
+      shell.style.width = 100 / scale + "%";
       shell.style.transform = "scale(" + scale + ")";
       shell.style.transformOrigin = "top left";
       h = Math.ceil(h * scale);
+    } else {
+      shell.style.width = "100%";
     }
     card.style.setProperty("height", h + "px");
     card.style.setProperty("max-height", pageBudget + "px");
@@ -9790,18 +9841,65 @@
     surveyPrintFitToken = token;
   }
 
+  var surveyPrintLoadingHideTimer = null;
+
+  function showSurveyPrintLoading() {
+    var el = document.getElementById("surveyPrintLoading");
+    if (!el) return;
+    if (surveyPrintLoadingHideTimer) {
+      clearTimeout(surveyPrintLoadingHideTimer);
+      surveyPrintLoadingHideTimer = null;
+    }
+    el.hidden = false;
+    el.setAttribute("aria-hidden", "false");
+    document.body.classList.add("survey-print-loading-active");
+    var printBtn = document.getElementById("surveyPrintBtn");
+    if (printBtn) printBtn.disabled = true;
+  }
+
+  function hideSurveyPrintLoading() {
+    var el = document.getElementById("surveyPrintLoading");
+    if (surveyPrintLoadingHideTimer) {
+      clearTimeout(surveyPrintLoadingHideTimer);
+      surveyPrintLoadingHideTimer = null;
+    }
+    if (el) {
+      el.hidden = true;
+      el.setAttribute("aria-hidden", "true");
+    }
+    document.body.classList.remove("survey-print-loading-active");
+    var printBtn = document.getElementById("surveyPrintBtn");
+    if (printBtn) printBtn.disabled = false;
+  }
+
+  function scheduleSurveyPrintLoadingFallback() {
+    if (surveyPrintLoadingHideTimer) clearTimeout(surveyPrintLoadingHideTimer);
+    surveyPrintLoadingHideTimer = setTimeout(hideSurveyPrintLoading, 15000);
+  }
+
   function runSurveyPrint() {
     var results = document.getElementById("results");
     if (!results || !results.classList.contains("visible")) {
       alert("먼저 시트를 조회한 뒤 인쇄해 주세요.");
       return;
     }
-    syncResultsPrintState(results);
-    setPrintMode(true);
-    prepareStudentCardsPrintFit(true);
-    attachResultsForPrint();
+    showSurveyPrintLoading();
+    scheduleSurveyPrintLoadingFallback();
     requestAnimationFrame(function () {
-      window.print();
+      requestAnimationFrame(function () {
+        try {
+          syncResultsPrintState(results);
+          setPrintMode(true);
+          prepareStudentCardsPrintFit(true);
+          attachResultsForPrint();
+          requestAnimationFrame(function () {
+            window.print();
+          });
+        } catch (err) {
+          hideSurveyPrintLoading();
+          throw err;
+        }
+      });
     });
   }
 
@@ -10155,6 +10253,7 @@
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
   });
   window.addEventListener("beforeprint", function () {
+    hideSurveyPrintLoading();
     var results = document.getElementById("results");
     if (results && results.classList.contains("visible")) {
       syncResultsPrintState(results);
@@ -10171,6 +10270,7 @@
     }
   });
   window.addEventListener("afterprint", function () {
+    hideSurveyPrintLoading();
     surveyPrintFitToken = "";
     restoreResultsAfterPrint();
     setPrintMode(false);
