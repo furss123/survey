@@ -2999,31 +2999,77 @@
   const SHEET_REGISTRY_KEY = "school-sheet-registry-v1";
   const ADMIN_SETUP_DRAFT_KEY = "school-admin-setup-draft-v1";
   const LEGACY_CLASS_VIEW_ALL = "__all__";
-  const INDEX_PAGE_PATH = (location.pathname.split("/").pop() || "index.html");
+  const VIEW_RESTORE_KEY = "school-survey-view-restore-v1";
   const PROFILE_PATTERN = /\[(\d+)반\]\s*\[(\d+)\]\s*\[([^\]]+)\]/;
 
   function buildIndexPageUrl(state) {
-    var params = new URLSearchParams();
+    var url = new URL(location.href);
+    url.search = "";
+    url.hash = "";
     if (state && state.adminSetup === "1") {
-      params.set("adminSetup", "1");
-      if (state.label) params.set("label", state.label);
-      if (state.url) params.set("url", state.url);
-      if (state.sheet) params.set("sheet", state.sheet);
-      if (state.classFilter) params.set("class", state.classFilter);
-      if (state.subject && state.subject !== "all") params.set("subject", state.subject);
+      url.searchParams.set("adminSetup", "1");
+      if (state.label) url.searchParams.set("label", state.label);
+      if (state.url) url.searchParams.set("url", state.url);
+      if (state.sheet) url.searchParams.set("sheet", state.sheet);
+      if (state.classFilter) url.searchParams.set("class", state.classFilter);
+      if (state.subject && state.subject !== "all") {
+        url.searchParams.set("subject", state.subject);
+      }
     } else if (state && state.open) {
-      params.set("open", state.open);
-      if (state.sheet) params.set("sheet", state.sheet);
-      if (state.classFilter) params.set("class", state.classFilter);
-      if (state.subject && state.subject !== "all") params.set("subject", state.subject);
+      url.searchParams.set("open", state.open);
+      if (state.sheet) url.searchParams.set("sheet", state.sheet);
+      if (state.classFilter) url.searchParams.set("class", state.classFilter);
+      if (state.subject && state.subject !== "all") {
+        url.searchParams.set("subject", state.subject);
+      }
     }
-    var q = params.toString();
-    return INDEX_PAGE_PATH + (q ? "?" + q : "");
+    return url.pathname + url.search;
+  }
+
+  function persistViewRestore(state) {
+    try {
+      if (!state || (!state.open && state.adminSetup !== "1")) {
+        sessionStorage.removeItem(VIEW_RESTORE_KEY);
+        return;
+      }
+      sessionStorage.setItem(
+        VIEW_RESTORE_KEY,
+        JSON.stringify({
+          open: state.open || "",
+          adminSetup: state.adminSetup || "",
+          label: state.label || "",
+          url: state.url || "",
+          sheet: state.sheet || "",
+          classFilter: state.classFilter || state.class || "",
+          subject: state.subject || "",
+          ts: Date.now(),
+        })
+      );
+    } catch (err) {
+      /* ignore */
+    }
+  }
+
+  function readViewRestoreFromSession() {
+    try {
+      var raw = sessionStorage.getItem(VIEW_RESTORE_KEY);
+      if (!raw) return null;
+      var saved = JSON.parse(raw);
+      if (!saved || !saved.ts || Date.now() - saved.ts > 24 * 60 * 60 * 1000) {
+        sessionStorage.removeItem(VIEW_RESTORE_KEY);
+        return null;
+      }
+      return saved;
+    } catch (err) {
+      return null;
+    }
   }
 
   function replaceIndexPageUrl(state) {
+    var payload = state || {};
+    persistViewRestore(payload);
     if (!history.replaceState) return;
-    history.replaceState(state || {}, "", buildIndexPageUrl(state || {}));
+    history.replaceState(payload, "", buildIndexPageUrl(payload));
   }
 
   function applyRestoreView(restore) {
@@ -6868,7 +6914,7 @@
       }
     }
     sessionStorage.removeItem(ADMIN_SETUP_DRAFT_KEY);
-    location.href = INDEX_PAGE_PATH;
+    location.href = buildIndexPageUrl({});
   }
 
   function fitHeaderTitleToMetaRow() {
@@ -8949,8 +8995,9 @@
   window.addEventListener("load", scheduleHeaderTitleFit);
 
   refreshHomeSurveyList({ sync: true, flash: false });
-  window.addEventListener("pageshow", function () {
+  window.addEventListener("pageshow", function (e) {
     refreshHomeSurveyList({ sync: true, flash: false });
+    if (e.persisted) restoreViewOnLoad();
   });
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") {
@@ -9045,28 +9092,92 @@
     });
   })();
 
-  (function openSheetFromQuery() {
+  async function restoreViewOnLoad() {
+    if (analysisInFlight) return;
     var params = new URLSearchParams(location.search);
     if (params.get("adminSetup") === "1") return;
+
     var openId = params.get("open");
+    var restoreView = {
+      sheet: params.get("sheet") || null,
+      class: params.get("class") || null,
+      subject: params.get("subject") || null,
+    };
+    if (!openId) {
+      var saved = readViewRestoreFromSession();
+      if (saved && saved.open) {
+        openId = saved.open;
+        if (!restoreView.sheet && saved.sheet) restoreView.sheet = saved.sheet;
+        if (!restoreView.class && saved.classFilter) restoreView.class = saved.classFilter;
+        if (!restoreView.subject && saved.subject) restoreView.subject = saved.subject;
+        replaceIndexPageUrl({
+          open: openId,
+          sheet: restoreView.sheet,
+          classFilter: restoreView.class,
+          subject: restoreView.subject,
+        });
+      }
+    }
     if (!openId) return;
+
+    var resultsEl = document.getElementById("results");
+    if (
+      resultsEl &&
+      resultsEl.classList.contains("visible") &&
+      currentLaunchEntry &&
+      String(currentLaunchEntry.id || "").split("::")[0] === String(openId).split("::")[0]
+    ) {
+      return;
+    }
+
+    var homePanel = document.getElementById("homePanel");
+    if (homePanel) homePanel.hidden = true;
+
+    await refreshHomeSurveyList({ sync: true, flash: false });
+
     var entry =
       resolveLaunchEntry(openId) ||
       getDefaultClassSheetButtons().find(function (item) {
         return item.id === openId;
       });
-    if (!entry) return;
+    if (!entry) {
+      if (homePanel) homePanel.hidden = false;
+      return;
+    }
     var baseId = String(openId).split("::")[0];
     var regEntry = findRegistryEntry(baseId) || entry;
-    var restoreView = {
-      sheet: params.get("sheet"),
-      class: params.get("class"),
-      subject: params.get("subject"),
-    };
-    setTimeout(function () {
-      launchSheetAnalysis(regEntry, null, restoreView);
-    }, 0);
-  })();
+    await launchSheetAnalysis(regEntry, null, restoreView);
+  }
+
+  restoreViewOnLoad();
+
+  window.addEventListener("popstate", function () {
+    var params = new URLSearchParams(location.search);
+    if (params.get("adminSetup") === "1") return;
+    var openId = params.get("open");
+    if (!openId) {
+      if (
+        document.getElementById("results") &&
+        document.getElementById("results").classList.contains("visible")
+      ) {
+        showHomeView();
+      }
+      return;
+    }
+    if (lastMultiResult && currentLaunchEntry) {
+      applyRestoreView({
+        sheet: params.get("sheet"),
+        class: params.get("class"),
+        subject: params.get("subject"),
+      });
+      showResultsView();
+      var sheetId = parseSpreadsheetId(currentLaunchEntry.url);
+      renderResults(getActiveAnalysis(), sheetId, lastMultiResult);
+      syncViewUrl();
+    } else {
+      restoreViewOnLoad();
+    }
+  });
 
   var headerLogoHome = document.getElementById("headerLogoHome");
   if (headerLogoHome) {
