@@ -2229,7 +2229,10 @@
     }
     /* 학생 인쇄 1페이지 맞춤: 폰트·줄간격·여백 조절 (질문·답 문구는 그대로, 다단 없음) */
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
-      padding: var(--print-card-pad, 10px 12px 0) !important;
+      padding-top: var(--print-card-pad-top, 12px) !important;
+      padding-right: var(--print-card-pad-x, 14px) !important;
+      padding-bottom: 0 !important;
+      padding-left: var(--print-card-pad-x, 14px) !important;
       max-height: none;
       overflow: visible;
       box-sizing: border-box;
@@ -2239,16 +2242,16 @@
       padding-bottom: var(--print-header-pb, 8px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-num {
-      font-size: calc(var(--print-font-pt, 11.5pt) * 0.95) !important;
+      font-size: calc(var(--print-font-pt, 12pt) * 0.95) !important;
       line-height: var(--print-line-height, 1.32) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-name {
-      font-size: calc(var(--print-font-pt, 11.5pt) * 1.12) !important;
+      font-size: calc(var(--print-font-pt, 12pt) * 1.12) !important;
       line-height: var(--print-line-height, 1.32) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-id,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-class {
-      font-size: calc(var(--print-font-pt, 11.5pt) * 0.88) !important;
+      font-size: calc(var(--print-font-pt, 12pt) * 0.88) !important;
       line-height: var(--print-line-height, 1.32) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-response-body {
@@ -2261,13 +2264,13 @@
       padding: var(--print-block-pad, 8px 10px 6px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .category-block .cat-title {
-      font-size: calc(var(--print-font-pt, 11.5pt) * 0.92) !important;
+      font-size: calc(var(--print-font-pt, 12pt) * 0.92) !important;
       line-height: var(--print-line-height, 1.32) !important;
       margin-bottom: var(--print-title-mb, 4px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report__subject-name,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report__teacher-title {
-      font-size: calc(var(--print-font-pt, 11.5pt) * 1.05) !important;
+      font-size: calc(var(--print-font-pt, 12pt) * 1.05) !important;
       line-height: var(--print-line-height, 1.32) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line,
@@ -2277,8 +2280,8 @@
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .preview,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .absent-note,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .subject-empty {
-      font-size: var(--print-font-pt, 11.5pt) !important;
-      line-height: var(--print-line-height, 1.32) !important;
+      font-size: var(--print-font-pt, 12pt) !important;
+      line-height: var(--print-line-height, 1.34) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .cat-body,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .cat-field {
@@ -2286,43 +2289,45 @@
       word-break: keep-all;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive {
-      gap: var(--print-report-gap, 0) !important;
+      gap: var(--print-report-gap, 2px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item {
-      margin: 0 0 var(--print-qa-gap, 6px) !important;
-      padding: var(--print-qa-pad, 6px 8px) !important;
-      border-radius: 6px !important;
+      margin: 0 0 var(--print-qa-gap, 9px) !important;
+      padding: var(--print-qa-pad, 8px 10px) !important;
+      border-radius: 7px !important;
       page-break-inside: auto;
       break-inside: auto;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__question {
-      font-size: calc(var(--print-font-pt, 10.5pt) * 0.92) !important;
-      line-height: var(--print-line-height, 1.28) !important;
-      margin-bottom: var(--print-qa-q-mb, 4px) !important;
+      font-size: calc(var(--print-font-pt, 11pt) * 0.94) !important;
+      line-height: var(--print-line-height, 1.34) !important;
+      margin-bottom: var(--print-qa-q-mb, 5px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer-text,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__detail,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-pair__q,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-pair__a {
-      font-size: var(--print-font-pt, 10.5pt) !important;
-      line-height: var(--print-line-height, 1.28) !important;
+      font-size: var(--print-font-pt, 11pt) !important;
+      line-height: var(--print-line-height, 1.34) !important;
     }
+    /* 복수 정답: 한 줄에 2개(2단) — 문단형 카드 */
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer--multi,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--multi {
       display: grid !important;
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      gap: var(--print-multi-row-gap, 3px) var(--print-multi-col-gap, 8px) !important;
-      align-items: start !important;
+      gap: var(--print-multi-row-gap, 7px) var(--print-multi-col-gap, 11px) !important;
+      align-items: stretch !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--multi .survey-qa-multi-choice {
       margin-bottom: 0 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice {
       margin: 0 !important;
-      padding: var(--print-multi-pad, 3px 5px 3px 6px) !important;
-      border-left-width: 2px !important;
-      border-radius: 3px !important;
+      padding: var(--print-multi-pad, 6px 8px 6px 9px) !important;
+      border-left: 2px solid #3d6b9e !important;
+      border-radius: 5px !important;
+      background: rgba(61, 107, 158, 0.07) !important;
       page-break-inside: auto !important;
       break-inside: auto !important;
       min-width: 0 !important;
@@ -2330,14 +2335,18 @@
       word-break: keep-all;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type {
-      margin-bottom: var(--print-multi-type-mb, 2px) !important;
-      font-size: calc(var(--print-font-pt, 10.5pt) * 0.95) !important;
+      margin-bottom: var(--print-multi-type-mb, 3px) !important;
+      font-size: calc(var(--print-font-pt, 11pt) * 0.96) !important;
+      line-height: 1.32 !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__detail {
+      line-height: 1.38 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
       .student-survey-report--smart
       .survey-qa-item__question {
-      font-size: calc(var(--print-font-pt, 10.5pt) * 0.92 + 1pt) !important;
+      font-size: calc(var(--print-font-pt, 11pt) * 0.94 + 1pt) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
@@ -2351,13 +2360,13 @@
       #results
       .student-survey-report--smart
       .survey-qa-multi-choice__detail {
-      font-size: calc(var(--print-font-pt, 10.5pt) + 1pt) !important;
+      font-size: calc(var(--print-font-pt, 11pt) + 1pt) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
       .student-survey-report--smart
       .survey-qa-multi-choice__type {
-      font-size: calc(var(--print-font-pt, 10.5pt) * 0.95 + 1pt) !important;
+      font-size: calc(var(--print-font-pt, 11pt) * 0.96 + 1pt) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale {
       margin-top: var(--print-likert-mt, 2px) !important;
@@ -2450,7 +2459,7 @@
         --error-text: #b91c1c;
       }
       .admin-setup-panel { display: none !important; }
-      @page { size: A4; margin: 13mm; }
+      @page { size: A4; margin: 18mm 13mm 13mm 13mm; }
       body { padding: 0 !important; background: #fff !important; color: #0f172a !important; }
       body.is-printing-results * { visibility: hidden; }
       body.is-printing-results #results,
@@ -2627,8 +2636,8 @@
         .survey-field-line__value--multi {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 3px 8px !important;
-        align-items: start !important;
+        gap: var(--print-multi-row-gap, 7px) var(--print-multi-col-gap, 11px) !important;
+        align-items: stretch !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -2636,6 +2645,12 @@
         page-break-inside: auto !important;
         break-inside: auto !important;
         min-width: 0 !important;
+        padding: var(--print-multi-pad, 6px 8px 6px 9px) !important;
+        border-left: 2px solid #3d6b9e !important;
+        border-radius: 5px !important;
+        background: rgba(61, 107, 158, 0.07) !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       /* 담임선생님께!: 반 전원 한 페이지 압축 그리드 */
       body.is-printing-results.print-teacher-mode .student-cards-list {
@@ -8438,8 +8453,8 @@
   }
 
   function getPrintablePageHeightPx() {
-    /* A4 297mm − 상하 여백 13mm×2 ≈ 271mm 인쇄 가능 높이 */
-    return Math.round((271 * 96) / 25.4);
+    /* A4 297mm − 위 18mm(기존 13+5) − 아래 13mm ≈ 266mm */
+    return Math.round((266 * 96) / 25.4);
   }
 
   /** 인쇄 본문·Q&A 등 전체 글자 크기 가산 (1인1페이지 맞춤·줌 규칙은 그대로) */
@@ -8450,7 +8465,8 @@
     "--print-line-height",
     "--print-block-gap",
     "--print-block-pad",
-    "--print-card-pad",
+    "--print-card-pad-top",
+    "--print-card-pad-x",
     "--print-header-mb",
     "--print-header-pb",
     "--print-body-pb",
@@ -8459,6 +8475,10 @@
     "--print-qa-pad",
     "--print-qa-q-mb",
     "--print-report-gap",
+    "--print-multi-row-gap",
+    "--print-multi-col-gap",
+    "--print-multi-pad",
+    "--print-multi-type-mb",
     "--print-likert-mt",
     "--print-likert-legend-mb",
     "--print-likert-track-gap",
@@ -8485,69 +8505,89 @@
     card.style.setProperty("--print-line-height", String(lineH));
     card.classList.toggle("print-fit-compact-likert", tier >= 2);
     if (tier >= 3) {
-      card.style.setProperty("--print-block-gap", "2px");
-      card.style.setProperty("--print-block-pad", "3px 5px 2px");
-      card.style.setProperty("--print-card-pad", "4px 6px 0");
-      card.style.setProperty("--print-header-mb", "3px");
-      card.style.setProperty("--print-header-pb", "3px");
-      card.style.setProperty("--print-body-pb", "4px");
-      card.style.setProperty("--print-title-mb", "1px");
-      card.style.setProperty("--print-qa-gap", "2px");
-      card.style.setProperty("--print-qa-pad", "3px 5px");
-      card.style.setProperty("--print-qa-q-mb", "2px");
-      card.style.setProperty("--print-report-gap", "0");
-      card.style.setProperty("--print-likert-mt", "1px");
-      card.style.setProperty("--print-likert-legend-mb", "2px");
-      card.style.setProperty("--print-likert-track-gap", "2px");
-      card.style.setProperty("--print-likert-step-h", "16px");
-    } else if (tier >= 2) {
       card.style.setProperty("--print-block-gap", "3px");
       card.style.setProperty("--print-block-pad", "4px 6px 3px");
-      card.style.setProperty("--print-card-pad", "6px 8px 0");
+      card.style.setProperty("--print-card-pad-top", "6px");
+      card.style.setProperty("--print-card-pad-x", "8px");
       card.style.setProperty("--print-header-mb", "4px");
       card.style.setProperty("--print-header-pb", "4px");
-      card.style.setProperty("--print-body-pb", "6px");
+      card.style.setProperty("--print-body-pb", "5px");
       card.style.setProperty("--print-title-mb", "2px");
       card.style.setProperty("--print-qa-gap", "3px");
       card.style.setProperty("--print-qa-pad", "4px 6px");
       card.style.setProperty("--print-qa-q-mb", "2px");
       card.style.setProperty("--print-report-gap", "0");
+      card.style.setProperty("--print-multi-row-gap", "4px");
+      card.style.setProperty("--print-multi-col-gap", "7px");
+      card.style.setProperty("--print-multi-pad", "4px 5px 4px 6px");
+      card.style.setProperty("--print-multi-type-mb", "2px");
       card.style.setProperty("--print-likert-mt", "2px");
       card.style.setProperty("--print-likert-legend-mb", "2px");
       card.style.setProperty("--print-likert-track-gap", "3px");
-      card.style.setProperty("--print-likert-step-h", "18px");
-    } else if (tier >= 1) {
-      card.style.setProperty("--print-block-gap", "5px");
-      card.style.setProperty("--print-block-pad", "6px 8px 5px");
-      card.style.setProperty("--print-card-pad", "8px 10px 0");
-      card.style.setProperty("--print-header-mb", "6px");
-      card.style.setProperty("--print-header-pb", "6px");
-      card.style.setProperty("--print-body-pb", "8px");
+      card.style.setProperty("--print-likert-step-h", "17px");
+    } else if (tier >= 2) {
+      card.style.setProperty("--print-block-gap", "4px");
+      card.style.setProperty("--print-block-pad", "5px 7px 4px");
+      card.style.setProperty("--print-card-pad-top", "8px");
+      card.style.setProperty("--print-card-pad-x", "10px");
+      card.style.setProperty("--print-header-mb", "5px");
+      card.style.setProperty("--print-header-pb", "5px");
+      card.style.setProperty("--print-body-pb", "7px");
       card.style.setProperty("--print-title-mb", "3px");
-      card.style.setProperty("--print-qa-gap", "4px");
-      card.style.setProperty("--print-qa-pad", "5px 7px");
+      card.style.setProperty("--print-qa-gap", "5px");
+      card.style.setProperty("--print-qa-pad", "5px 8px");
       card.style.setProperty("--print-qa-q-mb", "3px");
-      card.style.setProperty("--print-report-gap", "0");
+      card.style.setProperty("--print-report-gap", "1px");
+      card.style.setProperty("--print-multi-row-gap", "5px");
+      card.style.setProperty("--print-multi-col-gap", "9px");
+      card.style.setProperty("--print-multi-pad", "5px 6px 5px 7px");
+      card.style.setProperty("--print-multi-type-mb", "2px");
       card.style.setProperty("--print-likert-mt", "2px");
       card.style.setProperty("--print-likert-legend-mb", "3px");
       card.style.setProperty("--print-likert-track-gap", "4px");
-      card.style.setProperty("--print-likert-step-h", "20px");
-    } else {
-      card.style.setProperty("--print-block-gap", "7px");
-      card.style.setProperty("--print-block-pad", "8px 10px 6px");
-      card.style.setProperty("--print-card-pad", "10px 12px 0");
-      card.style.setProperty("--print-header-mb", "8px");
-      card.style.setProperty("--print-header-pb", "8px");
-      card.style.setProperty("--print-body-pb", "10px");
-      card.style.setProperty("--print-title-mb", "4px");
-      card.style.setProperty("--print-qa-gap", "6px");
-      card.style.setProperty("--print-qa-pad", "6px 8px");
+      card.style.setProperty("--print-likert-step-h", "19px");
+    } else if (tier >= 1) {
+      card.style.setProperty("--print-block-gap", "6px");
+      card.style.setProperty("--print-block-pad", "7px 9px 5px");
+      card.style.setProperty("--print-card-pad-top", "10px");
+      card.style.setProperty("--print-card-pad-x", "12px");
+      card.style.setProperty("--print-header-mb", "7px");
+      card.style.setProperty("--print-header-pb", "7px");
+      card.style.setProperty("--print-body-pb", "9px");
+      card.style.setProperty("--print-title-mb", "3px");
+      card.style.setProperty("--print-qa-gap", "7px");
+      card.style.setProperty("--print-qa-pad", "6px 9px");
       card.style.setProperty("--print-qa-q-mb", "4px");
-      card.style.setProperty("--print-report-gap", "0");
+      card.style.setProperty("--print-report-gap", "1px");
+      card.style.setProperty("--print-multi-row-gap", "6px");
+      card.style.setProperty("--print-multi-col-gap", "10px");
+      card.style.setProperty("--print-multi-pad", "5px 7px 5px 8px");
+      card.style.setProperty("--print-multi-type-mb", "3px");
+      card.style.setProperty("--print-likert-mt", "3px");
+      card.style.setProperty("--print-likert-legend-mb", "3px");
+      card.style.setProperty("--print-likert-track-gap", "4px");
+      card.style.setProperty("--print-likert-step-h", "21px");
+    } else {
+      card.style.setProperty("--print-block-gap", "8px");
+      card.style.setProperty("--print-block-pad", "9px 11px 7px");
+      card.style.setProperty("--print-card-pad-top", "12px");
+      card.style.setProperty("--print-card-pad-x", "14px");
+      card.style.setProperty("--print-header-mb", "9px");
+      card.style.setProperty("--print-header-pb", "9px");
+      card.style.setProperty("--print-body-pb", "11px");
+      card.style.setProperty("--print-title-mb", "4px");
+      card.style.setProperty("--print-qa-gap", "9px");
+      card.style.setProperty("--print-qa-pad", "8px 10px");
+      card.style.setProperty("--print-qa-q-mb", "5px");
+      card.style.setProperty("--print-report-gap", "2px");
+      card.style.setProperty("--print-multi-row-gap", "7px");
+      card.style.setProperty("--print-multi-col-gap", "11px");
+      card.style.setProperty("--print-multi-pad", "6px 8px 6px 9px");
+      card.style.setProperty("--print-multi-type-mb", "3px");
       card.style.setProperty("--print-likert-mt", "3px");
       card.style.setProperty("--print-likert-legend-mb", "4px");
       card.style.setProperty("--print-likert-track-gap", "5px");
-      card.style.setProperty("--print-likert-step-h", "22px");
+      card.style.setProperty("--print-likert-step-h", "23px");
     }
   }
 
@@ -8558,19 +8598,19 @@
   function applyPrintZoomToFit(card, pageBudget) {
     card.style.removeProperty("--print-zoom");
     if (card.scrollHeight <= pageBudget) return;
-    var scale = Math.max(0.82, Math.min(1, (pageBudget - 2) / card.scrollHeight));
+    var scale = Math.max(0.86, Math.min(1, (pageBudget - 2) / card.scrollHeight));
     card.style.setProperty("--print-zoom", String(Math.round(scale * 1000) / 1000));
     if (card.scrollHeight > pageBudget) {
-      scale = Math.max(0.82, (pageBudget - 2) / card.scrollHeight);
+      scale = Math.max(0.86, (pageBudget - 2) / card.scrollHeight);
       card.style.setProperty("--print-zoom", String(Math.round(scale * 1000) / 1000));
     }
   }
 
   function fitStudentCardToOnePage(card, pageBudget) {
-    var minFontPt = 5.5;
-    var minLineH = 1.06;
-    var maxFontPt = 10;
-    var maxLineH = 1.36;
+    var minFontPt = 6;
+    var minLineH = 1.1;
+    var maxFontPt = 10.75;
+    var maxLineH = 1.38;
     var bestFont = minFontPt;
     var bestLine = minLineH;
     var bestTier = 3;
@@ -8631,7 +8671,7 @@
     if (!document.body.classList.contains("is-printing-results")) {
       document.body.classList.add("is-printing-results");
     }
-    var pageBudget = getPrintablePageHeightPx() - 12;
+    var pageBudget = getPrintablePageHeightPx() - 8;
 
     cards.forEach(function (card) {
       fitStudentCardToOnePage(card, pageBudget);
