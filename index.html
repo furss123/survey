@@ -7521,17 +7521,12 @@
     if (opts.compactHeader) {
       html += '<header class="student-response-header student-response-header--compact">';
       html += '<div class="header-meta">';
-      if (num) html += '<span class="student-num">' + esc(num) + "번</span>";
-      if (name) html += '<span class="student-name">' + esc(name) + "</span>";
-      else if (num) html += '<span class="student-name student-name--placeholder">이름 없음</span>';
-      if (row.학번) html += '<span class="student-id">' + esc(row.학번) + "</span>";
-      html += "</div>";
-      if (row.완료) {
-        html += '<span class="status-badge done">완료</span>';
-      } else if (row.완료 === false) {
-        html += '<span class="status-badge pending">미완료</span>';
-      }
-      html += "</header>";
+      var compactLabel = "";
+      if (num && name) compactLabel = esc(num) + "번 " + esc(name);
+      else if (num) compactLabel = esc(num) + "번";
+      else if (name) compactLabel = esc(name);
+      html += '<span class="student-name">' + (compactLabel || "—") + "</span>";
+      html += "</div></header>";
     } else {
       html += renderStudentResponseHeader(row);
     }
@@ -7640,10 +7635,12 @@
     if (!opts.compactHeader && sheetName) {
       html += '<span class="student-class">' + esc(sheetName) + "</span>";
     }
-    if (num != null) html += '<span class="student-num">' + esc(num) + "번</span>";
-    html += '<span class="student-name">' + esc(name) + "</span>";
-    html += "</div>";
-    html += '<span class="status-badge pending">미참여</span></header>';
+    var absentLabel = "";
+    if (num != null && name) absentLabel = esc(num) + "번 " + esc(name);
+    else if (num != null) absentLabel = esc(num) + "번";
+    else absentLabel = esc(name);
+    html += '<span class="student-name">' + absentLabel + "</span>";
+    html += "</div></header>";
     html += '<div class="student-response-body"><p class="absent-note">설문에 참여하지 않았습니다.</p></div>';
     html += '<hr class="student-card-divider" aria-hidden="true" />';
     html += "</article>";
