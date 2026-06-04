@@ -7829,9 +7829,20 @@
     if (normalized.indexOf(",") < 0) return false;
     if (/"[^"]*"\s*,/.test(normalized)) return true;
     if (/형\s*[-–—][^,]{1,}\s*,/.test(normalized)) return true;
-    return /(?:[\.\!\?…⋯]|[가-힣](?:다|요|함|때|임|음|네|죠|까|나|라|며|고|서|면|줘|세)|습니다|해요|돼요|있어요|없어요|겠어요|했어요|였어요|할게요|인가요|되나요|뿌듯함|느낄)\s*,/.test(
+    return /(?:[\.\!\?…⋯]|[가-힣](?:다|요|함|때|임|음|네|죠|까|나|라|며|서|면|줘|세)|습니다|해요|돼요|있어요|없어요|겠어요|했어요|였어요|할게요|인가요|되나요|뿌듯함|느낄)\s*,/.test(
       normalized
     );
+  }
+
+  /** Q8 실천 계획: 선택지 문구 안 쉼표는 유지, 선택지 사이만 분리 */
+  function splitSmartQ8ActionPlanAnswer(text) {
+    return String(text || "")
+      .replace(/\uFF0C/g, ",")
+      .split(/,\s*(?=(?:매(?:일| 단원)|배운|수업|틀린|시험|공부|집중|기말|포모도로))/)
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
   }
 
   function isQuoteChar(ch) {
@@ -7843,6 +7854,7 @@
     var parts = [];
     var current = "";
     var inQuote = false;
+    var parenDepth = 0;
     for (var i = 0; i < text.length; i++) {
       var ch = text[i];
       if (isQuoteChar(ch)) {
@@ -7850,7 +7862,17 @@
         current += ch;
         continue;
       }
-      if (!inQuote && ch === ",") {
+      if (!inQuote && ch === "(") {
+        parenDepth++;
+        current += ch;
+        continue;
+      }
+      if (!inQuote && ch === ")" && parenDepth > 0) {
+        parenDepth--;
+        current += ch;
+        continue;
+      }
+      if (!inQuote && parenDepth === 0 && ch === ",") {
         var rest = text.slice(i + 1);
         if (/^\s*\S/.test(rest)) {
           var piece = current.trim();
@@ -7911,6 +7933,13 @@
     if (!text || text === "—") return null;
     if (!isQuestionMultiSelectAllowed(question)) return null;
     var normalizedComma = text.replace(/\uFF0C/g, ",");
+    var qMain = getQuestionMainNumber(question);
+
+    if (qMain === 8) {
+      var q8Parts = splitSmartQ8ActionPlanAnswer(normalizedComma);
+      if (q8Parts.length >= 2) return q8Parts;
+      if (q8Parts.length === 1) return null;
+    }
 
     if (hasCommaAfterSentenceEnd(normalizedComma)) {
       var forcedComma = splitCommaSeparatedRespectingQuotes(normalizedComma);
