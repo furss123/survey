@@ -2316,15 +2316,15 @@
     body.admin-setup-mode .section-head-row .admin-entry-link {
       display: none;
     }
-    /* 학생 인쇄 1인1페이지: A4 210×297mm, 쪽테두리 안쪽 여백 상하좌우 3mm */
+    /* 학생 인쇄 1인1페이지: A4, 쪽테두리 여백 20mm, 내용(테두리 안) 4mm·전폭 */
     body.print-one-student-per-page:not(.print-teacher-mode) {
-      --print-page-margin: 0;
-      --print-sheet-width: 210mm;
-      --print-sheet-height: 297mm;
-      --print-card-pad-top: 3mm;
-      --print-card-pad-right: 3mm;
-      --print-card-pad-bottom: 3mm;
-      --print-card-pad-left: 3mm;
+      --print-page-margin: 20mm;
+      --print-sheet-width: 170mm;
+      --print-sheet-height: 257mm;
+      --print-card-pad-top: 4mm;
+      --print-card-pad-right: 4mm;
+      --print-card-pad-bottom: 4mm;
+      --print-card-pad-left: 4mm;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results.visible {
       width: 100% !important;
@@ -2350,10 +2350,10 @@
       width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
-      padding-top: var(--print-card-pad-top, 3mm) !important;
-      padding-right: var(--print-card-pad-right, 3mm) !important;
-      padding-bottom: var(--print-card-pad-bottom, 3mm) !important;
-      padding-left: var(--print-card-pad-left, 3mm) !important;
+      padding-top: var(--print-card-pad-top, 4mm) !important;
+      padding-right: var(--print-card-pad-right, 4mm) !important;
+      padding-bottom: var(--print-card-pad-bottom, 4mm) !important;
+      padding-left: var(--print-card-pad-left, 4mm) !important;
       max-height: none;
       overflow: visible;
       box-sizing: border-box;
@@ -2775,11 +2775,11 @@
       transform-origin: top center;
     }
     body.print-fit-measuring.print-one-student-per-page #results {
-      width: var(--print-sheet-width, 210mm);
-      max-width: var(--print-sheet-width, 210mm);
+      width: var(--print-sheet-width, 170mm);
+      max-width: var(--print-sheet-width, 170mm);
     }
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
-      max-width: var(--print-sheet-width, 210mm);
+      max-width: var(--print-sheet-width, 170mm);
       min-height: 0 !important;
     }
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card::after {
@@ -2867,7 +2867,7 @@
       }
       @page {
         size: A4;
-        margin: var(--print-page-margin, 0); /* A4 전체, 테두리 안쪽 3mm 패딩 */
+        margin: var(--print-page-margin, 20mm); /* A4 → 쪽 170×257mm, 내용 안쪽 4mm */
       }
       body {
         padding: 0 !important;
@@ -2947,7 +2947,7 @@
         #results.visible
         .student-card.print-fit-applied {
         overflow: hidden !important;
-        max-height: var(--print-sheet-height, 297mm) !important;
+        max-height: var(--print-sheet-height, 257mm) !important;
         box-sizing: border-box !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
@@ -3172,8 +3172,8 @@
         position: relative !important;
         width: 100% !important;
         max-width: 100% !important;
-        min-height: var(--print-sheet-height, 297mm) !important;
-        max-height: var(--print-sheet-height, 297mm) !important;
+        min-height: var(--print-sheet-height, 257mm) !important;
+        max-height: var(--print-sheet-height, 257mm) !important;
         margin: 0 !important;
         border: none !important;
         border-radius: 0 !important;
@@ -3188,7 +3188,7 @@
         left: 0 !important;
         right: 0 !important;
         width: 100% !important;
-        height: var(--print-sheet-height, 297mm) !important;
+        height: var(--print-sheet-height, 257mm) !important;
         border: 1px solid #c5d4e6 !important;
         border-radius: var(--print-frame-radius, 12px) !important;
         box-sizing: border-box !important;
@@ -3453,7 +3453,7 @@
     }
   </style>
   <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260611">
-  <link rel="stylesheet" href="styles/survey-print.css?v=20260617">
+  <link rel="stylesheet" href="styles/survey-print.css?v=20260618">
 </head>
 <body>
   <header class="site-header no-print">
@@ -9424,8 +9424,8 @@
   }
 
   function getPrintablePageHeightPx() {
-    /* A4 297mm border-box, 쪽테두리 안쪽 패딩 3mm×2 → 본문 높이 ≈ 291mm */
-    return Math.round((291 * 96) / 25.4);
+    /* 쪽 257mm − 내용 패딩 4mm×2 → 본문 높이 249mm */
+    return Math.round((249 * 96) / 25.4);
   }
 
   function getStudentCardPageBudgetPx(card) {
@@ -9541,10 +9541,10 @@
       Math.round((fontPt + PRINT_FONT_SIZE_BUMP_PT) * 20) / 20 + "pt"
     );
     card.style.setProperty("--print-line-height", String(lineH));
-    card.style.setProperty("--print-card-pad-top", "3mm");
-    card.style.setProperty("--print-card-pad-bottom", "3mm");
-    card.style.setProperty("--print-card-pad-left", "3mm");
-    card.style.setProperty("--print-card-pad-right", "3mm");
+    card.style.setProperty("--print-card-pad-top", "4mm");
+    card.style.setProperty("--print-card-pad-bottom", "4mm");
+    card.style.setProperty("--print-card-pad-left", "4mm");
+    card.style.setProperty("--print-card-pad-right", "4mm");
     card.classList.toggle("print-fit-compact-likert", tier >= 2);
     if (tier >= 4) {
       card.style.setProperty("--print-block-gap", "2px");
