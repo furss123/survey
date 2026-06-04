@@ -2560,8 +2560,42 @@
         display: none !important;
         visibility: hidden !important;
       }
+      body.is-printing-results #appLayout {
+        display: block !important;
+        visibility: visible !important;
+      }
+      body.is-printing-results #homePanel {
+        display: none !important;
+      }
       @page { size: A4; margin: 18mm 13mm 13mm 13mm; }
       body { padding: 0 !important; background: #fff !important; color: #0f172a !important; }
+      /* 인쇄 시 #results를 body 직속으로 옮긴 뒤, 나머지 UI는 숨기고 결과만 출력 */
+      body.is-printing-results.survey-print-detached > *:not(#results) {
+        display: none !important;
+      }
+      body.is-printing-results.survey-print-detached * {
+        visibility: hidden;
+      }
+      body.is-printing-results.survey-print-detached #results,
+      body.is-printing-results.survey-print-detached #results * {
+        visibility: visible !important;
+      }
+      body.is-printing-results.survey-print-detached #results.visible {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        color: #0f172a !important;
+        overflow: visible !important;
+      }
       body.is-printing-results .site-header,
       body.is-printing-results #siteFooterRoot,
       body.is-printing-results #homePanel,
@@ -2981,7 +3015,7 @@
     </div>
   </div>
 
-  <div class="app-layout no-print" id="appLayout">
+  <div class="app-layout" id="appLayout">
     <main class="app-main">
       <div id="homePanel" class="search-container">
         <section class="panel-section">
@@ -8736,6 +8770,7 @@
   }
 
   function showHomeView() {
+    restoreResultsAfterPrint();
     var homePanel = document.getElementById("homePanel");
     var results = document.getElementById("results");
     var errorEl = document.getElementById("error");
@@ -8816,6 +8851,48 @@
     "--print-likert-step-h",
     "--print-zoom",
   ];
+
+  var surveyPrintRestore = null;
+
+  function attachResultsForPrint() {
+    var results = document.getElementById("results");
+    if (!results || !results.classList.contains("visible") || surveyPrintRestore) return;
+    surveyPrintRestore = {
+      parent: results.parentNode,
+      next: results.nextSibling,
+    };
+    document.body.appendChild(results);
+    document.body.classList.add("survey-print-detached");
+  }
+
+  function restoreResultsAfterPrint() {
+    var results = document.getElementById("results");
+    if (!surveyPrintRestore || !results) return;
+    var parent = surveyPrintRestore.parent;
+    if (parent) {
+      if (surveyPrintRestore.next) {
+        parent.insertBefore(results, surveyPrintRestore.next);
+      } else {
+        parent.appendChild(results);
+      }
+    }
+    surveyPrintRestore = null;
+    document.body.classList.remove("survey-print-detached");
+  }
+
+  function copyPrintFitFromCard(source, target) {
+    if (!source || !target || source === target) return;
+    target.classList.toggle("print-fit-applied", source.classList.contains("print-fit-applied"));
+    target.classList.toggle(
+      "print-fit-compact-likert",
+      source.classList.contains("print-fit-compact-likert")
+    );
+    PRINT_FIT_SPACING_PROPS.forEach(function (prop) {
+      var val = source.style.getPropertyValue(prop);
+      if (val) target.style.setProperty(prop, val);
+      else target.style.removeProperty(prop);
+    });
+  }
 
   function clearStudentCardsPrintFit() {
     document.querySelectorAll("#results .student-card").forEach(function (card) {
@@ -8937,52 +9014,54 @@
     }
   }
 
+  function largestFontThatFits(card, pageBudget, lineH, tier, minFontPt, maxFontPt) {
+    applyStudentCardPrintFitVars(card, maxFontPt, lineH, tier);
+    card.style.removeProperty("--print-zoom");
+    if (!studentCardFitsPage(card, pageBudget)) {
+      var h = card.scrollHeight;
+      if (h > pageBudget) {
+        var est = Math.max(
+          minFontPt,
+          Math.min(maxFontPt, Math.round(maxFontPt * ((pageBudget - 2) / h) * 20) / 20)
+        );
+        applyStudentCardPrintFitVars(card, est, lineH, tier);
+        if (!studentCardFitsPage(card, pageBudget)) {
+          for (var down = est; down + 0.001 >= minFontPt; down = Math.round((down - 0.25) * 20) / 20) {
+            applyStudentCardPrintFitVars(card, down, lineH, tier);
+            card.style.removeProperty("--print-zoom");
+            if (studentCardFitsPage(card, pageBudget)) return down;
+          }
+          return minFontPt;
+        }
+        for (var up = est; up + 0.001 <= maxFontPt; up = Math.round((up + 0.25) * 20) / 20) {
+          applyStudentCardPrintFitVars(card, up, lineH, tier);
+          card.style.removeProperty("--print-zoom");
+          if (!studentCardFitsPage(card, pageBudget)) {
+            return Math.max(minFontPt, Math.round((up - 0.25) * 20) / 20);
+          }
+        }
+        return Math.min(maxFontPt, up);
+      }
+    }
+    return maxFontPt;
+  }
+
   function fitStudentCardToOnePage(card, pageBudget) {
     var minFontPt = 6;
     var minLineH = 1.1;
     var maxFontPt = 10.75;
     var maxLineH = 1.38;
-    var bestFont = minFontPt;
-    var bestLine = minLineH;
-    var bestTier = 3;
 
     card.style.removeProperty("--print-zoom");
 
     for (var tier = 0; tier <= 3; tier++) {
       var lineH = maxLineH;
       while (lineH + 0.001 >= minLineH) {
-        var lo = minFontPt;
-        var hi = maxFontPt;
-        var chosen = minFontPt;
-        while (hi - lo > 0.1) {
-          var mid = Math.round(((lo + hi) / 2) * 20) / 20;
-          applyStudentCardPrintFitVars(card, mid, lineH, tier);
-          card.style.removeProperty("--print-zoom");
-          if (studentCardFitsPage(card, pageBudget)) {
-            chosen = mid;
-            lo = mid + 0.1;
-          } else {
-            hi = mid - 0.1;
-          }
-        }
-        for (var tryFont = chosen; tryFont + 0.001 >= minFontPt; tryFont = Math.round((tryFont - 0.12) * 20) / 20) {
-          applyStudentCardPrintFitVars(card, tryFont, lineH, tier);
-          card.style.removeProperty("--print-zoom");
-          if (studentCardFitsPage(card, pageBudget)) {
-            chosen = tryFont;
-            break;
-          }
-        }
-        applyStudentCardPrintFitVars(card, chosen, lineH, tier);
+        var fontPt = largestFontThatFits(card, pageBudget, lineH, tier, minFontPt, maxFontPt);
+        applyStudentCardPrintFitVars(card, fontPt, lineH, tier);
         card.style.removeProperty("--print-zoom");
-        if (studentCardFitsPage(card, pageBudget)) {
-          bestFont = chosen;
-          bestLine = lineH;
-          bestTier = tier;
-          applyStudentCardPrintFitVars(card, bestFont, bestLine, bestTier);
-          return;
-        }
-        lineH = Math.round((lineH - 0.025) * 100) / 100;
+        if (studentCardFitsPage(card, pageBudget)) return;
+        lineH = Math.round((lineH - 0.05) * 100) / 100;
       }
     }
 
@@ -8990,26 +9069,59 @@
     applyPrintZoomToFit(card, pageBudget);
   }
 
-  function prepareStudentCardsPrintFit() {
-    clearStudentCardsPrintFit();
+  var surveyPrintFitToken = "";
+
+  function getSurveyPrintFitToken() {
+    var cards = document.querySelectorAll("#results .student-card:not(.student-card--absent)");
+    var parts = [String(cards.length)];
+    for (var i = 0; i < cards.length; i++) {
+      parts.push(
+        (cards[i].getAttribute("data-student-num") || "") +
+          ":" +
+          (cards[i].getAttribute("data-student-name") || String(i))
+      );
+    }
+    return parts.join("|");
+  }
+
+  function prepareStudentCardsPrintFit(force) {
     if (!shouldPrintOneStudentPerPage()) return;
+    var token = getSurveyPrintFitToken();
+    if (!force && token && token === surveyPrintFitToken) {
+      var applied = document.querySelector(
+        "#results .student-card.print-fit-applied:not(.student-card--absent)"
+      );
+      if (applied) return;
+    }
+    clearStudentCardsPrintFit();
     var cards = document.querySelectorAll(
       "#results .student-card:not(.student-card--absent)"
     );
     if (!cards.length) return;
 
-    document.body.classList.add("print-fit-measuring", "print-one-student-per-page");
-    if (!document.body.classList.contains("is-printing-results")) {
-      document.body.classList.add("is-printing-results");
-    }
+    document.body.classList.add("print-fit-measuring");
     var pageBudget = getPrintablePageHeightPx() - 8;
-
-    cards.forEach(function (card) {
-      fitStudentCardToOnePage(card, pageBudget);
-      card.classList.add("print-fit-applied");
-    });
+    var tallest = cards[0];
+    var maxHeight = 0;
+    var i;
+    for (i = 0; i < cards.length; i++) {
+      cards[i].style.removeProperty("--print-zoom");
+      applyStudentCardPrintFitVars(cards[i], 10.75, 1.38, 0);
+      var h = cards[i].scrollHeight;
+      if (h > maxHeight) {
+        maxHeight = h;
+        tallest = cards[i];
+      }
+    }
+    fitStudentCardToOnePage(tallest, pageBudget);
+    tallest.classList.add("print-fit-applied");
+    for (i = 0; i < cards.length; i++) {
+      copyPrintFitFromCard(tallest, cards[i]);
+      cards[i].classList.add("print-fit-applied");
+    }
 
     document.body.classList.remove("print-fit-measuring");
+    surveyPrintFitToken = token;
   }
 
   function runSurveyPrint() {
@@ -9020,11 +9132,10 @@
     }
     syncResultsPrintState(results);
     setPrintMode(true);
-    prepareStudentCardsPrintFit();
+    prepareStudentCardsPrintFit(true);
+    attachResultsForPrint();
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        window.print();
-      });
+      window.print();
     });
   }
 
@@ -9064,6 +9175,7 @@
   }
 
   function renderResults(data, spreadsheetId, multi) {
+    surveyPrintFitToken = "";
     var el = document.getElementById("results");
     ensureClassSelectionForResults();
     var sheet = getActiveSheetAnalysis();
@@ -9381,12 +9493,20 @@
     if (results && results.classList.contains("visible")) {
       syncResultsPrintState(results);
       setPrintMode(true);
-      prepareStudentCardsPrintFit();
+      prepareStudentCardsPrintFit(false);
+      attachResultsForPrint();
     } else {
-      document.body.classList.remove("is-printing-results", "print-one-student-per-page", "print-teacher-mode");
+      document.body.classList.remove(
+        "is-printing-results",
+        "print-one-student-per-page",
+        "print-teacher-mode",
+        "survey-print-detached"
+      );
     }
   });
   window.addEventListener("afterprint", function () {
+    surveyPrintFitToken = "";
+    restoreResultsAfterPrint();
     setPrintMode(false);
     clearStudentCardsPrintFit();
   });
