@@ -9,7 +9,8 @@ body.is-printing-results {
   --print-page-margin-x: 15mm;
   --print-sheet-width: 180mm;
   --print-card-pad-left: 3mm;
-  --print-card-pad-right: 2mm;
+  --print-card-pad-right: 3mm;
+  --print-qa-pad-y: 5px;
   --print-ink: #243044;
   --print-ink-body: #3d4d61;
   --print-ink-muted: #6b7f94;
@@ -72,19 +73,35 @@ body.is-printing-results #results .student-print-title__name {
   font-weight: 700 !important;
 }
 
-/* ── 문항 목록 간격 ── */
+/* ── 문항 목록: 프레임 안 전폭·좌측 3mm 기준 ── */
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card__print-fit,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-body,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report__teacher,
+body.is-printing-results #results .student-card__print-fit,
+body.is-printing-results #results .student-response-body,
+body.is-printing-results #results .student-survey-report--adaptive,
+body.is-printing-results #results .student-survey-report__teacher {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive,
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report__teacher,
 body.is-printing-results #results .student-survey-report--adaptive,
 body.is-printing-results #results .student-survey-report__teacher {
-  gap: 7px !important;
+  gap: 6px !important;
+  align-items: stretch !important;
 }
 
-/* ── 문항 카드: 좌측 포인트 라인 1개 ── */
+/* ── 문항 카드: 전폭·좌우 대칭 테두리 ── */
 body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card,
 body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
   padding-left: var(--print-card-pad-left, 3mm) !important;
-  padding-right: var(--print-card-pad-right, 2mm) !important;
+  padding-right: var(--print-card-pad-right, 3mm) !important;
   text-align: left !important;
 }
 
@@ -121,18 +138,22 @@ body.is-printing-results #results .survey-qa-item__answer--multi {
   align-items: flex-start !important;
 }
 
-body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item,
-body.is-printing-results #results .survey-qa-item {
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .survey-qa-item,
+body.is-printing-results #results .student-card .survey-qa-item {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
   margin: 0 !important;
-  padding: 7px 8px 8px 10px !important;
+  padding: var(--print-qa-pad-y) 0 calc(var(--print-qa-pad-y) + 1px) !important;
   background: var(--print-surface) !important;
   border: 1px solid var(--print-line) !important;
-  border-left: 3px solid var(--print-accent) !important;
   border-radius: var(--print-radius) !important;
   box-shadow: none !important;
+  box-sizing: border-box !important;
   color: var(--print-ink-body) !important;
   page-break-inside: avoid !important;
   break-inside: avoid !important;
+  text-align: left !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__question,
@@ -140,7 +161,10 @@ body.is-printing-results #results .survey-qa-item__question,
 body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
   .student-card
   .survey-qa-item__question {
-  margin: 0 0 5px !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 0 4px !important;
   padding: 0 !important;
   border-bottom: none !important;
   font-size: 9.25pt !important;
@@ -167,6 +191,9 @@ body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
   .survey-qa-item__answer--multi-one {
   display: flex !important;
   flex-direction: column !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+  max-width: 100% !important;
   gap: 3px !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -174,6 +201,7 @@ body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+  text-align: left !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode)
@@ -204,11 +232,16 @@ body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-mul
 body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
   .student-card
   .survey-qa-multi-choice {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
   margin: 0 !important;
-  padding: 1px 0 1px 0.85em !important;
+  padding: 1px 0 1px 0.65em !important;
   border: none !important;
   background: transparent !important;
   position: relative !important;
+  text-align: left !important;
+  box-sizing: border-box !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice--plain::before,
@@ -299,7 +332,13 @@ body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
 /* ── 척도: 한 줄 트랙, 선택만 강조 ── */
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item .likert-scale,
 body.is-printing-results #results .survey-qa-item .likert-scale {
-  margin-top: 3px !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 3px 0 0 !important;
+  padding: 0 !important;
+  text-align: left !important;
+  box-sizing: border-box !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__legend,
@@ -318,12 +357,19 @@ body.is-printing-results #results .likert-scale__legend em {
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item .likert-scale__track,
 body.is-printing-results #results .survey-qa-item .likert-scale__track {
-  gap: 4px !important;
-  padding: 5px 8px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 0 !important;
+  padding: 0 !important;
   background: var(--print-fill) !important;
   border: 1px solid var(--print-line) !important;
   border-radius: 4px !important;
-  justify-content: flex-start !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__legend,
@@ -337,10 +383,21 @@ body.is-printing-results #results .survey-qa-item .likert-scale__step.is-filled 
   flex: 1 1 0 !important;
   min-height: 22px !important;
   min-width: 0 !important;
+  margin: 0 !important;
   background: transparent !important;
   border: none !important;
-  border-radius: 3px !important;
+  border-right: 1px solid var(--print-line) !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+body.print-one-student-per-page:not(.print-teacher-mode)
+  #results
+  .survey-qa-item
+  .likert-scale__step:last-child,
+body.is-printing-results #results .survey-qa-item .likert-scale__step:last-child {
+  border-right: none !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item .likert-scale__step-num,
