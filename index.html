@@ -1445,6 +1445,31 @@
     .student-response-header--compact .student-name {
       font-size: 1.05rem;
     }
+    .student-print-title {
+      margin: 0;
+      padding: 0;
+      font-size: 1.08rem;
+      font-weight: 800;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+      color: var(--theme-heading-strong, #1e3a5f);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.28em 0.45em;
+    }
+    .student-print-title__class {
+      font-weight: 700;
+      color: var(--theme-heading-accent, #3d6b9e);
+    }
+    .student-print-title__num {
+      font-weight: 700;
+      color: var(--theme-heading-strong, #1e3a5f);
+    }
+    .student-print-title__name {
+      font-weight: 800;
+      color: var(--theme-heading-strong, #1e3a5f);
+    }
     .student-response-header .student-id {
       font-size: var(--text-xs);
       font-weight: 600;
@@ -2324,6 +2349,20 @@
       font-size: calc(var(--print-font-pt, 12pt) * 0.95) !important;
       line-height: var(--print-line-height, 1.32) !important;
     }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title {
+      font-size: calc(var(--print-font-pt, 12pt) * 1.15) !important;
+      line-height: var(--print-line-height, 1.32) !important;
+      color: #1e3a5f !important;
+      gap: 0.3em 0.45em !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title__class {
+      color: #3d6b9e !important;
+      font-weight: 700 !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title__num,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title__name {
+      color: #1e3a5f !important;
+    }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-name {
       font-size: calc(var(--print-font-pt, 12pt) * 1.12) !important;
       line-height: var(--print-line-height, 1.32) !important;
@@ -2513,10 +2552,13 @@
       box-shadow: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-header {
-      border-bottom-color: #c5d4e6 !important;
+      border-bottom: 1px solid #c5d4e6 !important;
+      margin-bottom: var(--print-header-mb, 8px) !important;
+      padding-bottom: var(--print-header-pb, 8px) !important;
       color: #1e3a5f !important;
     }
-    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-name {
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-name,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title {
       color: #1e3a5f !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
@@ -2793,10 +2835,25 @@
       }
       body.is-printing-results #results .student-response-header {
         border-bottom: 1px solid #c5d4e6 !important;
+        margin-bottom: 8px !important;
+        padding-bottom: 8px !important;
         color: #1e3a5f !important;
+      }
+      body.is-printing-results #results .student-print-title {
+        font-size: 13pt !important;
+        font-weight: 800 !important;
+        line-height: 1.32 !important;
+        color: #1e3a5f !important;
+        gap: 0.3em 0.45em !important;
+      }
+      body.is-printing-results #results .student-print-title__class {
+        color: #3d6b9e !important;
+        font-weight: 700 !important;
       }
       body.is-printing-results #results .student-num,
       body.is-printing-results #results .student-name,
+      body.is-printing-results #results .student-print-title__num,
+      body.is-printing-results #results .student-print-title__name,
       body.is-printing-results #results .student-id {
         color: #1e3a5f !important;
       }
@@ -7481,13 +7538,62 @@
     return nameStr;
   }
 
-  function formatStudentCompactLabel(num, name) {
+  function formatClassBanLabel(classVal) {
+    var t = String(classVal || "").trim();
+    if (!t && typeof getClassLabelFromFilter === "function") {
+      t = getClassLabelFromFilter() || "";
+    }
+    if (!t && typeof activeClassFilter === "string" && activeClassFilter) {
+      t = activeClassFilter;
+    }
+    if (!t) return "";
+    var m = t.match(/(\d+)\s*반/);
+    if (m) return m[1] + "반";
+    if (/^\d+$/.test(t)) return t + "반";
+    if (/반/.test(t)) return t.replace(/\s+/g, "");
+    return "";
+  }
+
+  function formatStudentCompactLabel(num, name, classVal) {
+    var ban = formatClassBanLabel(classVal);
     var numStr =
       num != null && num !== "" ? String(num).replace(/\s*번\s*$/, "").trim() : "";
     var nameStr = cleanStudentNameForDisplay(name, numStr || num);
-    if (numStr && nameStr) return numStr + "번 " + nameStr;
-    if (numStr) return numStr + "번";
-    return nameStr;
+    var parts = [];
+    if (ban) parts.push(ban);
+    if (numStr) parts.push(numStr + "번");
+    if (nameStr) parts.push(nameStr);
+    return parts.join(" ");
+  }
+
+  function renderStudentPrintHeaderHtml(classVal, num, name) {
+    var ban = formatClassBanLabel(classVal);
+    var numStr =
+      num != null && num !== "" ? String(num).replace(/\s*번\s*$/, "").trim() : "";
+    var nameStr = cleanStudentNameForDisplay(name, numStr || num);
+    var ariaParts = [];
+    if (ban) ariaParts.push(ban);
+    if (numStr) ariaParts.push(numStr + "번");
+    if (nameStr) ariaParts.push(nameStr);
+    var html = '<header class="student-response-header student-response-header--compact">';
+    html +=
+      '<h2 class="student-print-title" aria-label="' +
+      esc(ariaParts.join(" ") || "학생") +
+      '">';
+    if (ban) {
+      html += '<span class="student-print-title__class">' + esc(ban) + "</span>";
+    }
+    if (numStr) {
+      html += '<span class="student-print-title__num">' + esc(numStr) + "번</span>";
+    }
+    if (nameStr) {
+      html += '<span class="student-print-title__name">' + esc(nameStr) + "</span>";
+    }
+    if (!ban && !numStr && !nameStr) {
+      html += '<span class="student-print-title__name">—</span>';
+    }
+    html += "</h2></header>";
+    return html;
   }
 
   function resolveStudentDisplayName(row, sheetName, classKey) {
@@ -8681,7 +8787,14 @@
     opts = opts || {};
     var sheet = getActiveSheetAnalysis();
     var classVal =
-      row.반 && row.반 !== "(미입력)" ? String(row.반) : activeSheetView || "";
+      row.반 && row.반 !== "(미입력)" ? String(row.반) : "";
+    if (!classVal) {
+      classVal =
+        getClassLabelFromFilter() ||
+        activeClassFilter ||
+        activeSheetView ||
+        "";
+    }
     var num = row.번호 != null ? String(row.번호) : "";
     var name = resolveStudentDisplayName(
       row,
@@ -8694,13 +8807,7 @@
     if (name) html += ' data-student-name="' + esc(name) + '"';
     html += ">";
     if (opts.compactHeader) {
-      html += '<header class="student-response-header student-response-header--compact">';
-      html += '<div class="header-meta">';
-      html +=
-        '<span class="student-name">' +
-        esc(formatStudentCompactLabel(num, name) || "—") +
-        "</span>";
-      html += "</div></header>";
+      html += renderStudentPrintHeaderHtml(classVal, num, name);
     } else {
       html += renderStudentResponseHeader(row);
     }
@@ -8732,7 +8839,12 @@
         activeClassFilter
       );
     }
-    return formatStudentCompactLabel(num, name) || "";
+    var ban =
+      (student && student.반) ||
+      getClassLabelFromFilter() ||
+      activeClassFilter ||
+      "";
+    return formatStudentCompactLabel(num, name, ban) || "";
   }
 
   function renderParticipationBanner(data, classLabel) {
@@ -8799,22 +8911,31 @@
     var num = typeof student === "object" ? student.번호 : student;
     var name =
       typeof student === "object" && student.이름 ? String(student.이름) : "(미확인)";
+    var classVal =
+      (typeof student === "object" && student.반) ||
+      sheetName ||
+      getClassLabelFromFilter() ||
+      activeClassFilter ||
+      "";
     var html = '<article class="student-card student-card--absent"';
-    if (sheetName) html += ' data-student-class="' + esc(sheetName) + '"';
+    if (classVal) html += ' data-student-class="' + esc(classVal) + '"';
     if (num != null) html += ' data-student-num="' + esc(String(num)) + '"';
     if (name) html += ' data-student-name="' + esc(name) + '"';
     html += ">";
-    html += '<header class="student-response-header';
-    if (opts.compactHeader) html += " student-response-header--compact";
-    html += '"><div class="header-meta">';
-    if (!opts.compactHeader && sheetName) {
-      html += '<span class="student-class">' + esc(sheetName) + "</span>";
+    if (opts.compactHeader) {
+      html += renderStudentPrintHeaderHtml(classVal, num, name);
+    } else {
+      html += '<header class="student-response-header">';
+      html += '<div class="header-meta">';
+      if (classVal) {
+        html += '<span class="student-class">' + esc(formatClassBanLabel(classVal) || classVal) + "</span>";
+      }
+      html +=
+        '<span class="student-name">' +
+        esc(formatStudentCompactLabel(num, name, classVal) || "—") +
+        "</span>";
+      html += "</div></header>";
     }
-    html +=
-      '<span class="student-name">' +
-      esc(formatStudentCompactLabel(num, name) || "—") +
-      "</span>";
-    html += "</div></header>";
     html += '<div class="student-response-body"><p class="absent-note">설문에 참여하지 않았습니다.</p></div>';
     html += '<hr class="student-card-divider" aria-hidden="true" />';
     html += "</article>";
