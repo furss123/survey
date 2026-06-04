@@ -1706,13 +1706,6 @@
       color: var(--theme-heading);
       word-break: keep-all;
     }
-    .view-tracker-class {
-      margin: 4px 0 0;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-    .view-tracker-class:empty { display: none; }
     .view-tracker-status {
       margin: 8px 0 0;
       padding: 4px 8px;
@@ -2986,7 +2979,6 @@
   <aside class="view-tracker no-print" id="viewTracker" hidden aria-live="polite" aria-label="현재 보고 있는 학생">
     <p class="view-tracker-label">지금 보는 학생</p>
     <p class="view-tracker-current" id="viewTrackerCurrent">—</p>
-    <p class="view-tracker-class" id="viewTrackerClass"></p>
     <p class="view-tracker-status" id="viewTrackerStatus" hidden>미참여</p>
     <form class="view-tracker-jump" id="viewTrackerJumpForm" autocomplete="off">
       <label class="view-tracker-jump-label" for="viewTrackerJumpInput">번호로 이동</label>
@@ -8633,20 +8625,16 @@
   function updateViewTracker(card) {
     var panel = document.getElementById("viewTracker");
     var currentEl = document.getElementById("viewTrackerCurrent");
-    var classEl = document.getElementById("viewTrackerClass");
     var statusEl = document.getElementById("viewTrackerStatus");
-    if (!panel || !currentEl || !classEl) return;
+    if (!panel || !currentEl) return;
     if (!card) {
       panel.hidden = true;
       currentEl.textContent = "—";
-      classEl.textContent = "";
       if (statusEl) statusEl.hidden = true;
       return;
     }
-    var cls = card.getAttribute("data-student-class") || activeSheetView || "";
     panel.hidden = false;
     currentEl.textContent = formatViewTrackerLine(card);
-    classEl.textContent = cls ? cls + "반" : "";
     if (statusEl) {
       statusEl.hidden = !card.classList.contains("student-card--absent");
     }
