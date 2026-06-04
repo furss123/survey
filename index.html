@@ -2029,13 +2029,13 @@
       border-left: 3px solid var(--accent, #3b82f6);
       background: rgba(59, 130, 246, 0.06);
     }
-    /* 복수 선택(유형 · 본문): Q1·Q5·Q11 등 동일 — ·는 본문 첫 줄 높이 기준 */
+    /* 복수 선택(유형 + 본문): Q1·Q5·Q11 등 — 유형·본문 사이 가운데점 없음 */
     .survey-qa-multi-choice--typed {
       display: flex;
       flex-direction: row;
       flex-wrap: nowrap;
       align-items: flex-start;
-      gap: 0;
+      gap: 0.35em;
     }
     .survey-qa-multi-choice--typed .survey-qa-multi-choice__type {
       display: inline-flex;
@@ -2051,16 +2051,8 @@
       white-space: nowrap;
     }
     .survey-qa-multi-choice--typed .survey-qa-multi-choice__type::after {
-      content: "·";
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      margin: 0 0.32em;
-      font-size: 1em;
-      font-weight: 400;
-      line-height: 1;
-      color: var(--theme-text-muted, #64748b);
+      display: none !important;
+      content: none !important;
     }
     .survey-qa-multi-choice--typed .survey-qa-multi-choice__detail {
       display: block;
@@ -2613,7 +2605,7 @@
       flex-direction: row !important;
       flex-wrap: nowrap !important;
       align-items: flex-start !important;
-      gap: 0 !important;
+      gap: 0.32em !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type {
       display: inline-flex !important;
@@ -2627,15 +2619,8 @@
       white-space: nowrap !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type::after {
-      content: "·" !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      margin: 0 0.32em !important;
-      font-size: inherit !important;
-      font-weight: 400 !important;
-      line-height: 1 !important;
-      color: #5a7291 !important;
+      display: none !important;
+      content: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__detail {
       margin: 0 !important;
@@ -3320,7 +3305,8 @@
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
         .survey-qa-multi-choice__type::after {
-        color: #5a7291 !important;
+        display: none !important;
+        content: none !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -3340,6 +3326,7 @@
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: flex-start !important;
+        gap: 0.32em !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -3352,11 +3339,8 @@
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
         .survey-qa-multi-choice__type::after {
-        content: "·" !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        margin: 0 0.32em !important;
-        line-height: 1 !important;
+        display: none !important;
+        content: none !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -8809,16 +8793,29 @@
     return [text];
   }
 
+  function trimMultiChoiceDetailLead(text) {
+    return String(text || "")
+      .replace(/^[\s·•∙‧\u00b7\u2022\u2219\-–—:]+/, "")
+      .trim();
+  }
+
   function splitMultiSelectChoiceSegment(segment) {
     var s = String(segment || "").trim();
     if (!s) return { type: "", detail: "" };
     var m = s.match(/^(.+?형)\s*[-–—]\s*(.+)$/);
-    if (m) return { type: m[1].trim(), detail: m[2].trim() };
+    if (m) {
+      return {
+        type: m[1].trim(),
+        detail: trimMultiChoiceDetailLead(m[2].trim()),
+      };
+    }
     var dash = s.search(/\s[-–—]\s/);
     if (dash > 0) {
       return {
         type: s.slice(0, dash).trim(),
-        detail: s.slice(dash).replace(/^\s*[-–—]\s*/, "").trim(),
+        detail: trimMultiChoiceDetailLead(
+          s.slice(dash).replace(/^\s*[-–—]\s*/, "").trim()
+        ),
       };
     }
     return { type: "", detail: s };
