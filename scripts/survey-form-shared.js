@@ -334,7 +334,7 @@
       if (!entry || !entry.id || isSurveyDeleted(entry.id)) return;
       var prev = byId[entry.id];
       if (!prev) {
-        byId[entry.id] = entry;
+        byId[entry.id] = ensureSurveyFullyPublic(entry);
         return;
       }
       var remoteRev = registryLabelRevision(prev);
@@ -361,6 +361,10 @@
         completedAt: entry.completedAt != null ? entry.completedAt : prev.completedAt,
       });
     });
+    (remote || []).forEach(function (entry) {
+      if (!entry || !entry.id || isSurveyDeleted(entry.id) || byId[entry.id]) return;
+      byId[entry.id] = entry;
+    });
     return dedupeRegistryEntries(
       Object.keys(byId).map(function (id) {
         return byId[id];
@@ -373,6 +377,53 @@
     if (String(entry.id).indexOf("md-") === 0) return null;
     var out = ensureSurveyFullyPublic(Object.assign({}, entry, { sourceType: "sheet" }));
     return hasSheetSource(out) ? out : null;
+  }
+
+  /** GitHub Pages 공개 목록에 반드시 포함할 설문 (다른 PC 목록 누락 방지) */
+  var REQUIRED_PUBLIC_SHEET_SURVEYS = [
+    {
+      id: "1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM",
+      label: "SMART 학습검사 피드백 설문",
+      url: "https://docs.google.com/spreadsheets/d/1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM/edit?usp=sharing",
+      sourceType: "sheet",
+      visibility: "public",
+      viewMode: "class",
+      resultsLayout: "class",
+      categorySelectAll: true,
+      updatedAt: 1767225600001,
+    },
+  ];
+
+  function appendRequiredPublicSurveys(list) {
+    var byId = {};
+    (list || []).forEach(function (entry) {
+      if (entry && entry.id) byId[entry.id] = entry;
+    });
+    REQUIRED_PUBLIC_SHEET_SURVEYS.forEach(function (required) {
+      var built = expandBundledRegistryEntry(required);
+      if (!built) return;
+      var prev = byId[built.id];
+      if (!prev) {
+        byId[built.id] = built;
+        return;
+      }
+      var remoteRev = registryLabelRevision(built);
+      var localRev = registryLabelRevision(prev);
+      if (remoteRev >= localRev) {
+        byId[built.id] = Object.assign({}, built, prev, {
+          label: coerceText(built.label) ? built.label : prev.label,
+          url: coerceText(built.url) ? built.url : prev.url,
+          viewMode: built.viewMode || prev.viewMode,
+          resultsLayout: built.resultsLayout || prev.resultsLayout,
+          updatedAt: built.updatedAt || prev.updatedAt,
+          categorySelectAll:
+            built.categorySelectAll != null ? built.categorySelectAll : prev.categorySelectAll,
+        });
+      }
+    });
+    return Object.keys(byId).map(function (id) {
+      return byId[id];
+    });
   }
 
   async function fetchBundledSheetRegistry() {
@@ -400,7 +451,7 @@
   async function refreshRegistryFromServer(options) {
     options = options || {};
     var local = loadRegistry();
-    var published = await fetchBundledSheetRegistry();
+    var published = appendRequiredPublicSurveys(await fetchBundledSheetRegistry());
     var merged = mergeRemoteAndLocalRegistry(published, local);
     saveRegistry(merged, { silent: options.silent });
     return merged;

@@ -8,5 +8,17 @@
     "visibility": "public",
     "categorySelectAll": true,
     "registeredAt": 1780000000000
+  },
+  {
+    "id": "1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM",
+    "label": "SMART 학습검사 피드백 설문",
+    "updatedAt": 1767225600001,
+    "url": "https://docs.google.com/spreadsheets/d/1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM/edit?usp=sharing",
+    "sourceType": "sheet",
+    "visibility": "public",
+    "viewMode": "class",
+    "resultsLayout": "class",
+    "categorySelectAll": true,
+    "registeredAt": 1767225600001
   }
 ]
