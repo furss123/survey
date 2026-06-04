@@ -156,54 +156,38 @@
     return s;
   }
 
+  function applyKoreanOrthography(text, options) {
+    if (typeof global.KoreanOrthography !== "undefined" && global.KoreanOrthography.apply) {
+      return global.KoreanOrthography.apply(text, options);
+    }
+    return String(text || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function normalizeDisplayText(text) {
     var s = coerceText(decodeHtmlEntities(text));
     if (!s) return "";
     s = repairUtf8FromLatin1(s);
-    return s.replace(/\s+/g, " ").trim();
+    s = s.replace(/\s+/g, " ").trim();
+    return applyKoreanOrthography(s, { light: true });
   }
 
-  /** 설문 답변 띄어쓰기·맞춤법 보조 (원문 의미 유지, 과도한 자동 교정 지양) */
+  /** 설문 답변: 국립국어원 표준 맞춤법·띄어쓰기 (서울대 교육 표기 기준과 동일 계열) */
   function applyKoreanAnswerSpacing(text) {
-    var s = String(text || "");
-    if (!s) return s;
-
-    s = s.replace(/\s+([,.;:!?)\]}〉》」』】])/g, "$1");
-    s = s.replace(/([(\[{(〈《「『【])\s+/g, "$1");
-    s = s.replace(/\s*([→/|])\s*/g, " $1 ");
-    s = s.replace(/\s*·\s*/g, " · ");
-
-    var rules = [
-      [/때\s*문\s*에/g, "때문에"],
-      [/그\s*래\s*서/g, "그래서"],
-      [/하\s*지\s*만/g, "하지만"],
-      [/그\s*리\s*고/g, "그리고"],
-      [/할\s*수\s*있/g, "할 수 있"],
-      [/될\s*수\s*있/g, "될 수 있"],
-      [/것\s*같/g, "것 같"],
-      [/수\s*있\s*는/g, "수 있는"],
-      [/되\s*요\b/g, "돼요"],
-      [/안\s*되\s*는/g, "안 되는"],
-      [/안\s*돼\s*요/g, "안 돼요"],
-      [/안\s*되\s*요/g, "안 돼요"],
-      [/건너\s*뜀/g, "건너뜀"],
-      [/스스\s*로/g, "스스로"],
-    ];
-    rules.forEach(function (rule) {
-      s = s.replace(rule[0], rule[1]);
-    });
-
-    return s.replace(/\s{2,}/g, " ").trim();
+    return applyKoreanOrthography(text, { light: false });
   }
 
   function normalizeSurveyAnswerText(text, options) {
     options = options || {};
-    var s = normalizeDisplayText(text);
+    var s = coerceText(decodeHtmlEntities(text));
     if (!s) return "";
+    s = repairUtf8FromLatin1(s);
+    s = s.replace(/\s+/g, " ").trim();
     if (options.singleLine) {
       s = s.replace(/[\r\n\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim();
     }
-    return applyKoreanAnswerSpacing(s);
+    return applyKoreanOrthography(s, { light: false });
   }
 
   function normalizeRegistryEntry(entry) {
@@ -1100,6 +1084,7 @@
     normalizeDisplayText: normalizeDisplayText,
     normalizeSurveyAnswerText: normalizeSurveyAnswerText,
     applyKoreanAnswerSpacing: applyKoreanAnswerSpacing,
+    applyKoreanOrthography: applyKoreanOrthography,
     decodeHtmlEntities: decodeHtmlEntities,
     repairUtf8FromLatin1: repairUtf8FromLatin1,
     normalizeRegistryEntry: normalizeRegistryEntry,
