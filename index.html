@@ -2011,6 +2011,11 @@
       white-space: pre-wrap;
       word-break: keep-all;
     }
+    .survey-qa-item__answer-text--single-line {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: keep-all;
+    }
     .survey-qa-item__answer--multi {
       display: flex;
       flex-direction: column;
@@ -2492,6 +2497,12 @@
       font-size: calc(var(--print-font-pt, 11pt) * 0.94) !important;
       line-height: var(--print-line-height, 1.34) !important;
       margin-bottom: var(--print-qa-q-mb, 5px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer-text--single-line,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--single-line {
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+      word-break: keep-all !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer-text,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type,
@@ -3586,7 +3597,7 @@
     <div class="site-footer-inner">Created by HyoT. Copyright © 2026 남악고등학교 HyoT. All rights reserved.</div>
   </footer>
 
-  <script src="scripts/survey-form-shared.js?v=20260604"></script>
+  <script src="scripts/survey-form-shared.js?v=20260607"></script>
   <script src="scripts/admin-session.js?v=20260530"></script>
   <script>
 (function () {
@@ -8522,8 +8533,25 @@
     return main * 100 + sub;
   }
 
-  function formatAdaptiveAnswerText(value) {
-    return coerceText(value || "").trim();
+  /** SMART 등: 서술(Q9)·한 줄 소감(Q13) — 쉼표·줄바꿈이 있어도 복수 선택으로 나누지 않음 */
+  var NARRATIVE_SINGLE_LINE_MAIN_Q = { 9: 1, 13: 1 };
+
+  function isNarrativeSingleLineQuestion(question) {
+    var main = getQuestionMainNumber(question);
+    if (main != null && NARRATIVE_SINGLE_LINE_MAIN_Q[main]) return true;
+    var q = String(question || "");
+    if (/한\s*줄\s*소감|직접\s*적어|서술\s*형|자유\s*서술/i.test(q)) return true;
+    return false;
+  }
+
+  function formatAdaptiveAnswerText(value, question) {
+    var singleLine = isNarrativeSingleLineQuestion(question);
+    if (typeof SurveyForm !== "undefined" && SurveyForm.normalizeSurveyAnswerText) {
+      return SurveyForm.normalizeSurveyAnswerText(value, { singleLine: singleLine });
+    }
+    var s = coerceText(value || "").replace(/\s+/g, " ").trim();
+    if (singleLine) s = s.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+    return s;
   }
 
   function parseLikertScaleScore(value) {
@@ -8550,8 +8578,6 @@
   }
 
   var MULTI_SELECT_TYPE_DASH_RE = /형\s*[-–—]\s*/;
-  /** SMART 등: 한 줄 소감·서술(Q13) — 쉼표가 있어도 복수 선택으로 나누지 않음 */
-  var COMMA_MULTI_EXCLUDE_Q = 13;
 
   function getQuestionMainNumber(question) {
     var q = String(question || "").trim();
@@ -8572,7 +8598,8 @@
   }
 
   function isCommaMultiSelectExcludedQuestion(question) {
-    return getQuestionMainNumber(question) === COMMA_MULTI_EXCLUDE_Q;
+    var main = getQuestionMainNumber(question);
+    return main != null && !!NARRATIVE_SINGLE_LINE_MAIN_Q[main];
   }
 
   /** 4-1·7-1·12-1 등 척도(1~5) 문항 */
@@ -8809,11 +8836,15 @@
   function renderMultiSelectAnswerHtml(raw, question) {
     var choices = parseMultiSelectAnswer(raw, question);
     if (!choices || !choices.length) {
+      var text = formatAdaptiveAnswerText(raw, question) || raw || "—";
+      var answerClass = "survey-qa-item__answer-text";
+      if (isNarrativeSingleLineQuestion(question)) {
+        answerClass += " survey-qa-item__answer-text--single-line";
+      }
       return {
         isMulti: false,
         single: false,
-        html:
-          '<p class="survey-qa-item__answer-text">' + esc(raw || "—") + "</p>",
+        html: '<p class="' + answerClass + '">' + esc(text) + "</p>",
       };
     }
     var html = "";
@@ -8844,9 +8875,12 @@
   function renderSurveyAnswerValueHtml(raw, question) {
     var rendered = renderMultiSelectAnswerHtml(raw, question);
     if (!rendered.isMulti) {
-      return (
-        '<span class="survey-field-line__value">' + esc(raw || "—") + "</span>"
-      );
+      var text = formatAdaptiveAnswerText(raw, question) || raw || "—";
+      var valClass = "survey-field-line__value";
+      if (isNarrativeSingleLineQuestion(question)) {
+        valClass += " survey-field-line__value--single-line";
+      }
+      return '<span class="' + valClass + '">' + esc(text) + "</span>";
     }
     var wrapClass =
       "survey-field-line__value survey-field-line__value--multi";
@@ -8895,7 +8929,7 @@
       seen[q] = true;
       items.push({
         question: q,
-        answer: formatAdaptiveAnswerText(answer),
+        answer: formatAdaptiveAnswerText(answer, q),
         order: order != null ? order : 99999,
         sortKey: questionOrderKey(q),
       });
