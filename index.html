@@ -7507,7 +7507,7 @@
             '">' +
             esc(label) +
             "</span>: " +
-            renderSurveyAnswerValueHtml(val) +
+            renderSurveyAnswerValueHtml(val, label) +
             "</div>";
         });
         html += "</div>";
@@ -7553,7 +7553,7 @@
             '">' +
             esc(label) +
             "</span>: " +
-            renderSurveyAnswerValueHtml(val) +
+            renderSurveyAnswerValueHtml(val, label) +
             "</div>";
         });
         html += "</div>";
@@ -7674,6 +7674,33 @@
   }
 
   var MULTI_SELECT_TYPE_DASH_RE = /형\s*[-–—]\s*/;
+  var COMMA_MULTI_EXCLUDE_Q = 13;
+
+  function getQuestionMainNumber(question) {
+    var q = String(question || "").trim();
+    var m = q.match(/Q\s*0*(\d+)/i);
+    if (m) return parseInt(m[1], 10);
+    m = q.match(/^(\d+)\s*[-–.]/);
+    if (m) return parseInt(m[1], 10);
+    return null;
+  }
+
+  function isCommaMultiSelectExcludedQuestion(question) {
+    return getQuestionMainNumber(question) === COMMA_MULTI_EXCLUDE_Q;
+  }
+
+  /** 문장이 끝난 뒤 이어지는 쉼표(복수 선택 목록) */
+  function hasCommaAfterSentenceEnd(text) {
+    var normalized = String(text || "")
+      .replace(/\uFF0C/g, ",")
+      .trim();
+    if (normalized.indexOf(",") < 0) return false;
+    if (/"[^"]*"\s*,/.test(normalized)) return true;
+    if (/형\s*[-–—][^,]{1,}\s*,/.test(normalized)) return true;
+    return /(?:[\.\!\?…⋯]|[가-힣](?:다|요|함|때|임|음|네|죠|까|나|라|며|고|서|면|줘|세)|습니다|해요|돼요|있어요|없어요|겠어요|했어요|였어요|할게요|인가요|되나요|뿌듯함|느낄)\s*,/.test(
+      normalized
+    );
+  }
 
   function isQuoteChar(ch) {
     return ch === '"' || ch === "\u201c" || ch === "\u201d" || ch === "\u2018" || ch === "\u2019";
@@ -7747,9 +7774,18 @@
     );
   }
 
-  function parseMultiSelectAnswer(raw) {
+  function parseMultiSelectAnswer(raw, question) {
     var text = String(raw || "").trim();
     if (!text || text === "—") return null;
+    var normalizedComma = text.replace(/\uFF0C/g, ",");
+
+    if (!isCommaMultiSelectExcludedQuestion(question)) {
+      if (hasCommaAfterSentenceEnd(normalizedComma)) {
+        var forcedComma = splitCommaSeparatedRespectingQuotes(normalizedComma);
+        if (forcedComma.length >= 2) return forcedComma;
+      }
+    }
+
     var byNewline = text
       .split(/\r?\n+/)
       .map(function (s) {
@@ -7759,11 +7795,13 @@
     if (byNewline.length >= 2 && shouldTreatAsMultiSelectList(byNewline)) {
       return byNewline;
     }
-    if (text.indexOf(",") >= 0) {
-      var byComma = splitCommaSeparatedRespectingQuotes(text);
+    if (normalizedComma.indexOf(",") >= 0) {
+      var byComma = splitCommaSeparatedRespectingQuotes(normalizedComma);
       if (shouldTreatAsMultiSelectList(byComma)) return byComma;
     }
-    var byTypedComma = text.split(/,\s*(?=[^\s,]+(?:형\s*[-–—]|\S+형\s*[-–—]))/);
+    var byTypedComma = normalizedComma.split(
+      /,\s*(?=[^\s,]+(?:형\s*[-–—]|\S+형\s*[-–—]))/
+    );
     if (byTypedComma.length >= 2) {
       return byTypedComma
         .map(function (s) {
@@ -7789,8 +7827,8 @@
     return { type: "", detail: s };
   }
 
-  function renderMultiSelectAnswerHtml(raw) {
-    var choices = parseMultiSelectAnswer(raw);
+  function renderMultiSelectAnswerHtml(raw, question) {
+    var choices = parseMultiSelectAnswer(raw, question);
     if (!choices || choices.length < 2) {
       return {
         isMulti: false,
@@ -7820,8 +7858,8 @@
     return { isMulti: true, html: html };
   }
 
-  function renderSurveyAnswerValueHtml(raw) {
-    var rendered = renderMultiSelectAnswerHtml(raw);
+  function renderSurveyAnswerValueHtml(raw, question) {
+    var rendered = renderMultiSelectAnswerHtml(raw, question);
     if (!rendered.isMulti) {
       return (
         '<span class="survey-field-line__value">' + esc(raw || "—") + "</span>"
@@ -7941,7 +7979,7 @@
     if (likert != null) {
       answerBody = renderLikertScaleBar(likert);
     } else {
-      var rendered = renderMultiSelectAnswerHtml(item.answer);
+      var rendered = renderMultiSelectAnswerHtml(item.answer, q);
       if (rendered.isMulti) answerExtraClass = " survey-qa-item__answer--multi";
       answerBody = rendered.html;
     }
