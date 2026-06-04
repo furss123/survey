@@ -2451,6 +2451,61 @@
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--multi .survey-qa-multi-choice {
       margin-bottom: 0 !important;
     }
+    /* 복수 문항·답 1개: 2단 없이 한 줄 */
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer--multi-one,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--multi-one {
+      display: block !important;
+      grid-template-columns: none !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer--multi-one .survey-qa-multi-choice,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--multi-one .survey-qa-multi-choice {
+      display: inline-flex !important;
+      flex-wrap: nowrap !important;
+      align-items: baseline !important;
+      width: auto !important;
+      max-width: 100% !important;
+      padding: 0 !important;
+      vertical-align: top !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-qa-item__answer--multi-one
+      .survey-qa-multi-choice--plain::before,
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-field-line__value--multi-one
+      .survey-qa-multi-choice--plain::before {
+      position: relative !important;
+      left: auto !important;
+      top: auto !important;
+      transform: none !important;
+      display: inline-block !important;
+      vertical-align: middle !important;
+      margin-right: 0.35em !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-qa-item__answer--multi-one
+      .survey-qa-multi-choice--typed
+      .survey-qa-multi-choice__detail,
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-field-line__value--multi-one
+      .survey-qa-multi-choice--typed
+      .survey-qa-multi-choice__detail,
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-qa-item__answer--multi-one
+      .survey-qa-multi-choice--plain
+      .survey-qa-multi-choice__detail,
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-field-line__value--multi-one
+      .survey-qa-multi-choice--plain
+      .survey-qa-multi-choice__detail {
+      display: inline !important;
+      white-space: normal !important;
+    }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice {
       position: relative !important;
       margin: 0 !important;
@@ -3052,6 +3107,53 @@
         background: var(--print-multi-wrap-bg, #f4f8fc) !important;
         border: 1px solid var(--print-multi-wrap-border, #c5d4e6) !important;
         border-radius: 4px !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-qa-item__answer--multi-one,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-field-line__value--multi-one {
+        display: block !important;
+        grid-template-columns: none !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-qa-item__answer--multi-one
+        .survey-qa-multi-choice,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-field-line__value--multi-one
+        .survey-qa-multi-choice {
+        display: inline-flex !important;
+        flex-wrap: nowrap !important;
+        align-items: baseline !important;
+        width: auto !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-qa-item__answer--multi-one
+        .survey-qa-multi-choice--typed
+        .survey-qa-multi-choice__detail,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-field-line__value--multi-one
+        .survey-qa-multi-choice--typed
+        .survey-qa-multi-choice__detail,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-qa-item__answer--multi-one
+        .survey-qa-multi-choice--plain
+        .survey-qa-multi-choice__detail,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-field-line__value--multi-one
+        .survey-qa-multi-choice--plain
+        .survey-qa-multi-choice__detail {
+        display: inline !important;
+        white-space: normal !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -8526,14 +8628,12 @@
 
     if (qMain === 8) {
       var q8Parts = splitSmartQ8ActionPlanAnswer(normalizedComma);
-      if (q8Parts.length >= 2) return q8Parts;
-      if (q8Parts.length === 1) return null;
+      if (q8Parts.length >= 1) return q8Parts;
     }
 
     if (qMain === 5) {
       var q5Parts = splitSmartQ5MotivationAnswer(normalizedComma);
-      if (q5Parts.length >= 2) return q5Parts;
-      if (q5Parts.length === 1) return null;
+      if (q5Parts.length >= 1) return q5Parts;
     }
 
     if (hasCommaAfterSentenceEnd(normalizedComma)) {
@@ -8564,7 +8664,7 @@
         })
         .filter(Boolean);
     }
-    return null;
+    return [text];
   }
 
   function splitMultiSelectChoiceSegment(segment) {
@@ -8584,9 +8684,10 @@
 
   function renderMultiSelectAnswerHtml(raw, question) {
     var choices = parseMultiSelectAnswer(raw, question);
-    if (!choices || choices.length < 2) {
+    if (!choices || !choices.length) {
       return {
         isMulti: false,
+        single: false,
         html:
           '<p class="survey-qa-item__answer-text">' + esc(raw || "—") + "</p>",
       };
@@ -8613,7 +8714,7 @@
       }
       html += "</div>";
     });
-    return { isMulti: true, html: html };
+    return { isMulti: true, single: choices.length === 1, html: html };
   }
 
   function renderSurveyAnswerValueHtml(raw, question) {
@@ -8623,11 +8724,10 @@
         '<span class="survey-field-line__value">' + esc(raw || "—") + "</span>"
       );
     }
-    return (
-      '<div class="survey-field-line__value survey-field-line__value--multi">' +
-      rendered.html +
-      "</div>"
-    );
+    var wrapClass =
+      "survey-field-line__value survey-field-line__value--multi";
+    if (rendered.single) wrapClass += " survey-field-line__value--multi-one";
+    return '<div class="' + wrapClass + '">' + rendered.html + "</div>";
   }
 
   function renderLikertScaleBar(score) {
@@ -8738,7 +8838,10 @@
       answerBody = renderLikertScaleBar(likert);
     } else {
       var rendered = renderMultiSelectAnswerHtml(item.answer, q);
-      if (rendered.isMulti) answerExtraClass = " survey-qa-item__answer--multi";
+      if (rendered.isMulti) {
+        answerExtraClass = " survey-qa-item__answer--multi";
+        if (rendered.single) answerExtraClass += " survey-qa-item__answer--multi-one";
+      }
       answerBody = rendered.html;
     }
     html += '<div class="survey-qa-item__answer' + answerExtraClass + '">';
