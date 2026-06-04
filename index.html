@@ -5580,6 +5580,41 @@
     return !!(currentLaunchEntry && currentLaunchEntry.categorySelectAll);
   }
 
+  function isLegacySubjectCategoryConfig(categories) {
+    if (!categories || !categories.length) return false;
+    var enabled = categories.filter(function (c) {
+      return c.enabled !== false && c.id !== "all";
+    });
+    if (!enabled.length) return false;
+    var subjectLike = enabled.filter(function (c) {
+      return (
+        CORE_RESULTS_SUBJECT_IDS.indexOf(c.id) >= 0 ||
+        c.id === "teacher" ||
+        DEFAULT_SUBJECT_FILTER_OPTIONS.some(function (o) {
+          return o.id === c.id;
+        })
+      );
+    });
+    return subjectLike.length >= 2 || subjectLike.length === enabled.length;
+  }
+
+  function getLaunchViewMode(entry) {
+    if (!entry) return "subject";
+    if (entry.viewMode === "class" || entry.viewMode === "subject") return entry.viewMode;
+    if (entry.categorySelectAll === true) return "class";
+    if (entry.classes && entry.classes.length) {
+      if (!entry.categories || !entry.categories.length) return "class";
+      return isLegacySubjectCategoryConfig(entry.categories) ? "subject" : "class";
+    }
+    if (!entry.categories || !entry.categories.length) return "subject";
+    return isLegacySubjectCategoryConfig(entry.categories) ? "subject" : "class";
+  }
+
+  function usesClassBasedResultsPicker() {
+    if (adminSetupMode) return false;
+    return getLaunchViewMode(currentLaunchEntry) === "class";
+  }
+
   function compareRowsByStudentId(a, b) {
     var pa = parseStudentId(a.학번 || "");
     var pb = parseStudentId(b.학번 || "");
@@ -6090,6 +6125,7 @@
       url: adminSetupUrl,
       tab: preferredTab,
       classes: registryClasses,
+      viewMode: adminCategorySelectAll ? "class" : "subject",
       categorySelectAll: adminCategorySelectAll,
       categories: adminSetupCategories.map(function (c, i) {
         return {
@@ -6449,12 +6485,14 @@
   }
 
   function hasRegistryCategoryFilter() {
+    if (usesClassBasedResultsPicker()) return false;
     if (isAllCategoriesDisplayMode()) return false;
     if (adminSetupMode && adminSetupCategories.length) return true;
     return false;
   }
 
   function getResultsSubjectPickerOptions() {
+    if (usesClassBasedResultsPicker()) return [];
     var cols = getSheetCategoryColumns(lastMultiResult);
     var ordered = [];
     if (cols.length) {
@@ -6503,6 +6541,9 @@
   }
 
   function rowHasVisibleSections(row) {
+    if (usesClassBasedResultsPicker()) {
+      return (row.sections || []).some(isMeaningfulSection);
+    }
     return (row.sections || []).some(function (sec) {
       if (!isMeaningfulSection(sec)) return false;
       var view = activeSubjectView || "all";
@@ -6569,6 +6610,10 @@
   }
 
   function ensureActiveSubjectViewValid() {
+    if (usesClassBasedResultsPicker()) {
+      activeSubjectView = "all";
+      return;
+    }
     var opts = getResultsSubjectPickerOptions();
     if (!opts.length) {
       activeSubjectView = "all";
@@ -6694,7 +6739,9 @@
         "</button>";
     });
     html += "</div>";
-    html += renderSubjectFilterRow();
+    if (!usesClassBasedResultsPicker()) {
+      html += renderSubjectFilterRow();
+    }
     html += "</nav>";
     return html;
   }
@@ -6955,7 +7002,78 @@
     return idx >= 0 ? idx : 900;
   }
 
+  function renderAdaptiveFieldLine(label, value) {
+    var val = String(value || "").trim();
+    return (
+      '<div class="survey-field-line' +
+      (val ? "" : " survey-field-line--empty") +
+      '"><span class="survey-field-line__label" title="' +
+      esc(label) +
+      '">' +
+      esc(label) +
+      '</span>: <span class="survey-field-line__value">' +
+      esc(val || "—") +
+      "</span></div>"
+    );
+  }
+
+  function renderAdaptiveQuestionResponses(row) {
+    var sections = (row.sections || []).filter(isMeaningfulSection);
+    if (!sections.length) {
+      return '<p class="muted response-empty">작성된 응답이 없습니다.</p>';
+    }
+    var html = '<div class="student-survey-report student-survey-report--adaptive">';
+    sections.forEach(function (sec) {
+      if (isTeacherMessageSection(sec)) return;
+      var title = categoryDisplayLabel(sec.title || "") || coerceText(sec.title || "");
+      if (title && isInternalSurveyFieldTitle(title)) title = "";
+      html += '<section class="student-survey-report__question">';
+      if (title) {
+        html += '<h4 class="student-survey-report__question-title">' + esc(title) + "</h4>";
+      }
+      if (sec.fields && sec.fields.length) {
+        html += '<div class="student-survey-report__fields">';
+        sec.fields.forEach(function (f) {
+          html += renderAdaptiveFieldLine(formatFieldLabelFromSheet(f.key), f.value);
+        });
+        html += "</div>";
+      } else if (sec.body) {
+        var parsed = parseSectionFields(sec.body);
+        if (parsed.length) {
+          html += '<div class="student-survey-report__fields">';
+          parsed.forEach(function (f) {
+            html += renderAdaptiveFieldLine(formatFieldLabelFromSheet(f.key), f.value);
+          });
+          html += "</div>";
+        } else {
+          html += '<div class="student-survey-report__body">' + esc(sec.body) + "</div>";
+        }
+      }
+      html += "</section>";
+    });
+    var teacherSec = getTeacherSectionFromRow(row);
+    if (teacherSec) {
+      html += '<section class="student-survey-report__teacher">';
+      html += '<h4 class="student-survey-report__teacher-title">담임쌤께</h4>';
+      if (teacherSec.fields && teacherSec.fields.length) {
+        html += '<div class="student-survey-report__fields">';
+        teacherSec.fields.forEach(function (f) {
+          html += renderAdaptiveFieldLine(formatFieldLabelFromSheet(f.key), f.value);
+        });
+        html += "</div>";
+      } else if (teacherSec.body) {
+        html += '<div class="student-survey-report__body">' + esc(teacherSec.body) + "</div>";
+      }
+      html += "</section>";
+    }
+    html += "</div>";
+    return html;
+  }
+
   function renderCategoryBlocks(row, subjectFilter) {
+    if (usesClassBasedResultsPicker()) {
+      return renderAdaptiveQuestionResponses(row);
+    }
     return renderStudentSubjectReport(row, subjectFilter);
   }
 
