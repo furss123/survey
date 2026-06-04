@@ -319,6 +319,12 @@
     return setSurveyStatus(id, status);
   }
 
+  function registryLabelRevision(entry) {
+    if (!entry) return 0;
+    var n = Number(entry.updatedAt);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
   function mergeRemoteAndLocalRegistry(remote, local) {
     var byId = {};
     (remote || []).forEach(function (entry) {
@@ -331,10 +337,28 @@
         byId[entry.id] = entry;
         return;
       }
-      /* 같은 ID는 로컬(관리자 수정)이 서버 JSON보다 우선 — 새로고침 시 제목이 되돌아가지 않음 */
-      byId[entry.id] = Object.assign({}, prev, entry, {
-        label: coerceText(entry.label) ? entry.label : prev.label,
-        url: coerceText(entry.url) ? entry.url : prev.url,
+      var remoteRev = registryLabelRevision(prev);
+      var localRev = registryLabelRevision(entry);
+      var localWinsLabel = localRev > remoteRev;
+      if (localWinsLabel) {
+        byId[entry.id] = Object.assign({}, prev, entry, {
+          label: coerceText(entry.label) ? entry.label : prev.label,
+          url: coerceText(entry.url) ? entry.url : prev.url,
+        });
+        return;
+      }
+      byId[entry.id] = Object.assign({}, entry, prev, {
+        label: coerceText(prev.label) ? prev.label : entry.label,
+        url: coerceText(prev.url) ? prev.url : entry.url,
+        updatedAt: prev.updatedAt || entry.updatedAt,
+        categories: entry.categories || prev.categories,
+        classes: entry.classes || prev.classes,
+        categorySelectAll:
+          entry.categorySelectAll != null
+            ? entry.categorySelectAll
+            : prev.categorySelectAll,
+        surveyStatus: entry.surveyStatus || prev.surveyStatus,
+        completedAt: entry.completedAt != null ? entry.completedAt : prev.completedAt,
       });
     });
     return dedupeRegistryEntries(
