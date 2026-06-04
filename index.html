@@ -2308,16 +2308,26 @@
       font-size: var(--print-font-pt, 10.5pt) !important;
       line-height: var(--print-line-height, 1.28) !important;
     }
-    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer--multi {
-      gap: var(--print-multi-gap, 5px) !important;
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer--multi,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--multi {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: var(--print-multi-row-gap, 3px) var(--print-multi-col-gap, 8px) !important;
+      align-items: start !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--multi .survey-qa-multi-choice {
+      margin-bottom: 0 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice {
       margin: 0 !important;
-      padding: var(--print-multi-pad, 4px 6px 4px 8px) !important;
+      padding: var(--print-multi-pad, 3px 5px 3px 6px) !important;
       border-left-width: 2px !important;
-      border-radius: 4px !important;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      border-radius: 3px !important;
+      page-break-inside: auto !important;
+      break-inside: auto !important;
+      min-width: 0 !important;
+      overflow-wrap: anywhere;
+      word-break: keep-all;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type {
       margin-bottom: var(--print-multi-type-mb, 2px) !important;
@@ -2597,7 +2607,6 @@
         overflow: visible;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-item,
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-multi-choice,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-pair,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .likert-scale,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .category-block {
@@ -2609,6 +2618,24 @@
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .likert-scale__summary {
         display: none !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-qa-item__answer--multi,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-field-line__value--multi {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 3px 8px !important;
+        align-items: start !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
+        .survey-qa-multi-choice {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        min-width: 0 !important;
       }
       /* 담임선생님께!: 반 전원 한 페이지 압축 그리드 */
       body.is-printing-results.print-teacher-mode .student-cards-list {
