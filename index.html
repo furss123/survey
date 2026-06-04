@@ -2014,6 +2014,7 @@
       word-break: keep-all;
     }
     .survey-qa-multi-choice__detail {
+      display: block;
       margin: 0;
       font-size: var(--text-sm);
       line-height: 1.55;
@@ -2371,38 +2372,70 @@
       content: "" !important;
       position: absolute !important;
       left: 0 !important;
-      top: 0.55em !important;
+      top: 50% !important;
       width: 4px !important;
       height: 4px !important;
+      margin-top: -2px !important;
       border-radius: 50% !important;
       background: #3d6b9e !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-qa-multi-choice--typed {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+      align-content: center !important;
+      gap: 0 !important;
+    }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type {
-      display: inline !important;
+      display: inline-flex !important;
+      align-items: center !important;
       margin: 0 !important;
-      font-size: calc(var(--print-font-pt, 11pt) * 0.98) !important;
+      padding: 0 !important;
+      font-size: var(--print-font-pt, 11pt) !important;
       font-weight: 700 !important;
-      line-height: var(--print-line-height, 1.34) !important;
+      line-height: 1.32 !important;
       color: #1e3a5f !important;
+      vertical-align: middle !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type::after {
-      content: " · " !important;
+      content: "·" !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin: 0 0.32em !important;
+      font-size: inherit !important;
       font-weight: 400 !important;
+      line-height: 1 !important;
       color: #64748b !important;
+      vertical-align: middle !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__detail {
-      display: inline !important;
       margin: 0 !important;
-      line-height: var(--print-line-height, 1.36) !important;
+      padding: 0 !important;
+      line-height: 1.32 !important;
       color: #0f172a !important;
+      vertical-align: middle !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-qa-multi-choice--typed
+      .survey-qa-multi-choice__detail {
+      display: inline !important;
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+      font-size: var(--print-font-pt, 11pt) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
       .survey-qa-multi-choice--plain
       .survey-qa-multi-choice__detail {
       display: block !important;
+      font-size: var(--print-font-pt, 11pt) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
@@ -2427,8 +2460,14 @@
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
       .student-survey-report--smart
-      .survey-qa-multi-choice__type {
-      font-size: calc(var(--print-font-pt, 11pt) * 0.96 + 1pt) !important;
+      .survey-qa-multi-choice__type,
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .student-survey-report--smart
+      .survey-qa-multi-choice--typed
+      .survey-qa-multi-choice__detail {
+      font-size: calc(var(--print-font-pt, 11pt) + 1pt) !important;
+      line-height: 1.32 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale {
       margin-top: var(--print-likert-mt, 2px) !important;
@@ -2733,7 +2772,8 @@
         content: "" !important;
         position: absolute !important;
         left: 0 !important;
-        top: 0.55em !important;
+        top: 50% !important;
+        margin-top: -2px !important;
         width: 4px !important;
         height: 4px !important;
         border-radius: 50% !important;
@@ -2743,18 +2783,35 @@
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
+        .survey-qa-multi-choice--typed {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
         .survey-qa-multi-choice__type {
-        display: inline !important;
+        display: inline-flex !important;
+        align-items: center !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
         .survey-qa-multi-choice__type::after {
-        content: " · " !important;
+        content: "·" !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        margin: 0 0.32em !important;
+        line-height: 1 !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
+        .survey-qa-multi-choice--typed
         .survey-qa-multi-choice__detail {
         display: inline !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        vertical-align: middle !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -8139,14 +8196,15 @@
       var part = splitMultiSelectChoiceSegment(seg);
       var cellClass = "survey-qa-multi-choice";
       if (!part.type) cellClass += " survey-qa-multi-choice--plain";
+      else cellClass += " survey-qa-multi-choice--typed";
       html += '<div class="' + cellClass + '">';
       if (part.type) {
         html +=
           '<span class="survey-qa-multi-choice__type">' + esc(part.type) + "</span>";
         html +=
-          '<p class="survey-qa-multi-choice__detail">' +
+          '<span class="survey-qa-multi-choice__detail">' +
           esc(part.detail) +
-          "</p>";
+          "</span>";
       } else {
         html +=
           '<p class="survey-qa-multi-choice__detail">' +
