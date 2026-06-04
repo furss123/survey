@@ -8040,6 +8040,19 @@
       .filter(Boolean);
   }
 
+  /** Q5 학업 동기(3개 선택): 폼 선택지 시작어 기준으로만 분리 */
+  function splitSmartQ5MotivationAnswer(text) {
+    return String(text || "")
+      .replace(/\uFF0C/g, ",")
+      .split(
+        /,\s*(?=(?:시험에서|수업에서|선생님\s*칭찬|장래\s*희망|반\s*친구|어려운\s*문제|부모님))/
+      )
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
+  }
+
   function isQuoteChar(ch) {
     return ch === '"' || ch === "\u201c" || ch === "\u201d" || ch === "\u2018" || ch === "\u2019";
   }
@@ -8134,6 +8147,12 @@
       var q8Parts = splitSmartQ8ActionPlanAnswer(normalizedComma);
       if (q8Parts.length >= 2) return q8Parts;
       if (q8Parts.length === 1) return null;
+    }
+
+    if (qMain === 5) {
+      var q5Parts = splitSmartQ5MotivationAnswer(normalizedComma);
+      if (q5Parts.length >= 2) return q5Parts;
+      if (q5Parts.length === 1) return null;
     }
 
     if (hasCommaAfterSentenceEnd(normalizedComma)) {
