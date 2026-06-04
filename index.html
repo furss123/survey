@@ -2652,10 +2652,18 @@
       border: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item .likert-scale__step.is-selected {
-      background: #eef4fb !important;
-      border: 2px solid #3d6b9e !important;
+      background: #edf2f7 !important;
+      border: 2px solid #1a4468 !important;
       border-radius: 4px !important;
       box-shadow: none !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .survey-qa-item
+      .likert-scale__step.is-selected
+      .likert-scale__step-num {
+      color: #1a4468 !important;
+      font-weight: 700 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item {
       width: 100% !important;
@@ -3096,10 +3104,18 @@
         border: none !important;
       }
       body.is-printing-results #results .survey-qa-item .likert-scale__step.is-selected {
-        background: #eef4fb !important;
-        border: 2px solid #3d6b9e !important;
+        background: #edf2f7 !important;
+        border: 2px solid #1a4468 !important;
         border-radius: 4px !important;
         box-shadow: none !important;
+      }
+      body.is-printing-results
+        #results
+        .survey-qa-item
+        .likert-scale__step.is-selected
+        .likert-scale__step-num {
+        color: #1a4468 !important;
+        font-weight: 700 !important;
       }
       body.is-printing-results .results-sticky-chrome,
       body.is-printing-results .class-picker-bar,
@@ -3437,7 +3453,7 @@
     }
   </style>
   <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260611">
-  <link rel="stylesheet" href="styles/survey-print.css?v=20260615">
+  <link rel="stylesheet" href="styles/survey-print.css?v=20260616">
 </head>
 <body>
   <header class="site-header no-print">

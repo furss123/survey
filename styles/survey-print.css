@@ -11,6 +11,7 @@ body.is-printing-results {
   --print-card-pad-left: 3mm;
   --print-card-pad-right: 3mm;
   --print-qa-pad-y: 5px;
+  --print-likert-track-inset-x: 1.5mm;
   --print-ink: #243044;
   --print-ink-body: #3d4d61;
   --print-ink-muted: #6b7f94;
@@ -332,12 +333,14 @@ body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
 /* ── 척도: 한 줄 트랙, 선택만 강조 ── */
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item .likert-scale,
 body.is-printing-results #results .survey-qa-item .likert-scale {
-  display: block !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
   width: 100% !important;
   max-width: 100% !important;
   margin: 3px 0 0 !important;
   padding: 0 !important;
-  text-align: left !important;
+  text-align: center !important;
   box-sizing: border-box !important;
 }
 
@@ -361,8 +364,10 @@ body.is-printing-results #results .survey-qa-item .likert-scale__track {
   flex-direction: row !important;
   align-items: stretch !important;
   justify-content: flex-start !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  width: calc(100% - (2 * var(--print-likert-track-inset-x, 1.5mm))) !important;
+  max-width: calc(100% - (2 * var(--print-likert-track-inset-x, 1.5mm))) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   gap: 0 !important;
   padding: 0 !important;
   background: var(--print-fill) !important;
@@ -409,8 +414,9 @@ body.is-printing-results #results .likert-scale__step-num {
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item .likert-scale__step.is-selected,
 body.is-printing-results #results .survey-qa-item .likert-scale__step.is-selected {
-  background: var(--print-accent) !important;
-  border: none !important;
+  background: var(--print-fill-accent) !important;
+  border: 2px solid var(--print-accent) !important;
+  border-radius: 3px !important;
   box-shadow: none !important;
 }
 
@@ -424,7 +430,7 @@ body.is-printing-results
   .survey-qa-item
   .likert-scale__step.is-selected
   .likert-scale__step-num {
-  color: #ffffff !important;
+  color: var(--print-accent) !important;
   font-weight: 700 !important;
 }
 
@@ -475,7 +481,7 @@ body.print-one-student-per-page:not(.print-teacher-mode)
     border: none !important;
     border-radius: 0 !important;
     padding-left: 3mm !important;
-    padding-right: 2mm !important;
+    padding-right: 3mm !important;
   }
 
   body.is-printing-results #results .class-section__head {
