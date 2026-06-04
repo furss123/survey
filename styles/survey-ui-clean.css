@@ -3,28 +3,30 @@
  */
 @media screen {
   :root {
-    --school-bg: #f4f6f9;
-    --school-border: #e2e8f0;
-    --school-border-light: #eef2f6;
-    --school-muted: #5c6b7a;
-    --shadow-xs: 0 1px 2px rgba(15, 36, 64, 0.03);
-    --shadow-sm: 0 2px 6px rgba(15, 36, 64, 0.05);
-    --shadow-md: 0 4px 14px rgba(15, 36, 64, 0.06);
+    /* index.html 라이트 토큰과 맞춤 — 흐릿한 회색·작은 대비 방지 */
+    --school-bg: #eef2f7;
+    --school-border: #b4c3d5;
+    --school-border-light: #c5d4e3;
+    --school-muted: #475569;
+    --shadow-xs: 0 1px 3px rgba(15, 36, 64, 0.06);
+    --shadow-sm: 0 2px 8px rgba(15, 36, 64, 0.08);
+    --shadow-md: 0 4px 16px rgba(15, 36, 64, 0.1);
     --radius-sm: 10px;
     --radius-md: 12px;
     --radius-lg: 14px;
     --theme-bg-page: var(--school-bg);
+    --theme-bg-panel: #ffffff;
     --theme-bg-muted: #f8fafc;
-    --theme-text-muted: #5c6b7a;
-    --theme-border: #e2e8f0;
-    --theme-border-light: #eef2f6;
-    --theme-query-card-bg: #fafbfc;
-    --theme-query-card-hover: #f4f7fa;
-    --theme-hover-bg: #f4f7fa;
-    --theme-hover-surface: #fafbfc;
-    --border-strong: #cbd5e1;
-    --ui-line-height: 1.62;
-    --ui-line-height-tight: 1.45;
+    --theme-text-muted: #334155;
+    --theme-border: #b4c3d5;
+    --theme-border-light: #c5d4e3;
+    --theme-query-card-bg: #ffffff;
+    --theme-query-card-hover: #eef4fb;
+    --theme-hover-bg: #eef4fb;
+    --theme-hover-surface: #ffffff;
+    --border-strong: #94a8be;
+    --ui-line-height: 1.65;
+    --ui-line-height-tight: 1.5;
   }
 
   html[data-theme="dark"] {
@@ -170,6 +172,34 @@
   }
 
   /* 학생 카드 */
+  html:not([data-theme="dark"]) .student-card {
+    background: #ffffff;
+    border-color: var(--border-strong);
+    border-left-width: 4px;
+    box-shadow: var(--shadow-xs);
+  }
+  html:not([data-theme="dark"]) #results.visible {
+    background: #ffffff;
+    border-color: var(--border-strong);
+  }
+  html:not([data-theme="dark"]) .participation-banner {
+    background: #faf6eb;
+    border-color: var(--school-navy-light, #3d6b9e);
+  }
+  html:not([data-theme="dark"]) .participation-missing {
+    color: #334155;
+    font-weight: 600;
+  }
+  html:not([data-theme="dark"]) .participation-chip {
+    color: #1e3a5f;
+    background: #ffffff;
+    border-color: var(--border-strong);
+  }
+  html:not([data-theme="dark"]) .class-select-option:not(.active) {
+    color: #1f2f45;
+    background: #ffffff;
+    border-color: var(--border-strong);
+  }
   .student-card {
     border-left-width: 1px;
     border-radius: var(--radius-sm);
@@ -199,33 +229,97 @@
     color: var(--theme-text-muted);
   }
 
-  /* Q&A */
-  .survey-qa-item {
+  /* Q&A — 라이트: 흰 카드·진한 글자·뚜렷한 테두리 */
+  html:not([data-theme="dark"]) .survey-qa-item {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: #ffffff;
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-xs);
+  }
+  html:not([data-theme="dark"]) .survey-qa-item__question {
+    margin-bottom: 10px;
+    font-size: 0.9375rem;
+    font-weight: 800;
+    line-height: var(--ui-line-height-tight);
+    color: var(--theme-heading-strong, #0f2440);
+  }
+  html:not([data-theme="dark"]) .survey-qa-item__answer-text,
+  html:not([data-theme="dark"]) .survey-qa-multi-choice__detail {
+    font-size: 0.9375rem;
+    line-height: var(--ui-line-height);
+    color: #0f172a;
+  }
+  html:not([data-theme="dark"]) .survey-qa-multi-choice {
+    padding: 11px 13px 11px 15px;
+    border: 1px solid var(--theme-border);
+    border-left: 3px solid var(--school-navy-light, #3d6b9e);
+    border-radius: var(--radius-sm);
+    background: #eef4fb;
+  }
+  html:not([data-theme="dark"]) .survey-qa-multi-choice--typed {
+    align-items: flex-start;
+  }
+  html:not([data-theme="dark"]) .survey-qa-multi-choice--typed .survey-qa-multi-choice__type {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--theme-heading, #1e3a5f);
+    line-height: var(--multi-choice-line-height, 1.5);
+  }
+  html:not([data-theme="dark"]) .survey-qa-multi-choice--typed .survey-qa-multi-choice__detail {
+    line-height: var(--multi-choice-line-height, 1.5);
+    white-space: pre-wrap;
+  }
+  html:not([data-theme="dark"]) #results .student-survey-report--adaptive .survey-qa-item__question,
+  html:not([data-theme="dark"]) #results .student-survey-report--adaptive .survey-qa-item__answer-text,
+  html:not([data-theme="dark"]) #results .student-survey-report--adaptive .survey-qa-multi-choice__type,
+  html:not([data-theme="dark"]) #results .student-survey-report--adaptive .survey-qa-multi-choice__detail {
+    font-size: calc(0.9375rem + 1pt);
+  }
+  html:not([data-theme="dark"])
+    #results
+    .student-survey-report--adaptive.student-survey-report--smart
+    .survey-qa-item__question,
+  html:not([data-theme="dark"])
+    #results
+    .student-survey-report--adaptive.student-survey-report--smart
+    .survey-qa-item__answer-text,
+  html:not([data-theme="dark"])
+    #results
+    .student-survey-report--adaptive.student-survey-report--smart
+    .survey-qa-multi-choice__type,
+  html:not([data-theme="dark"])
+    #results
+    .student-survey-report--adaptive.student-survey-report--smart
+    .survey-qa-multi-choice__detail {
+    font-size: calc(0.9375rem + 2pt);
+  }
+  html[data-theme="dark"] .survey-qa-item {
     margin-bottom: 14px;
     padding: 12px 14px;
     border-radius: var(--radius-sm);
     background: var(--theme-bg-muted);
     border: 1px solid var(--theme-border-light);
   }
-  .survey-qa-item__question {
+  html[data-theme="dark"] .survey-qa-item__question {
     margin-bottom: 8px;
     font-weight: 600;
     line-height: var(--ui-line-height-tight);
     color: var(--theme-heading-strong);
   }
-  .survey-qa-item__answer-text,
-  .survey-qa-multi-choice__detail {
+  html[data-theme="dark"] .survey-qa-item__answer-text,
+  html[data-theme="dark"] .survey-qa-multi-choice__detail {
     line-height: var(--ui-line-height);
     color: var(--theme-text);
   }
-  .survey-qa-multi-choice {
+  html[data-theme="dark"] .survey-qa-multi-choice {
     padding: 10px 12px;
     border-left-width: 2px;
     border-left-color: var(--border-accent);
     border-radius: var(--radius-sm);
     background: var(--theme-bg-panel);
   }
-  .survey-qa-multi-choice__type {
+  html[data-theme="dark"] .survey-qa-multi-choice__type {
     font-weight: 600;
     color: var(--theme-heading);
   }
@@ -305,6 +399,29 @@
   }
 
   /* Likert (화면) */
+  html:not([data-theme="dark"]) .likert-scale__legend {
+    font-size: 0.8125rem;
+    color: #334155;
+  }
+  html:not([data-theme="dark"]) .likert-scale__step {
+    min-height: 34px;
+    border-radius: 6px;
+    background: #e8edf4;
+    border: 1px solid #b4c3d5;
+  }
+  html:not([data-theme="dark"]) .likert-scale__step.is-filled {
+    background: #dbeafe;
+  }
+  html:not([data-theme="dark"]) .likert-scale__step.is-selected {
+    background: #bfdbfe;
+    border-color: #1e3a5f;
+    box-shadow: 0 0 0 1px rgba(30, 58, 95, 0.2);
+    border-width: 2px;
+  }
+  html:not([data-theme="dark"]) .likert-scale__step-num {
+    color: #0f2440;
+    font-weight: 800;
+  }
   .likert-scale__legend {
     font-size: var(--text-xs);
   }

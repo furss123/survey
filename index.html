@@ -89,6 +89,7 @@
       --bg-accent-banner: #f5f0e4;
       --border: var(--theme-border);
       --border-strong: #9fb1c6;
+      --border-subtle: #c5d4e3;
       --border-accent: var(--school-navy-light);
       --text: var(--theme-text);
       --text-muted: var(--theme-text-muted);
@@ -1966,7 +1967,7 @@
       padding: 14px 16px;
       border-radius: 12px;
       background: var(--chip-bg, rgba(15, 23, 42, 0.04));
-      border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+      border: 1px solid var(--border-subtle);
     }
     .survey-qa-item__question {
       margin: 0 0 10px;
@@ -1991,28 +1992,82 @@
       gap: 10px;
     }
     .survey-qa-multi-choice {
+      --multi-choice-line-height: 1.5;
       margin: 0;
       padding: 10px 12px 10px 14px;
       border-radius: 8px;
       border-left: 3px solid var(--accent, #3b82f6);
       background: rgba(59, 130, 246, 0.06);
     }
-    .survey-qa-multi-choice__type {
-      display: block;
-      margin: 0 0 4px;
+    /* 복수 선택(유형 · 본문): Q1·Q5·Q11 등 동일 — ·는 본문 첫 줄 높이 기준 */
+    .survey-qa-multi-choice--typed {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: flex-start;
+      gap: 0;
+    }
+    .survey-qa-multi-choice--typed .survey-qa-multi-choice__type {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      margin: 0;
+      padding: 0;
       font-size: var(--text-sm);
       font-weight: 700;
-      line-height: 1.45;
+      line-height: var(--multi-choice-line-height);
       color: var(--theme-heading);
       word-break: keep-all;
+      white-space: nowrap;
     }
-    .survey-qa-multi-choice__detail {
+    .survey-qa-multi-choice--typed .survey-qa-multi-choice__type::after {
+      content: "·";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin: 0 0.32em;
+      font-size: 1em;
+      font-weight: 400;
+      line-height: 1;
+      color: var(--theme-text-muted, #64748b);
+    }
+    .survey-qa-multi-choice--typed .survey-qa-multi-choice__detail {
       display: block;
+      flex: 1 1 auto;
+      min-width: 0;
       margin: 0;
+      padding: 0;
       font-size: var(--text-sm);
-      line-height: 1.55;
+      line-height: var(--multi-choice-line-height);
       color: var(--theme-text);
       word-break: keep-all;
+      white-space: pre-wrap;
+    }
+    .survey-qa-multi-choice--plain {
+      position: relative;
+      padding-left: 12px;
+    }
+    .survey-qa-multi-choice--plain::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: calc(0.5 * var(--multi-choice-line-height, 1.5) * 1em);
+      transform: translateY(-50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent, #3d6b9e);
+    }
+    .survey-qa-multi-choice--plain .survey-qa-multi-choice__detail {
+      display: block;
+      margin: 0;
+      padding: 0;
+      font-size: var(--text-sm);
+      line-height: var(--multi-choice-line-height);
+      color: var(--theme-text);
+      word-break: keep-all;
+      white-space: pre-wrap;
     }
     #results .student-survey-report--adaptive .survey-qa-item__question,
     #results .student-survey-report--adaptive .survey-qa-item__answer-text,
@@ -2361,14 +2416,15 @@
       overflow-wrap: break-word !important;
       word-break: keep-all !important;
     }
-    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice::before {
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice--plain::before {
       content: "" !important;
       position: absolute !important;
       left: 0 !important;
-      top: 50% !important;
+      top: calc(0.5 * var(--multi-choice-line-height, 1.32) * 1em) !important;
+      transform: translateY(-50%) !important;
       width: 4px !important;
       height: 4px !important;
-      margin-top: -2px !important;
+      margin-top: 0 !important;
       border-radius: 50% !important;
       background: #3d6b9e !important;
       -webkit-print-color-adjust: exact !important;
@@ -2376,12 +2432,17 @@
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
+      .survey-qa-multi-choice--typed::before {
+      display: none !important;
+      content: none !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
       .survey-qa-multi-choice--typed {
       display: flex !important;
       flex-direction: row !important;
-      flex-wrap: wrap !important;
-      align-items: center !important;
-      align-content: center !important;
+      flex-wrap: nowrap !important;
+      align-items: flex-start !important;
       gap: 0 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type {
@@ -2391,9 +2452,9 @@
       padding: 0 !important;
       font-size: var(--print-font-pt, 11pt) !important;
       font-weight: 700 !important;
-      line-height: 1.32 !important;
+      line-height: var(--multi-choice-line-height, 1.32) !important;
       color: #1e3a5f !important;
-      vertical-align: middle !important;
+      white-space: nowrap !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type::after {
       content: "·" !important;
@@ -2405,20 +2466,19 @@
       font-weight: 400 !important;
       line-height: 1 !important;
       color: #64748b !important;
-      vertical-align: middle !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__detail {
       margin: 0 !important;
       padding: 0 !important;
-      line-height: 1.32 !important;
+      line-height: var(--multi-choice-line-height, 1.32) !important;
       color: #0f172a !important;
-      vertical-align: middle !important;
+      white-space: pre-wrap !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
       .survey-qa-multi-choice--typed
       .survey-qa-multi-choice__detail {
-      display: inline !important;
+      display: block !important;
       flex: 1 1 auto !important;
       min-width: 0 !important;
       font-size: var(--print-font-pt, 11pt) !important;
@@ -2826,12 +2886,13 @@
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
-        .survey-qa-multi-choice::before {
+        .survey-qa-multi-choice--plain::before {
         content: "" !important;
         position: absolute !important;
         left: 0 !important;
-        top: 50% !important;
-        margin-top: -2px !important;
+        top: calc(0.5 * var(--multi-choice-line-height, 1.32) * 1em) !important;
+        transform: translateY(-50%) !important;
+        margin-top: 0 !important;
         width: 4px !important;
         height: 4px !important;
         border-radius: 50% !important;
@@ -2841,17 +2902,25 @@
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
+        .survey-qa-multi-choice--typed::before {
+        display: none !important;
+        content: none !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
+        .student-card
         .survey-qa-multi-choice--typed {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: wrap !important;
-        align-items: center !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
         .survey-qa-multi-choice__type {
         display: inline-flex !important;
         align-items: center !important;
+        line-height: var(--multi-choice-line-height, 1.32) !important;
+        white-space: nowrap !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -2866,10 +2935,13 @@
         .student-card
         .survey-qa-multi-choice--typed
         .survey-qa-multi-choice__detail {
-        display: inline !important;
+        display: block !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
-        vertical-align: middle !important;
+        line-height: var(--multi-choice-line-height, 1.32) !important;
+        white-space: pre-wrap !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -2952,7 +3024,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260604">
+  <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260606">
 </head>
 <body>
   <header class="site-header no-print">
@@ -8283,9 +8355,9 @@
           "</span>";
       } else {
         html +=
-          '<p class="survey-qa-multi-choice__detail">' +
+          '<span class="survey-qa-multi-choice__detail">' +
           esc(part.detail || seg) +
-          "</p>";
+          "</span>";
       }
       html += "</div>";
     });
