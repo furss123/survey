@@ -2328,16 +2328,15 @@
     }
     /* 학생 인쇄 1페이지 맞춤: 폰트·줄간격·여백 조절 (질문·답 문구는 그대로, 다단 없음) */
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
-      padding-top: var(--print-card-pad-top, 12px) !important;
-      padding-right: var(--print-card-pad-x, 14px) !important;
-      padding-bottom: 0 !important;
-      padding-left: var(--print-card-pad-x, 14px) !important;
+      padding-top: var(--print-card-pad-top, 14px) !important;
+      padding-right: var(--print-card-pad-x, 16px) !important;
+      padding-bottom: var(--print-body-pb, 14px) !important;
+      padding-left: var(--print-card-pad-x, 16px) !important;
       max-height: none;
-      overflow: visible;
+      overflow: hidden;
       box-sizing: border-box;
-      border: none !important;
-      border-left: none !important;
-      border-radius: 0 !important;
+      border: 1px solid #c5d4e6 !important;
+      border-radius: var(--print-frame-radius, 12px) !important;
       box-shadow: none !important;
       background: #ffffff !important;
     }
@@ -2373,7 +2372,7 @@
       line-height: var(--print-line-height, 1.32) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-response-body {
-      padding-bottom: var(--print-body-pb, 10px) !important;
+      padding-bottom: 0 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .category-blocks {
       gap: var(--print-block-gap, 6px) !important;
@@ -2406,15 +2405,21 @@
       overflow-wrap: anywhere;
       word-break: keep-all;
     }
-    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive {
-      gap: var(--print-report-gap, 2px) !important;
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report__teacher {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: var(--print-report-gap, 11px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item {
-      margin: 0 0 var(--print-qa-gap, 9px) !important;
-      padding: var(--print-qa-pad, 8px 10px) !important;
-      border-radius: 7px !important;
+      margin: 0 !important;
+      padding: var(--print-qa-pad, 9px 11px) !important;
+      border-radius: 8px !important;
       page-break-inside: auto;
       break-inside: auto;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item .likert-scale {
+      margin-top: var(--print-likert-mt, 4px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__question {
       font-size: calc(var(--print-font-pt, 11pt) * 0.94) !important;
@@ -2547,9 +2552,6 @@
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
       background: #ffffff !important;
       color: #2c4a6e !important;
-      border: none !important;
-      border-left: none !important;
-      box-shadow: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-header {
       border-bottom: 1px solid #c5d4e6 !important;
@@ -2828,10 +2830,10 @@
       body.is-printing-results #results .student-card {
         background: #ffffff !important;
         color: #2c4a6e !important;
-        border: none !important;
-        border-left: none !important;
-        border-radius: 0 !important;
+        border: 1px solid #c5d4e6 !important;
+        border-radius: 12px !important;
         box-shadow: none !important;
+        overflow: hidden !important;
       }
       body.is-printing-results #results .student-response-header {
         border-bottom: 1px solid #c5d4e6 !important;
@@ -2892,10 +2894,17 @@
       body.is-printing-results #results .survey-qa-multi-choice__type {
         color: #1e3a5f !important;
       }
+      body.is-printing-results #results .student-survey-report--adaptive,
+      body.is-printing-results #results .student-survey-report__teacher {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: var(--print-report-gap, 11px) !important;
+      }
       body.is-printing-results #results .survey-qa-item {
+        margin: 0 !important;
         background: #ffffff !important;
         border: 1px solid #c5d4e6 !important;
-        border-radius: 6px !important;
+        border-radius: 8px !important;
       }
       body.is-printing-results #results .category-block .cat-field span {
         color: #3d5a7a !important;
@@ -2978,9 +2987,10 @@
         margin-bottom: 10px;
         background: #ffffff !important;
         color: #2c4a6e !important;
-        border: none !important;
-        border-left: none !important;
+        border: 1px solid #c5d4e6 !important;
+        border-radius: 12px !important;
         box-shadow: none !important;
+        overflow: hidden !important;
       }
       /* 특정 반 + 전체과목: 학생 1명당 1페이지 */
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section {
@@ -3085,9 +3095,10 @@
         color: #2c4a6e !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
-        border: none !important;
-        border-left: none !important;
+        border: 1px solid #c5d4e6 !important;
+        border-radius: 12px !important;
         box-shadow: none !important;
+        overflow: hidden !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -9169,6 +9180,7 @@
     "--print-qa-pad",
     "--print-qa-q-mb",
     "--print-report-gap",
+    "--print-frame-radius",
     "--print-multi-wrap-pad",
     "--print-multi-row-gap",
     "--print-multi-col-gap",
@@ -9249,10 +9261,11 @@
       card.style.setProperty("--print-header-pb", "4px");
       card.style.setProperty("--print-body-pb", "5px");
       card.style.setProperty("--print-title-mb", "2px");
-      card.style.setProperty("--print-qa-gap", "3px");
+      card.style.setProperty("--print-qa-gap", "2px");
       card.style.setProperty("--print-qa-pad", "4px 6px");
       card.style.setProperty("--print-qa-q-mb", "2px");
-      card.style.setProperty("--print-report-gap", "0");
+      card.style.setProperty("--print-report-gap", "2px");
+      card.style.setProperty("--print-frame-radius", "8px");
       card.style.setProperty("--print-multi-wrap-pad", "4px 6px");
       card.style.setProperty("--print-multi-row-gap", "4px");
       card.style.setProperty("--print-multi-col-gap", "8px");
@@ -9270,10 +9283,11 @@
       card.style.setProperty("--print-header-pb", "5px");
       card.style.setProperty("--print-body-pb", "7px");
       card.style.setProperty("--print-title-mb", "3px");
-      card.style.setProperty("--print-qa-gap", "5px");
+      card.style.setProperty("--print-qa-gap", "4px");
       card.style.setProperty("--print-qa-pad", "5px 8px");
       card.style.setProperty("--print-qa-q-mb", "3px");
-      card.style.setProperty("--print-report-gap", "1px");
+      card.style.setProperty("--print-report-gap", "5px");
+      card.style.setProperty("--print-frame-radius", "9px");
       card.style.setProperty("--print-multi-wrap-pad", "5px 7px");
       card.style.setProperty("--print-multi-row-gap", "5px");
       card.style.setProperty("--print-multi-col-gap", "10px");
@@ -9291,10 +9305,11 @@
       card.style.setProperty("--print-header-pb", "7px");
       card.style.setProperty("--print-body-pb", "9px");
       card.style.setProperty("--print-title-mb", "3px");
-      card.style.setProperty("--print-qa-gap", "7px");
+      card.style.setProperty("--print-qa-gap", "6px");
       card.style.setProperty("--print-qa-pad", "6px 9px");
       card.style.setProperty("--print-qa-q-mb", "4px");
-      card.style.setProperty("--print-report-gap", "1px");
+      card.style.setProperty("--print-report-gap", "8px");
+      card.style.setProperty("--print-frame-radius", "10px");
       card.style.setProperty("--print-multi-wrap-pad", "6px 8px");
       card.style.setProperty("--print-multi-row-gap", "6px");
       card.style.setProperty("--print-multi-col-gap", "11px");
@@ -9312,10 +9327,11 @@
       card.style.setProperty("--print-header-pb", "9px");
       card.style.setProperty("--print-body-pb", "11px");
       card.style.setProperty("--print-title-mb", "4px");
-      card.style.setProperty("--print-qa-gap", "9px");
+      card.style.setProperty("--print-qa-gap", "8px");
       card.style.setProperty("--print-qa-pad", "8px 10px");
       card.style.setProperty("--print-qa-q-mb", "5px");
-      card.style.setProperty("--print-report-gap", "2px");
+      card.style.setProperty("--print-report-gap", "11px");
+      card.style.setProperty("--print-frame-radius", "12px");
       card.style.setProperty("--print-multi-wrap-pad", "8px 10px");
       card.style.setProperty("--print-multi-row-gap", "8px");
       card.style.setProperty("--print-multi-col-gap", "14px");
