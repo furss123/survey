@@ -1926,8 +1926,38 @@
       white-space: pre-wrap;
       word-break: keep-all;
     }
+    .survey-qa-item__answer--multi {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .survey-qa-multi-choice {
+      margin: 0;
+      padding: 10px 12px 10px 14px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent, #3b82f6);
+      background: rgba(59, 130, 246, 0.06);
+    }
+    .survey-qa-multi-choice__type {
+      display: block;
+      margin: 0 0 4px;
+      font-size: var(--text-sm);
+      font-weight: 700;
+      line-height: 1.45;
+      color: var(--theme-heading);
+      word-break: keep-all;
+    }
+    .survey-qa-multi-choice__detail {
+      margin: 0;
+      font-size: var(--text-sm);
+      line-height: 1.55;
+      color: var(--theme-text);
+      word-break: keep-all;
+    }
     #results .student-survey-report--adaptive .survey-qa-item__question,
-    #results .student-survey-report--adaptive .survey-qa-item__answer-text {
+    #results .student-survey-report--adaptive .survey-qa-item__answer-text,
+    #results .student-survey-report--adaptive .survey-qa-multi-choice__type,
+    #results .student-survey-report--adaptive .survey-qa-multi-choice__detail {
       font-size: calc(var(--text-sm) + 1pt);
     }
     .likert-scale {
@@ -2224,10 +2254,27 @@
       margin-bottom: var(--print-qa-q-mb, 4px) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer-text,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__detail,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-pair__q,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-pair__a {
       font-size: var(--print-font-pt, 9pt) !important;
       line-height: var(--print-line-height, 1.28) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer--multi {
+      gap: var(--print-multi-gap, 5px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice {
+      margin: 0 !important;
+      padding: var(--print-multi-pad, 4px 6px 4px 8px) !important;
+      border-left-width: 2px !important;
+      border-radius: 4px !important;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type {
+      margin-bottom: var(--print-multi-type-mb, 2px) !important;
+      font-size: calc(var(--print-font-pt, 9pt) * 0.95) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale {
       margin-top: var(--print-likert-mt, 2px) !important;
@@ -2477,6 +2524,7 @@
         overflow: visible;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-item,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-multi-choice,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-pair,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .likert-scale,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .category-block {
@@ -7583,6 +7631,86 @@
     return null;
   }
 
+  var MULTI_SELECT_TYPE_DASH_RE = /형\s*[-–—]\s*/;
+
+  function looksLikeTypedMultiSelectSegment(segment) {
+    var s = String(segment || "").trim();
+    if (!s) return false;
+    return MULTI_SELECT_TYPE_DASH_RE.test(s) || /\s[-–—]\s/.test(s);
+  }
+
+  function parseMultiSelectAnswer(raw) {
+    var text = String(raw || "").trim();
+    if (!text || text === "—") return null;
+    var byNewline = text
+      .split(/\r?\n+/)
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
+    if (byNewline.length >= 2) {
+      var typedCount = byNewline.filter(looksLikeTypedMultiSelectSegment).length;
+      if (typedCount >= 2 || (byNewline.length >= 2 && text.indexOf(",") < 0)) {
+        return byNewline;
+      }
+    }
+    var byComma = text.split(/,\s*(?=[^\s,]+(?:형\s*[-–—]|\S+형\s*[-–—]))/);
+    if (byComma.length >= 2) {
+      return byComma
+        .map(function (s) {
+          return s.trim();
+        })
+        .filter(Boolean);
+    }
+    return null;
+  }
+
+  function splitMultiSelectChoiceSegment(segment) {
+    var s = String(segment || "").trim();
+    if (!s) return { type: "", detail: "" };
+    var m = s.match(/^(.+?형)\s*[-–—]\s*(.+)$/);
+    if (m) return { type: m[1].trim(), detail: m[2].trim() };
+    var dash = s.search(/\s[-–—]\s/);
+    if (dash > 0) {
+      return {
+        type: s.slice(0, dash).trim(),
+        detail: s.slice(dash).replace(/^\s*[-–—]\s*/, "").trim(),
+      };
+    }
+    return { type: "", detail: s };
+  }
+
+  function renderMultiSelectAnswerHtml(raw) {
+    var choices = parseMultiSelectAnswer(raw);
+    if (!choices || choices.length < 2) {
+      return {
+        isMulti: false,
+        html:
+          '<p class="survey-qa-item__answer-text">' + esc(raw || "—") + "</p>",
+      };
+    }
+    var html = "";
+    choices.forEach(function (seg) {
+      var part = splitMultiSelectChoiceSegment(seg);
+      html += '<div class="survey-qa-multi-choice">';
+      if (part.type) {
+        html +=
+          '<span class="survey-qa-multi-choice__type">' + esc(part.type) + "</span>";
+        html +=
+          '<p class="survey-qa-multi-choice__detail">' +
+          esc(part.detail) +
+          "</p>";
+      } else {
+        html +=
+          '<p class="survey-qa-multi-choice__detail">' +
+          esc(part.detail || seg) +
+          "</p>";
+      }
+      html += "</div>";
+    });
+    return { isMulti: true, html: html };
+  }
+
   function renderLikertScaleBar(score) {
     var s = Math.max(1, Math.min(5, score));
     var html =
@@ -7685,15 +7813,17 @@
     var likert = shouldUseLikertScaleForItem(q, item.answer);
     var html = '<div class="survey-qa-item">';
     html += '<h4 class="survey-qa-item__question">' + esc(q) + "</h4>";
-    html += '<div class="survey-qa-item__answer">';
+    var answerBody = "";
+    var answerExtraClass = "";
     if (likert != null) {
-      html += renderLikertScaleBar(likert);
+      answerBody = renderLikertScaleBar(likert);
     } else {
-      html +=
-        '<p class="survey-qa-item__answer-text">' +
-        esc(item.answer || "—") +
-        "</p>";
+      var rendered = renderMultiSelectAnswerHtml(item.answer);
+      if (rendered.isMulti) answerExtraClass = " survey-qa-item__answer--multi";
+      answerBody = rendered.html;
     }
+    html += '<div class="survey-qa-item__answer' + answerExtraClass + '">';
+    html += answerBody;
     html += "</div></div>";
     return html;
   }
