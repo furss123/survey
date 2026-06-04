@@ -2326,19 +2326,78 @@
     body.admin-setup-mode .section-head-row .admin-entry-link {
       display: none;
     }
+    /* 학생 인쇄 1인1페이지: @page 여백(18/13mm)과 동일한 고정 쪽테두리 */
+    body.print-one-student-per-page:not(.print-teacher-mode) {
+      --print-page-margin-top: 18mm;
+      --print-page-margin-x: 13mm;
+      --print-page-margin-bottom: 13mm;
+      --print-sheet-width: 184mm;
+      --print-sheet-height: 266mm;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results.visible {
+      width: 100% !important;
+      max-width: var(--print-sheet-width) !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      padding: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: #ffffff !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .class-section,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-cards,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-cards-list {
+      margin: 0 !important;
+      padding: 0 !important;
+      gap: 0 !important;
+      max-width: 100% !important;
+    }
     /* 학생 인쇄 1페이지 맞춤: 폰트·줄간격·여백 조절 (질문·답 문구는 그대로, 다단 없음) */
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
+      position: relative !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
       padding-top: var(--print-card-pad-top, 14px) !important;
       padding-right: var(--print-card-pad-x, 16px) !important;
       padding-bottom: var(--print-body-pb, 14px) !important;
       padding-left: var(--print-card-pad-x, 16px) !important;
       max-height: none;
-      overflow: hidden;
+      overflow: visible;
       box-sizing: border-box;
-      border: 1px solid #c5d4e6 !important;
-      border-radius: var(--print-frame-radius, 12px) !important;
+      border: none !important;
+      border-radius: 0 !important;
       box-shadow: none !important;
       background: #ffffff !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card > * {
+      position: relative !important;
+      z-index: 1 !important;
+    }
+    body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
+      border: 1px solid #c5d4e6 !important;
+      border-radius: var(--print-frame-radius, 12px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode):not(.print-fit-measuring)
+      #results
+      .student-card {
+      min-height: var(--print-sheet-height) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode):not(.print-fit-measuring)
+      #results
+      .student-card::after {
+      content: "" !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      height: var(--print-sheet-height) !important;
+      border: 1px solid #c5d4e6 !important;
+      border-radius: var(--print-frame-radius, 12px) !important;
+      box-sizing: border-box !important;
+      pointer-events: none !important;
+      z-index: 0 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-response-header {
       margin-bottom: var(--print-header-mb, 8px) !important;
@@ -2704,6 +2763,11 @@
     }
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
       max-width: 184mm;
+      min-height: 0 !important;
+    }
+    body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card::after {
+      display: none !important;
+      content: none !important;
     }
     @media print {
       /* 인쇄 편집: 흰 배경·학교 푸른 톤·좌측 강조선 없음·그림자·그라데이션 제거 */
@@ -2784,7 +2848,10 @@
       body.is-printing-results #homePanel {
         display: none !important;
       }
-      @page { size: A4; margin: 18mm 13mm 13mm 13mm; }
+      @page {
+        size: A4;
+        margin: 18mm 13mm 13mm 13mm; /* = --print-sheet-width 184mm × --print-sheet-height 266mm */
+      }
       body {
         padding: 0 !important;
         background: #ffffff !important;
@@ -3047,6 +3114,48 @@
         box-shadow: none !important;
         overflow: hidden !important;
       }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) #results.visible {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-cards,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-cards-list {
+        margin: 0 !important;
+        padding: 0 !important;
+        gap: 0 !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
+        position: relative !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: var(--print-sheet-height, 266mm) !important;
+        margin: 0 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        box-decoration-break: clone !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card::after {
+        content: "" !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: var(--print-sheet-height, 266mm) !important;
+        border: 1px solid #c5d4e6 !important;
+        border-radius: var(--print-frame-radius, 12px) !important;
+        box-sizing: border-box !important;
+        pointer-events: none !important;
+        z-index: 0 !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card > * {
+        position: relative !important;
+        z-index: 1 !important;
+      }
       /* 특정 반 + 전체과목: 학생 1명당 1페이지 */
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section {
         page-break-inside: auto;
@@ -3078,7 +3187,6 @@
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
         max-height: none;
-        overflow: visible;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-item,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-pair,
@@ -3195,12 +3303,6 @@
         .student-card
         .survey-qa-multi-choice__detail {
         color: #2c4a6e !important;
-      }
-      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
-        border: 1px solid #c5d4e6 !important;
-        border-radius: 12px !important;
-        box-shadow: none !important;
-        overflow: hidden !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -9261,7 +9363,7 @@
   }
 
   function getPrintablePageHeightPx() {
-    /* A4 297mm − 위 18mm(기존 13+5) − 아래 13mm ≈ 266mm */
+    /* @page 여백과 동일: A4 297mm − 상 18mm − 하 13mm = 266mm (--print-sheet-height) */
     return Math.round((266 * 96) / 25.4);
   }
 
