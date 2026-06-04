@@ -2243,8 +2243,7 @@
       font-size: calc(var(--print-font-pt, 9pt) * 0.9) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__summary {
-      margin: var(--print-likert-summary-mt, 3px) 0 0 !important;
-      font-size: calc(var(--print-font-pt, 8pt) * 0.88) !important;
+      display: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
@@ -2258,11 +2257,11 @@
       zoom: var(--print-zoom, 1);
     }
     body.print-fit-measuring.print-one-student-per-page #results {
-      width: 194mm;
-      max-width: 194mm;
+      width: 184mm;
+      max-width: 184mm;
     }
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
-      max-width: 194mm;
+      max-width: 184mm;
     }
     @media print {
       /* 화면이 다크모드여도 인쇄는 라이트 테마 */
@@ -2317,7 +2316,7 @@
         --error-text: #b91c1c;
       }
       .admin-setup-panel { display: none !important; }
-      @page { size: A4; margin: 8mm; }
+      @page { size: A4; margin: 13mm; }
       body { padding: 0 !important; background: #fff !important; color: #0f172a !important; }
       body.is-printing-results * { visibility: hidden; }
       body.is-printing-results #results,
@@ -2481,6 +2480,9 @@
         break-inside: auto;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card-divider {
+        display: none !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .likert-scale__summary {
         display: none !important;
       }
       /* 담임선생님께!: 반 전원 한 페이지 압축 그리드 */
@@ -8007,8 +8009,8 @@
   }
 
   function getPrintablePageHeightPx() {
-    /* A4 297mm − 상하 여백 8mm×2 ≈ 281mm 인쇄 가능 높이 */
-    return Math.round((281 * 96) / 25.4);
+    /* A4 297mm − 상하 여백 13mm×2 ≈ 271mm 인쇄 가능 높이 */
+    return Math.round((271 * 96) / 25.4);
   }
 
   var PRINT_FIT_SPACING_PROPS = [
@@ -8029,7 +8031,6 @@
     "--print-likert-legend-mb",
     "--print-likert-track-gap",
     "--print-likert-step-h",
-    "--print-likert-summary-mt",
     "--print-zoom",
   ];
 
@@ -8063,8 +8064,7 @@
       card.style.setProperty("--print-likert-mt", "1px");
       card.style.setProperty("--print-likert-legend-mb", "2px");
       card.style.setProperty("--print-likert-track-gap", "2px");
-      card.style.setProperty("--print-likert-step-h", "14px");
-      card.style.setProperty("--print-likert-summary-mt", "2px");
+      card.style.setProperty("--print-likert-step-h", "16px");
     } else if (tier >= 2) {
       card.style.setProperty("--print-block-gap", "3px");
       card.style.setProperty("--print-block-pad", "4px 6px 3px");
@@ -8080,8 +8080,7 @@
       card.style.setProperty("--print-likert-mt", "2px");
       card.style.setProperty("--print-likert-legend-mb", "2px");
       card.style.setProperty("--print-likert-track-gap", "3px");
-      card.style.setProperty("--print-likert-step-h", "16px");
-      card.style.setProperty("--print-likert-summary-mt", "2px");
+      card.style.setProperty("--print-likert-step-h", "18px");
     } else if (tier >= 1) {
       card.style.setProperty("--print-block-gap", "5px");
       card.style.setProperty("--print-block-pad", "6px 8px 5px");
@@ -8098,7 +8097,6 @@
       card.style.setProperty("--print-likert-legend-mb", "3px");
       card.style.setProperty("--print-likert-track-gap", "4px");
       card.style.setProperty("--print-likert-step-h", "20px");
-      card.style.setProperty("--print-likert-summary-mt", "3px");
     } else {
       card.style.setProperty("--print-block-gap", "7px");
       card.style.setProperty("--print-block-pad", "8px 10px 6px");
@@ -8115,7 +8113,6 @@
       card.style.setProperty("--print-likert-legend-mb", "4px");
       card.style.setProperty("--print-likert-track-gap", "5px");
       card.style.setProperty("--print-likert-step-h", "22px");
-      card.style.setProperty("--print-likert-summary-mt", "4px");
     }
   }
 
@@ -8126,19 +8123,19 @@
   function applyPrintZoomToFit(card, pageBudget) {
     card.style.removeProperty("--print-zoom");
     if (card.scrollHeight <= pageBudget) return;
-    var scale = Math.max(0.72, Math.min(1, (pageBudget - 2) / card.scrollHeight));
+    var scale = Math.max(0.82, Math.min(1, (pageBudget - 2) / card.scrollHeight));
     card.style.setProperty("--print-zoom", String(Math.round(scale * 1000) / 1000));
     if (card.scrollHeight > pageBudget) {
-      scale = Math.max(0.72, (pageBudget - 2) / card.scrollHeight);
+      scale = Math.max(0.82, (pageBudget - 2) / card.scrollHeight);
       card.style.setProperty("--print-zoom", String(Math.round(scale * 1000) / 1000));
     }
   }
 
   function fitStudentCardToOnePage(card, pageBudget) {
-    var minFontPt = 4.25;
-    var minLineH = 1.02;
-    var maxFontPt = 10.5;
-    var maxLineH = 1.38;
+    var minFontPt = 5.5;
+    var minLineH = 1.06;
+    var maxFontPt = 10;
+    var maxLineH = 1.36;
     var bestFont = minFontPt;
     var bestLine = minLineH;
     var bestTier = 3;
