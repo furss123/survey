@@ -1886,6 +1886,44 @@
       font-weight: 700;
       color: var(--theme-heading);
     }
+    .admin-layout-picker {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .admin-layout-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      color: var(--theme-text);
+    }
+    .admin-layout-option input {
+      margin-top: 3px;
+    }
+    .survey-qa-pair {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--chip-bg, rgba(15, 23, 42, 0.04));
+      border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.08));
+    }
+    .survey-qa-pair__q,
+    .survey-qa-pair__a {
+      margin: 0 0 6px;
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+    .survey-qa-pair__a {
+      margin-bottom: 0;
+    }
+    .survey-qa-label {
+      display: inline-block;
+      min-width: 2.2em;
+      font-weight: 700;
+      color: var(--theme-heading);
+    }
     .admin-category-config {
       margin-bottom: 0;
     }
@@ -2414,7 +2452,21 @@
         <strong id="adminSetupTitle">시트 구성 미리보기</strong>
         <span class="admin-setup-meta" id="adminSetupMeta"></span>
       </div>
-      <div class="admin-setup-section">
+      <div class="admin-setup-section" id="adminLayoutSection">
+        <p class="admin-setup-section-label">결과 표시 방식</p>
+        <div class="admin-layout-picker" role="radiogroup" aria-label="결과 표시 방식">
+          <label class="admin-layout-option">
+            <input type="radio" name="adminResultsLayout" value="class" checked />
+            <span>반별 · 학생별 (질문–답) — 시트 질문을 학생 번호순으로 표시</span>
+          </label>
+          <label class="admin-layout-option">
+            <input type="radio" name="adminResultsLayout" value="subject" />
+            <span>과목별 — 시트가 국어·수학 등 과목별로 정리된 경우</span>
+          </label>
+        </div>
+        <p class="admin-setup-desc" id="adminLayoutHint"></p>
+      </div>
+      <div class="admin-setup-section" id="adminCategorySection">
         <div id="adminCategoryConfig" class="admin-category-config" role="group" aria-label="표시 카테고리"></div>
       </div>
       <div class="admin-setup-actions" id="adminSetupActionsConfigure">
@@ -4987,6 +5039,7 @@
   var adminSetupClasses = [];
   var adminSetupEditId = null;
   var adminSetupStep = "configure";
+  var adminSetupResultsLayout = "class";
   var adminCategorySelectAll = false;
   var TEACHER_MESSAGE_TITLE = "담임 선생님께 전하는 한마디";
   var DEFAULT_SUBJECT_FILTER_OPTIONS = [
@@ -5596,18 +5649,149 @@
     return /SMART\s*학습종합검사/.test(label);
   }
 
+  function isProtectedLegacySurvey(entry) {
+    if (!entry) return false;
+    if (entry.viewMode || entry.resultsLayout) return false;
+    if (isDesignatedClassViewSurvey(entry)) return false;
+    return true;
+  }
+
+  function isSubjectOrganizedSheet(multi) {
+    if (!multi) return false;
+    var sheets = (multi.sheets || []).filter(function (s) {
+      return !isListSheetTab(s.sheetName);
+    });
+    var subjectTabCount = 0;
+    sheets.forEach(function (s) {
+      if (matchKnownSubjectId(s.sheetName)) subjectTabCount++;
+    });
+    if (subjectTabCount >= 2) return true;
+    var cols = getSheetCategoryColumns(multi);
+    var subjectColCount = cols.filter(function (c) {
+      return c.id && CORE_RESULTS_SUBJECT_IDS.indexOf(c.id) >= 0;
+    }).length;
+    if (subjectColCount >= 2) return true;
+    var seen = {};
+    var sectionSubjects = 0;
+    sheets.forEach(function (sheet) {
+      (sheet.rows || []).forEach(function (row) {
+        (row.sections || []).forEach(function (sec) {
+          var subj =
+            matchKnownSubjectId(sec.subject || "") ||
+            matchKnownSubjectId(sec.title || "");
+          if (subj && !seen[subj]) {
+            seen[subj] = true;
+            sectionSubjects++;
+          }
+        });
+      });
+    });
+    return sectionSubjects >= 2;
+  }
+
+  function detectResultsLayoutFromAnalysis(multi, entry) {
+    if (entry && entry.resultsLayout === "class") return "class";
+    if (entry && entry.resultsLayout === "subject") return "subject";
+    if (entry && entry.viewMode === "class") return "class";
+    if (entry && entry.viewMode === "subject") return "subject";
+    if (isDesignatedClassViewSurvey(entry)) return "class";
+    if (isProtectedLegacySurvey(entry)) return "subject";
+    return isSubjectOrganizedSheet(multi) ? "subject" : "class";
+  }
+
   /** 기본값 subject — viewMode 없는 기존 설문은 과목 탭 UI 유지 */
   function getLaunchViewMode(entry) {
     if (!entry) return "subject";
-    if (entry.viewMode === "subject") return "subject";
-    if (entry.viewMode === "class") return "class";
+    if (entry.viewMode === "subject" || entry.resultsLayout === "subject") return "subject";
+    if (entry.viewMode === "class" || entry.resultsLayout === "class") return "class";
     if (isDesignatedClassViewSurvey(entry)) return "class";
     return "subject";
   }
 
   function usesClassBasedResultsPicker() {
-    if (adminSetupMode) return false;
+    if (adminSetupMode) return adminSetupResultsLayout === "class";
     return getLaunchViewMode(currentLaunchEntry) === "class";
+  }
+
+  function collectSubjectIdsForPicker() {
+    var ordered = [];
+    var cols = getSheetCategoryColumns(lastMultiResult);
+    cols.forEach(function (col) {
+      if (
+        col.id &&
+        CORE_RESULTS_SUBJECT_IDS.indexOf(col.id) >= 0 &&
+        ordered.indexOf(col.id) < 0
+      ) {
+        ordered.push(col.id);
+      }
+    });
+    var entry = currentLaunchEntry;
+    if (entry && entry.categories && entry.categories.length) {
+      entry.categories.forEach(function (c) {
+        if (c.id && c.id !== "all" && c.enabled !== false && ordered.indexOf(c.id) < 0) {
+          if (CORE_RESULTS_SUBJECT_IDS.indexOf(c.id) >= 0 || c.id === "teacher") {
+            ordered.push(c.id);
+          }
+        }
+      });
+    }
+    if (isProtectedLegacySurvey(entry)) {
+      CORE_RESULTS_SUBJECT_IDS.forEach(function (id) {
+        if (ordered.indexOf(id) < 0) ordered.push(id);
+      });
+    }
+    return ordered;
+  }
+
+  function usesSubjectResultsPicker() {
+    if (usesClassBasedResultsPicker()) return false;
+    if (adminSetupMode) return adminSetupResultsLayout === "subject";
+    if (isProtectedLegacySurvey(currentLaunchEntry)) {
+      return collectSubjectIdsForPicker().length > 0;
+    }
+    if (!isSubjectOrganizedSheet(lastMultiResult)) return false;
+    return collectSubjectIdsForPicker().length > 0;
+  }
+
+  function syncAdminLayoutUi() {
+    var layoutSection = document.getElementById("adminLayoutSection");
+    var categorySection = document.getElementById("adminCategorySection");
+    var hint = document.getElementById("adminLayoutHint");
+    var editEntry = adminSetupEditId ? findRegistryEntry(adminSetupEditId) : null;
+    var legacyLocked = !!(editEntry && isProtectedLegacySurvey(editEntry));
+    if (legacyLocked) adminSetupResultsLayout = "subject";
+    document.querySelectorAll('input[name="adminResultsLayout"]').forEach(function (input) {
+      input.checked = input.value === adminSetupResultsLayout;
+      input.disabled = legacyLocked;
+    });
+    if (layoutSection) layoutSection.hidden = legacyLocked || adminSetupStep === "preview";
+    if (categorySection) {
+      categorySection.hidden =
+        adminSetupStep === "preview" || adminSetupResultsLayout === "class";
+    }
+    if (hint) {
+      hint.textContent =
+        adminSetupResultsLayout === "class"
+          ? "1반~8반 탭으로 나누고, 각 학생의 시트 질문·답을 번호순으로 표시합니다."
+          : "시트에 과목별 항목이 있을 때만 전과목·국어·수학 등 과목 탭이 표시됩니다.";
+    }
+  }
+
+  function bindAdminLayoutPicker() {
+    document.querySelectorAll('input[name="adminResultsLayout"]').forEach(function (input) {
+      if (input.dataset.bound === "1") return;
+      input.dataset.bound = "1";
+      input.addEventListener("change", function () {
+        if (!input.checked) return;
+        adminSetupResultsLayout = input.value === "subject" ? "subject" : "class";
+        if (adminSetupResultsLayout === "class") adminCategorySelectAll = true;
+        syncAdminLayoutUi();
+        renderAdminSetupPanels();
+        if (adminSetupStep === "preview" && lastMultiResult) {
+          onAdminCategoryChanged();
+        }
+      });
+    });
   }
 
   function compareRowsByStudentId(a, b) {
@@ -6044,6 +6228,7 @@
         editId: adminSetupEditId,
         categories: adminSetupCategories,
         categorySelectAll: adminCategorySelectAll,
+        resultsLayout: adminSetupResultsLayout,
       })
     );
   }
@@ -6054,10 +6239,9 @@
     document.body.classList.toggle("admin-setup-step-preview", adminSetupStep === "preview");
     var configureActions = document.getElementById("adminSetupActionsConfigure");
     var previewActions = document.getElementById("adminSetupActionsPreview");
-    var categorySection = document.querySelector(".admin-setup-section");
     if (configureActions) configureActions.hidden = adminSetupStep !== "configure";
     if (previewActions) previewActions.hidden = adminSetupStep !== "preview";
-    if (categorySection) categorySection.hidden = adminSetupStep === "preview";
+    syncAdminLayoutUi();
     var titleEl = document.getElementById("adminSetupTitle");
     if (titleEl) {
       titleEl.textContent =
@@ -6116,16 +6300,28 @@
           ? lastMultiResult.sheets[0].sheetName
           : null;
     var existingEntry = adminSetupEditId ? findRegistryEntry(adminSetupEditId) : null;
-    var resolvedViewMode = adminSetupEditId
-      ? (existingEntry && existingEntry.viewMode) || "subject"
-      : "class";
+    if (existingEntry && isProtectedLegacySurvey(existingEntry)) {
+      adminSetupResultsLayout = "subject";
+    }
+    var resolvedLayout = adminSetupResultsLayout === "subject" ? "subject" : "class";
+    var resolvedViewMode = resolvedLayout === "class" ? "class" : "subject";
+    if (adminSetupEditId && existingEntry) {
+      if (isProtectedLegacySurvey(existingEntry)) {
+        resolvedLayout = "subject";
+        resolvedViewMode = "subject";
+      } else if (existingEntry.resultsLayout || existingEntry.viewMode) {
+        /* 게시 시 관리자가 고른 표시 방식 우선 */
+      }
+    }
     var payload = {
       label: SurveyForm.normalizeDisplayText(adminSetupLabel) || adminSetupLabel,
       url: adminSetupUrl,
       tab: preferredTab,
       classes: registryClasses,
+      resultsLayout: resolvedLayout,
       viewMode: resolvedViewMode,
-      categorySelectAll: adminCategorySelectAll,
+      categorySelectAll:
+        resolvedLayout === "class" ? true : adminCategorySelectAll,
       categories: adminSetupCategories.map(function (c, i) {
         return {
           id: c.id,
@@ -6277,6 +6473,18 @@
           if (c.id !== "all") c.enabled = true;
         });
       }
+      var editEntryForLayout = adminSetupEditId ? findRegistryEntry(adminSetupEditId) : null;
+      if (draft && draft.resultsLayout) {
+        adminSetupResultsLayout = draft.resultsLayout;
+      } else {
+        adminSetupResultsLayout = detectResultsLayoutFromAnalysis(
+          lastMultiResult,
+          editEntryForLayout
+        );
+      }
+      if (adminSetupResultsLayout === "class") adminCategorySelectAll = true;
+      bindAdminLayoutPicker();
+      syncAdminLayoutUi();
       renderAdminSetupPanels();
       activeSubjectView = "all";
       activeClassFilter = null;
@@ -6492,22 +6700,9 @@
 
   function getResultsSubjectPickerOptions() {
     if (usesClassBasedResultsPicker()) return [];
-    var cols = getSheetCategoryColumns(lastMultiResult);
-    var ordered = [];
-    if (cols.length) {
-      cols.forEach(function (col) {
-        if (
-          col.id &&
-          CORE_RESULTS_SUBJECT_IDS.indexOf(col.id) >= 0 &&
-          ordered.indexOf(col.id) < 0
-        ) {
-          ordered.push(col.id);
-        }
-      });
-    }
-    CORE_RESULTS_SUBJECT_IDS.forEach(function (id) {
-      if (ordered.indexOf(id) < 0) ordered.push(id);
-    });
+    if (!usesSubjectResultsPicker()) return [];
+    var ordered = collectSubjectIdsForPicker();
+    if (!ordered.length) return [];
     var subjectOpts = ordered.map(function (id, idx) {
       return {
         id: id,
@@ -6516,6 +6711,7 @@
         order: idx + 1,
       };
     });
+    if (subjectOpts.length === 1) return subjectOpts;
     return [{ id: "all", label: "전과목", enabled: true, order: 0 }].concat(subjectOpts);
   }
 
@@ -6697,25 +6893,10 @@
     return !filterKey || filterKey === classKey || filterKey === hostKey;
   }
 
-  function renderClassPickerBar() {
-    if (adminSetupMode) {
-      var subjectOnly = renderSubjectFilterRow();
-      if (!subjectOnly) return "";
-      return (
-        '<nav class="class-picker-bar" aria-label="과목 선택">' + subjectOnly + "</nav>"
-      );
-    }
-    var classTabs = getClassTabsConfig();
-    if (!classTabs.length) return "";
-    var sheet = getActiveSheetAnalysis();
-    if (!sheet) return "";
-    var sheetByName = {};
-    (lastMultiResult.sheets || []).forEach(function (s) {
-      if (!isListSheetTab(s.sheetName)) sheetByName[s.sheetName] = s;
-    });
+  function renderClassTabsGridHtml(classTabs, sheet, sheetByName) {
+    if (!classTabs.length || !sheet) return "";
     var tabCount = classTabs.length;
     var html =
-      '<nav class="class-picker-bar" aria-label="반·과목 선택">' +
       '<div class="class-picker-bar__grid class-picker-bar__grid--classes" role="tablist" aria-label="반 선택" style="--class-tab-count:' +
       esc(String(tabCount)) +
       '">';
@@ -6738,7 +6919,44 @@
         "</button>";
     });
     html += "</div>";
-    if (!usesClassBasedResultsPicker()) {
+    return html;
+  }
+
+  function renderAdminSetupResultsPickerBar() {
+    if (adminSetupResultsLayout === "class") {
+      var classTabs = getClassTabsConfig();
+      var sheet = getActiveSheetAnalysis();
+      if (!classTabs.length || !sheet) return "";
+      var sheetByName = {};
+      (lastMultiResult.sheets || []).forEach(function (s) {
+        if (!isListSheetTab(s.sheetName)) sheetByName[s.sheetName] = s;
+      });
+      var grid = renderClassTabsGridHtml(classTabs, sheet, sheetByName);
+      if (!grid) return "";
+      return '<nav class="class-picker-bar" aria-label="반 선택">' + grid + "</nav>";
+    }
+    var subjectOnly = renderSubjectFilterRow();
+    if (!subjectOnly) return "";
+    return '<nav class="class-picker-bar" aria-label="과목 선택">' + subjectOnly + "</nav>";
+  }
+
+  function renderClassPickerBar() {
+    if (adminSetupMode) {
+      return renderAdminSetupResultsPickerBar();
+    }
+    var classTabs = getClassTabsConfig();
+    if (!classTabs.length) return "";
+    var sheet = getActiveSheetAnalysis();
+    if (!sheet) return "";
+    var sheetByName = {};
+    (lastMultiResult.sheets || []).forEach(function (s) {
+      if (!isListSheetTab(s.sheetName)) sheetByName[s.sheetName] = s;
+    });
+    var aria =
+      usesClassBasedResultsPicker() ? "반 선택" : usesSubjectResultsPicker() ? "반·과목 선택" : "반 선택";
+    var html = '<nav class="class-picker-bar" aria-label="' + aria + '">';
+    html += renderClassTabsGridHtml(classTabs, sheet, sheetByName);
+    if (usesSubjectResultsPicker()) {
       html += renderSubjectFilterRow();
     }
     html += "</nav>";
@@ -7016,6 +7234,21 @@
     );
   }
 
+  function renderAdaptiveQAPair(question, answer) {
+    var q = String(question || "").trim();
+    var a = String(answer || "").trim();
+    if (!q && !a) return "";
+    return (
+      '<div class="survey-qa-pair">' +
+      '<p class="survey-qa-pair__q"><span class="survey-qa-label">질문</span> <span class="survey-qa-text">' +
+      esc(q || "—") +
+      "</span></p>" +
+      '<p class="survey-qa-pair__a"><span class="survey-qa-label">답</span> <span class="survey-qa-text">' +
+      esc(a || "—") +
+      "</span></p></div>"
+    );
+  }
+
   function renderAdaptiveQuestionResponses(row) {
     var sections = (row.sections || []).filter(isMeaningfulSection);
     if (!sections.length) {
@@ -7031,21 +7264,17 @@
         html += '<h4 class="student-survey-report__question-title">' + esc(title) + "</h4>";
       }
       if (sec.fields && sec.fields.length) {
-        html += '<div class="student-survey-report__fields">';
         sec.fields.forEach(function (f) {
-          html += renderAdaptiveFieldLine(formatFieldLabelFromSheet(f.key), f.value);
+          html += renderAdaptiveQAPair(formatFieldLabelFromSheet(f.key), f.value);
         });
-        html += "</div>";
       } else if (sec.body) {
         var parsed = parseSectionFields(sec.body);
         if (parsed.length) {
-          html += '<div class="student-survey-report__fields">';
           parsed.forEach(function (f) {
-            html += renderAdaptiveFieldLine(formatFieldLabelFromSheet(f.key), f.value);
+            html += renderAdaptiveQAPair(formatFieldLabelFromSheet(f.key), f.value);
           });
-          html += "</div>";
         } else {
-          html += '<div class="student-survey-report__body">' + esc(sec.body) + "</div>";
+          html += renderAdaptiveQAPair(title || "응답", sec.body);
         }
       }
       html += "</section>";
@@ -7055,13 +7284,11 @@
       html += '<section class="student-survey-report__teacher">';
       html += '<h4 class="student-survey-report__teacher-title">담임쌤께</h4>';
       if (teacherSec.fields && teacherSec.fields.length) {
-        html += '<div class="student-survey-report__fields">';
         teacherSec.fields.forEach(function (f) {
-          html += renderAdaptiveFieldLine(formatFieldLabelFromSheet(f.key), f.value);
+          html += renderAdaptiveQAPair(formatFieldLabelFromSheet(f.key), f.value);
         });
-        html += "</div>";
       } else if (teacherSec.body) {
-        html += '<div class="student-survey-report__body">' + esc(teacherSec.body) + "</div>";
+        html += renderAdaptiveQAPair("담임 선생님께", teacherSec.body);
       }
       html += "</section>";
     }
@@ -7657,6 +7884,7 @@
     }
   });
 
+  bindAdminLayoutPicker();
   document.getElementById("adminSetupConfirm").addEventListener("click", function () {
     confirmAdminSetup();
   });
@@ -7715,8 +7943,11 @@
         categories: draft && draft.categories ? draft.categories : null,
         classes: draft && draft.classes ? draft.classes : null,
         categorySelectAll: adminCategorySelectAll,
+        resultsLayout: draft && draft.resultsLayout ? draft.resultsLayout : adminSetupResultsLayout,
       })
     );
+    if (draft && draft.resultsLayout) adminSetupResultsLayout = draft.resultsLayout;
+    bindAdminLayoutPicker();
     replaceIndexPageUrl({
       adminSetup: "1",
       label: label,
