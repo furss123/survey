@@ -2316,13 +2316,15 @@
     body.admin-setup-mode .section-head-row .admin-entry-link {
       display: none;
     }
-    /* 학생 인쇄 1인1페이지: @page 여백(18/13mm)과 동일한 고정 쪽테두리 */
+    /* 학생 인쇄 1인1페이지: @page 좌우 15mm, 쪽테두리 180mm, 본문 좌측 3mm */
     body.print-one-student-per-page:not(.print-teacher-mode) {
       --print-page-margin-top: 18mm;
-      --print-page-margin-x: 13mm;
+      --print-page-margin-x: 15mm;
       --print-page-margin-bottom: 13mm;
-      --print-sheet-width: 184mm;
+      --print-sheet-width: 180mm;
       --print-sheet-height: 266mm;
+      --print-card-pad-left: 3mm;
+      --print-card-pad-right: 2mm;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results.visible {
       width: 100% !important;
@@ -2349,9 +2351,9 @@
       max-width: 100% !important;
       margin: 0 !important;
       padding-top: var(--print-card-pad-top, 14px) !important;
-      padding-right: var(--print-card-pad-x, 16px) !important;
+      padding-right: var(--print-card-pad-right, 2mm) !important;
       padding-bottom: var(--print-body-pb, 14px) !important;
-      padding-left: var(--print-card-pad-x, 16px) !important;
+      padding-left: var(--print-card-pad-left, 3mm) !important;
       max-height: none;
       overflow: visible;
       box-sizing: border-box;
@@ -2761,11 +2763,11 @@
       transform-origin: top center;
     }
     body.print-fit-measuring.print-one-student-per-page #results {
-      width: 184mm;
-      max-width: 184mm;
+      width: 180mm;
+      max-width: 180mm;
     }
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
-      max-width: 184mm;
+      max-width: 180mm;
       min-height: 0 !important;
     }
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card::after {
@@ -2853,7 +2855,7 @@
       }
       @page {
         size: A4;
-        margin: 18mm 13mm 13mm 13mm; /* = --print-sheet-width 184mm × --print-sheet-height 266mm */
+        margin: 18mm 15mm 13mm 15mm; /* = --print-sheet-width 180mm × --print-sheet-height 266mm */
       }
       body {
         padding: 0 !important;
@@ -3431,7 +3433,7 @@
     }
   </style>
   <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260611">
-  <link rel="stylesheet" href="styles/survey-print.css?v=20260612">
+  <link rel="stylesheet" href="styles/survey-print.css?v=20260614">
 </head>
 <body>
   <header class="site-header no-print">
@@ -9449,7 +9451,8 @@
     "--print-block-gap",
     "--print-block-pad",
     "--print-card-pad-top",
-    "--print-card-pad-x",
+    "--print-card-pad-left",
+    "--print-card-pad-right",
     "--print-header-mb",
     "--print-header-pb",
     "--print-body-pb",
@@ -9517,12 +9520,13 @@
       Math.round((fontPt + PRINT_FONT_SIZE_BUMP_PT) * 20) / 20 + "pt"
     );
     card.style.setProperty("--print-line-height", String(lineH));
+    card.style.setProperty("--print-card-pad-left", "3mm");
     card.classList.toggle("print-fit-compact-likert", tier >= 2);
     if (tier >= 4) {
       card.style.setProperty("--print-block-gap", "2px");
       card.style.setProperty("--print-block-pad", "3px 5px 2px");
       card.style.setProperty("--print-card-pad-top", "5px");
-      card.style.setProperty("--print-card-pad-x", "7px");
+      card.style.setProperty("--print-card-pad-right", "2mm");
       card.style.setProperty("--print-header-mb", "3px");
       card.style.setProperty("--print-header-pb", "3px");
       card.style.setProperty("--print-body-pb", "4px");
@@ -9544,7 +9548,7 @@
       card.style.setProperty("--print-block-gap", "3px");
       card.style.setProperty("--print-block-pad", "4px 6px 3px");
       card.style.setProperty("--print-card-pad-top", "6px");
-      card.style.setProperty("--print-card-pad-x", "8px");
+      card.style.setProperty("--print-card-pad-right", "2mm");
       card.style.setProperty("--print-header-mb", "4px");
       card.style.setProperty("--print-header-pb", "4px");
       card.style.setProperty("--print-body-pb", "5px");
@@ -9566,7 +9570,7 @@
       card.style.setProperty("--print-block-gap", "4px");
       card.style.setProperty("--print-block-pad", "5px 7px 4px");
       card.style.setProperty("--print-card-pad-top", "8px");
-      card.style.setProperty("--print-card-pad-x", "10px");
+      card.style.setProperty("--print-card-pad-right", "2mm");
       card.style.setProperty("--print-header-mb", "5px");
       card.style.setProperty("--print-header-pb", "5px");
       card.style.setProperty("--print-body-pb", "7px");
@@ -9588,7 +9592,7 @@
       card.style.setProperty("--print-block-gap", "6px");
       card.style.setProperty("--print-block-pad", "7px 9px 5px");
       card.style.setProperty("--print-card-pad-top", "10px");
-      card.style.setProperty("--print-card-pad-x", "12px");
+      card.style.setProperty("--print-card-pad-right", "2mm");
       card.style.setProperty("--print-header-mb", "7px");
       card.style.setProperty("--print-header-pb", "7px");
       card.style.setProperty("--print-body-pb", "9px");
@@ -9610,7 +9614,7 @@
       card.style.setProperty("--print-block-gap", "8px");
       card.style.setProperty("--print-block-pad", "9px 11px 7px");
       card.style.setProperty("--print-card-pad-top", "12px");
-      card.style.setProperty("--print-card-pad-x", "14px");
+      card.style.setProperty("--print-card-pad-right", "2mm");
       card.style.setProperty("--print-header-mb", "9px");
       card.style.setProperty("--print-header-pb", "9px");
       card.style.setProperty("--print-body-pb", "11px");

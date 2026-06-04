@@ -6,6 +6,10 @@
 /* ── 토큰 ── */
 body.print-one-student-per-page:not(.print-teacher-mode),
 body.is-printing-results {
+  --print-page-margin-x: 15mm;
+  --print-sheet-width: 180mm;
+  --print-card-pad-left: 3mm;
+  --print-card-pad-right: 2mm;
   --print-ink: #243044;
   --print-ink-body: #3d4d61;
   --print-ink-muted: #6b7f94;
@@ -77,10 +81,50 @@ body.is-printing-results #results .student-survey-report__teacher {
 }
 
 /* ── 문항 카드: 좌측 포인트 라인 1개 ── */
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card,
+body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
+  padding-left: var(--print-card-pad-left, 3mm) !important;
+  padding-right: var(--print-card-pad-right, 2mm) !important;
+  text-align: left !important;
+}
+
+/* 문항·답변 좌측 정렬 */
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-header,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report__teacher,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__question,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale,
+body.is-printing-results #results .student-response-header,
+body.is-printing-results #results .student-print-title,
+body.is-printing-results #results .student-survey-report--adaptive,
+body.is-printing-results #results .survey-qa-item,
+body.is-printing-results #results .survey-qa-item__question,
+body.is-printing-results #results .survey-qa-item__answer,
+body.is-printing-results #results .survey-qa-multi-choice,
+body.is-printing-results #results .likert-scale {
+  text-align: left !important;
+}
+
+body.print-one-student-per-page:not(.print-teacher-mode) #results .student-print-title,
+body.is-printing-results #results .student-print-title {
+  justify-content: flex-start !important;
+}
+
+body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer,
+body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer--multi,
+body.is-printing-results #results .survey-qa-item__answer,
+body.is-printing-results #results .survey-qa-item__answer--multi {
+  align-items: flex-start !important;
+}
+
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item,
 body.is-printing-results #results .survey-qa-item {
   margin: 0 !important;
-  padding: 7px 10px 8px 11px !important;
+  padding: 7px 8px 8px 10px !important;
   background: var(--print-surface) !important;
   border: 1px solid var(--print-line) !important;
   border-left: 3px solid var(--print-accent) !important;
@@ -279,6 +323,12 @@ body.is-printing-results #results .survey-qa-item .likert-scale__track {
   background: var(--print-fill) !important;
   border: 1px solid var(--print-line) !important;
   border-radius: 4px !important;
+  justify-content: flex-start !important;
+}
+
+body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__legend,
+body.is-printing-results #results .likert-scale__legend {
+  text-align: left !important;
 }
 
 body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item .likert-scale__step,
@@ -360,9 +410,15 @@ body.print-one-student-per-page:not(.print-teacher-mode)
 }
 
 @media print {
+  @page {
+    margin: 18mm 15mm 13mm 15mm;
+  }
+
   body.is-printing-results #results .student-card {
     border: none !important;
     border-radius: 0 !important;
+    padding-left: 3mm !important;
+    padding-right: 2mm !important;
   }
 
   body.is-printing-results #results .class-section__head {
