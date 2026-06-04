@@ -592,6 +592,37 @@
       text-align: center;
     }
     .home-section-empty[hidden] { display: none !important; }
+    #homePanel {
+      --home-font-bump: 1.5pt;
+    }
+    #homePanel .section-label {
+      font-size: calc(var(--text-lg) + 3pt + var(--home-font-bump));
+    }
+    #homePanel .admin-entry-btn {
+      font-size: calc(var(--text-sm) + var(--home-font-bump));
+    }
+    #homePanel .sheet-launch-btn {
+      font-size: calc(1.0625rem + var(--home-font-bump));
+    }
+    #homePanel .sheet-launch-btn__label {
+      font-size: calc(var(--text-md) + var(--home-font-bump));
+    }
+    #homePanel .sheet-launch-btn__date {
+      font-size: calc(var(--text-sm) + var(--home-font-bump));
+    }
+    #homePanel .sheet-launch-btn__pct {
+      font-size: calc(0.8125rem + var(--home-font-bump));
+    }
+    #homePanel .sheet-launch-btn__suffix {
+      font-size: calc(var(--text-md) + var(--home-font-bump));
+    }
+    #homePanel .survey-list-heading {
+      font-size: calc(var(--text-sm) + var(--home-font-bump));
+    }
+    #homePanel .home-empty-hint,
+    #homePanel .home-section-empty {
+      font-size: calc(var(--text-sm) + var(--home-font-bump));
+    }
     #surveyListGroups.is-refreshing {
       opacity: 0.55;
       pointer-events: none;
