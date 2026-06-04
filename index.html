@@ -2488,7 +2488,8 @@
       .likert-scale__legend {
       display: none !important;
     }
-    body.print-one-student-per-page:not(.print-teacher-mode)
+    /* zoom은 화면 맞춤 측정용 — 실제 인쇄는 @media print에서 1로 고정(빈 페이지 방지) */
+    body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode)
       #results
       .student-card.print-fit-applied {
       zoom: var(--print-zoom, 1);
@@ -2561,21 +2562,51 @@
       }
       @page { size: A4; margin: 18mm 13mm 13mm 13mm; }
       body { padding: 0 !important; background: #fff !important; color: #0f172a !important; }
-      body.is-printing-results * { visibility: hidden; }
-      body.is-printing-results #results,
-      body.is-printing-results #results * { visibility: visible; }
-      body.is-printing-results #results {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+      body.is-printing-results .site-header,
+      body.is-printing-results #siteFooterRoot,
+      body.is-printing-results #homePanel,
+      body.is-printing-results .admin-setup-panel,
+      body.is-printing-results .view-tracker,
+      body.is-printing-results .page-chrome-actions,
+      body.is-printing-results .results-sticky-chrome,
+      body.is-printing-results .class-picker-bar,
+      body.is-printing-results .category-picker-bar,
+      body.is-printing-results .survey-view-head,
+      body.is-printing-results .sheet-tabs,
+      body.is-printing-results .class-jump-nav,
+      body.is-printing-results .participation-banner,
+      body.is-printing-results .no-print {
+        display: none !important;
+      }
+      body.is-printing-results #results.visible,
+      #results.visible {
         display: block !important;
-        max-width: none;
+        visibility: visible !important;
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        width: 100% !important;
+        max-width: none !important;
         border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
+        margin: 0 !important;
         background: #fff !important;
         color: #0f172a !important;
+        overflow: visible !important;
+      }
+      body.is-printing-results #results.visible *,
+      #results.visible * {
+        visibility: visible !important;
+      }
+      body.is-printing-results #results.visible .student-card.print-fit-applied,
+      #results.visible .student-card.print-fit-applied {
+        zoom: 1 !important;
+        transform: none !important;
+      }
+      #results.visible .results-sticky-chrome,
+      #results.visible .no-print {
+        display: none !important;
       }
       body.is-printing-results #results .class-section {
         background: #fff !important;
@@ -8990,7 +9021,11 @@
     syncResultsPrintState(results);
     setPrintMode(true);
     prepareStudentCardsPrintFit();
-    window.print();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        window.print();
+      });
+    });
   }
 
   function setPrintMode(enabled) {
@@ -9347,6 +9382,8 @@
       syncResultsPrintState(results);
       setPrintMode(true);
       prepareStudentCardsPrintFit();
+    } else {
+      document.body.classList.remove("is-printing-results", "print-one-student-per-page", "print-teacher-mode");
     }
   });
   window.addEventListener("afterprint", function () {
