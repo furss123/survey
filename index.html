@@ -1293,6 +1293,16 @@
       color: var(--text-muted);
       font-style: italic;
     }
+    .survey-field-line__value--multi {
+      display: block;
+      margin-top: 6px;
+    }
+    .survey-field-line__value--multi .survey-qa-multi-choice {
+      margin-bottom: 8px;
+    }
+    .survey-field-line__value--multi .survey-qa-multi-choice:last-child {
+      margin-bottom: 0;
+    }
     .student-survey-report__body {
       font-size: 0.9375rem;
       line-height: 1.6;
@@ -7496,9 +7506,9 @@
             esc(label) +
             '">' +
             esc(label) +
-            "</span>: <span class=\"survey-field-line__value\">" +
-            esc(val || "—") +
-            "</span></div>";
+            "</span>: " +
+            renderSurveyAnswerValueHtml(val) +
+            "</div>";
         });
         html += "</div>";
       } else if (teacherSec.body) {
@@ -7542,9 +7552,9 @@
             esc(label) +
             '">' +
             esc(label) +
-            "</span>: <span class=\"survey-field-line__value\">" +
-            esc(val || "—") +
-            "</span></div>";
+            "</span>: " +
+            renderSurveyAnswerValueHtml(val) +
+            "</div>";
         });
         html += "</div>";
       } else if (hasBody) {
@@ -7665,10 +7675,76 @@
 
   var MULTI_SELECT_TYPE_DASH_RE = /형\s*[-–—]\s*/;
 
-  function looksLikeTypedMultiSelectSegment(segment) {
+  function isQuoteChar(ch) {
+    return ch === '"' || ch === "\u201c" || ch === "\u201d" || ch === "\u2018" || ch === "\u2019";
+  }
+
+  /** 쉼표로 이어진 복수 선택(따옴표 안 쉼표는 유지) */
+  function splitCommaSeparatedRespectingQuotes(text) {
+    var parts = [];
+    var current = "";
+    var inQuote = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (isQuoteChar(ch)) {
+        inQuote = !inQuote;
+        current += ch;
+        continue;
+      }
+      if (!inQuote && ch === ",") {
+        var rest = text.slice(i + 1);
+        if (/^\s*\S/.test(rest)) {
+          var piece = current.trim();
+          if (piece) parts.push(piece);
+          current = "";
+          continue;
+        }
+      }
+      current += ch;
+    }
+    var tail = current.trim();
+    if (tail) parts.push(tail);
+    return parts;
+  }
+
+  function looksLikeMultiSelectSegment(segment) {
     var s = String(segment || "").trim();
-    if (!s) return false;
-    return MULTI_SELECT_TYPE_DASH_RE.test(s) || /\s[-–—]\s/.test(s);
+    if (!s || s.length < 4) return false;
+    if (MULTI_SELECT_TYPE_DASH_RE.test(s)) return true;
+    if (/\s[-–—]\s/.test(s)) return true;
+    if (/(?:때|함)(?:\s*[,.)])?\s*$/u.test(s)) return true;
+    if (/고\s*느낄\s*때\s*$/u.test(s)) return true;
+    if (/때의\s+\S+/u.test(s)) return true;
+    return false;
+  }
+
+  function looksLikeTypedMultiSelectSegment(segment) {
+    return looksLikeMultiSelectSegment(segment);
+  }
+
+  function shouldTreatAsMultiSelectList(segments) {
+    if (!segments || segments.length < 2) return false;
+    var matchCount = segments.filter(looksLikeMultiSelectSegment).length;
+    if (matchCount >= 2) return true;
+    if (matchCount >= 1 && segments.length >= 2) {
+      return segments.every(function (s) {
+        return s.length >= 6 && s.length <= 220;
+      });
+    }
+    var typed = segments.filter(function (s) {
+      return MULTI_SELECT_TYPE_DASH_RE.test(s);
+    }).length;
+    if (typed >= 2) return true;
+    return (
+      segments.length >= 2 &&
+      segments.every(function (s) {
+        return s.length >= 8 && s.length <= 180;
+      }) &&
+      segments.filter(function (s) {
+        return /(?:때|함)\s*$/u.test(s);
+      }).length >=
+        Math.max(2, Math.ceil(segments.length * 0.5))
+    );
   }
 
   function parseMultiSelectAnswer(raw) {
@@ -7680,15 +7756,16 @@
         return s.trim();
       })
       .filter(Boolean);
-    if (byNewline.length >= 2) {
-      var typedCount = byNewline.filter(looksLikeTypedMultiSelectSegment).length;
-      if (typedCount >= 2 || (byNewline.length >= 2 && text.indexOf(",") < 0)) {
-        return byNewline;
-      }
+    if (byNewline.length >= 2 && shouldTreatAsMultiSelectList(byNewline)) {
+      return byNewline;
     }
-    var byComma = text.split(/,\s*(?=[^\s,]+(?:형\s*[-–—]|\S+형\s*[-–—]))/);
-    if (byComma.length >= 2) {
-      return byComma
+    if (text.indexOf(",") >= 0) {
+      var byComma = splitCommaSeparatedRespectingQuotes(text);
+      if (shouldTreatAsMultiSelectList(byComma)) return byComma;
+    }
+    var byTypedComma = text.split(/,\s*(?=[^\s,]+(?:형\s*[-–—]|\S+형\s*[-–—]))/);
+    if (byTypedComma.length >= 2) {
+      return byTypedComma
         .map(function (s) {
           return s.trim();
         })
@@ -7741,6 +7818,20 @@
       html += "</div>";
     });
     return { isMulti: true, html: html };
+  }
+
+  function renderSurveyAnswerValueHtml(raw) {
+    var rendered = renderMultiSelectAnswerHtml(raw);
+    if (!rendered.isMulti) {
+      return (
+        '<span class="survey-field-line__value">' + esc(raw || "—") + "</span>"
+      );
+    }
+    return (
+      '<div class="survey-field-line__value survey-field-line__value--multi">' +
+      rendered.html +
+      "</div>"
+    );
   }
 
   function renderLikertScaleBar(score) {
