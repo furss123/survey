@@ -2146,7 +2146,7 @@
     body.admin-setup-mode .section-head-row .admin-entry-link {
       display: none;
     }
-    /* 학생 인쇄 1페이지 맞춤: 폰트·줄간격·여백만 조절 (다단·transform 축소 없음) */
+    /* 학생 인쇄 1페이지 맞춤: 폰트·줄간격·여백 조절 (질문·답 문구는 그대로, 다단 없음) */
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
       padding: var(--print-card-pad, 10px 12px 0) !important;
       max-height: none;
@@ -2204,12 +2204,65 @@
       overflow-wrap: anywhere;
       word-break: keep-all;
     }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-survey-report--adaptive {
+      gap: var(--print-report-gap, 0) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item {
+      margin: 0 0 var(--print-qa-gap, 6px) !important;
+      padding: var(--print-qa-pad, 6px 8px) !important;
+      border-radius: 6px !important;
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__question {
+      font-size: calc(var(--print-font-pt, 9pt) * 0.92) !important;
+      line-height: var(--print-line-height, 1.28) !important;
+      margin-bottom: var(--print-qa-q-mb, 4px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__answer-text,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-pair__q,
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-pair__a {
+      font-size: var(--print-font-pt, 9pt) !important;
+      line-height: var(--print-line-height, 1.28) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale {
+      margin-top: var(--print-likert-mt, 2px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__legend {
+      font-size: calc(var(--print-font-pt, 8pt) * 0.85) !important;
+      margin-bottom: var(--print-likert-legend-mb, 4px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__track {
+      gap: var(--print-likert-track-gap, 4px) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step {
+      min-height: var(--print-likert-step-h, 22px) !important;
+      border-radius: 4px !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step-num {
+      font-size: calc(var(--print-font-pt, 9pt) * 0.9) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__summary {
+      margin: var(--print-likert-summary-mt, 3px) 0 0 !important;
+      font-size: calc(var(--print-font-pt, 8pt) * 0.88) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .student-card.print-fit-compact-likert
+      .likert-scale__legend {
+      display: none !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .student-card.print-fit-applied {
+      zoom: var(--print-zoom, 1);
+    }
     body.print-fit-measuring.print-one-student-per-page #results {
-      width: 190mm;
-      max-width: 190mm;
+      width: 194mm;
+      max-width: 194mm;
     }
     body.print-fit-measuring.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
-      max-width: 190mm;
+      max-width: 194mm;
     }
     @media print {
       /* 화면이 다크모드여도 인쇄는 라이트 테마 */
@@ -2264,7 +2317,7 @@
         --error-text: #b91c1c;
       }
       .admin-setup-panel { display: none !important; }
-      @page { size: A4; margin: 10mm; }
+      @page { size: A4; margin: 8mm; }
       body { padding: 0 !important; background: #fff !important; color: #0f172a !important; }
       body.is-printing-results * { visibility: hidden; }
       body.is-printing-results #results,
@@ -2392,20 +2445,40 @@
         page-break-inside: auto;
         break-inside: auto;
       }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card--absent,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .participation-banner,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section__missing {
+        display: none !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-cards-list {
+        display: block !important;
+      }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
         page-break-after: always;
         break-after: page;
         page-break-inside: avoid;
         break-inside: avoid;
         margin-bottom: 0;
+        box-decoration-break: clone;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card:last-child {
         page-break-after: auto;
         break-after: auto;
       }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section__head,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .sheet-banner {
+        display: none !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
+        max-height: none;
+        overflow: visible;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-item,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .survey-qa-pair,
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .likert-scale,
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card .category-block {
-        page-break-inside: avoid;
-        break-inside: avoid;
+        page-break-inside: auto;
+        break-inside: auto;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card-divider {
         display: none !important;
@@ -3651,6 +3724,72 @@
     return colIdx === SURVEY_COL_STUDENT_ID || colIdx === SURVEY_COL_NAME;
   }
 
+  function isQuestionColumnHeader(header) {
+    var h = formatAdaptiveQuestionTitle(header);
+    if (!h) return false;
+    if (/^Q\s*\d/i.test(h)) return true;
+    if (/^\d+\s*[-–.]\s*\d+/i.test(h)) return true;
+    return false;
+  }
+
+  /** A=반, B=번호·이름, C~=Q1… 형식 (SMART 학습종합검사 등) */
+  function isAbClassNumberNameQuestionSheet(headerRow) {
+    if (!headerRow || headerRow.length < 4) return false;
+    var c0 = normalizeHeader(headerRow[0] || "");
+    var c1 = normalizeHeader(headerRow[1] || "");
+    var hasClass =
+      c0 === "반" || findColumnIndex([headerRow[0]], CLASS_ALIASES) >= 0;
+    var hasNumName = /번호/.test(c1) && /이름/.test(c1);
+    if (!hasClass || !hasNumName) return false;
+    var qCount = 0;
+    for (var i = 2; i < headerRow.length; i++) {
+      if (isQuestionColumnHeader(headerRow[i])) qCount++;
+    }
+    return qCount >= 3;
+  }
+
+  function buildIdentityColumnIndices(cols, headerRow, options) {
+    options = options || {};
+    if (options.abQuestionSheet) return [0, 1];
+    var indices = [];
+    function add(idx) {
+      if (typeof idx === "number" && idx >= 0 && indices.indexOf(idx) < 0) {
+        indices.push(idx);
+      }
+    }
+    add(cols.classIdx);
+    add(cols.studentIdIdx);
+    add(cols.numberIdx);
+    add(cols.nameIdx);
+    (cols.studentSelectorIndices || []).forEach(add);
+    add(cols.completionIdx);
+    if (!indices.length && isFixedSurveyColumnIndex(SURVEY_COL_STUDENT_ID)) {
+      add(SURVEY_COL_STUDENT_ID);
+      add(SURVEY_COL_NAME);
+    }
+    return indices.sort(function (a, b) {
+      return a - b;
+    });
+  }
+
+  function getSheetIdentityColumnIndices(sheet) {
+    if (!sheet || !sheet.meta) return null;
+    if (sheet.meta.identityColumnIndices && sheet.meta.identityColumnIndices.length) {
+      return sheet.meta.identityColumnIndices;
+    }
+    return null;
+  }
+
+  function sheetHasQuestionColumns(sheet) {
+    if (!sheet || !sheet.headers) return false;
+    var count = 0;
+    sheet.headers.forEach(function (h, colIdx) {
+      if (isSkippableCategoryHeader(h, colIdx, sheet.meta)) return;
+      if (isQuestionColumnHeader(h)) count++;
+    });
+    return count >= 3;
+  }
+
   function normalizeCategoryHeaderLabel(headerTitle) {
     var raw = coerceText(headerTitle).replace(/\s+/g, " ").trim();
     if (!raw) return { id: "", label: "" };
@@ -3819,6 +3958,8 @@
       studentIdColumn: "B열",
       nameColumn: "B열",
       completionColumn: "(응답 있음)",
+      identityColumnIndices: [0, 1],
+      questionColumnStart: 2,
     });
   }
 
@@ -4108,6 +4249,15 @@
     });
 
     var cols = resolveSurveyColumnIndices(headerRow);
+    var abQuestionSheet = isAbClassNumberNameQuestionSheet(headerRow);
+    if (abQuestionSheet) {
+      if (cols.classIdx < 0) cols.classIdx = 0;
+      if (cols.numberIdx < 0) cols.numberIdx = 1;
+      if (cols.nameIdx < 0) cols.nameIdx = 1;
+    }
+    var identityColumnIndices = buildIdentityColumnIndices(cols, headerRow, {
+      abQuestionSheet: abQuestionSheet,
+    });
 
     var rows = dataRows.map(function (raw, rowIndex) {
       var cells = headerRow.map(function (_, i) { return coerceText(raw[i]); });
@@ -4124,6 +4274,16 @@
           ? coerceNumber(raw[cols.numberIdx])
           : sidParsed.번호;
       var nameVal = cols.nameIdx >= 0 ? coerceText(raw[cols.nameIdx]) : "";
+      if (
+        cols.numberIdx >= 0 &&
+        cols.numberIdx === cols.nameIdx &&
+        coerceText(raw[cols.numberIdx])
+      ) {
+        var parsedNumName = parseNumberNameCell(raw[cols.numberIdx], classVal);
+        if (parsedNumName.번호 != null) numberVal = parsedNumName.번호;
+        if (parsedNumName.이름) nameVal = parsedNumName.이름;
+        if (!classVal && parsedNumName.반) classVal = parsedNumName.반;
+      }
       var fromSelectors = extractStudentFromSelectorCells(
         raw,
         cols.studentSelectorIndices
@@ -4172,7 +4332,7 @@
         학년: sidParsed.grade,
         반: classVal || "(미입력)",
         번호: numberVal,
-        이름: nameVal,
+        이름: nameVal ? cleanStudentNameForDisplay(nameVal, numberVal) : nameVal,
         완료: isCompletedValue(completionRaw),
         미리보기: pickContentPreview(headerRow, cells),
         _raw: Object.fromEntries(
@@ -4181,7 +4341,9 @@
           })
         ),
       };
-      enrichRowWithTableCategories(row, headerRow, cells);
+      if (!abQuestionSheet) {
+        enrichRowWithTableCategories(row, headerRow, cells);
+      }
       var profileText = longestCellText(cells);
       if (hasProfileContent(profileText)) {
         return enrichRowWithProfile(row, profileText, extractProfileMeta(profileText));
@@ -4204,7 +4366,11 @@
       completionColumn:
         cols.completionIdx >= 0 ? headerRow[cols.completionIdx] : "(자동 추론)",
       format: "table",
-      layout: "survey-b-col-student-id-c-col-name",
+      layout: abQuestionSheet
+        ? "class-number-name-questions"
+        : "survey-b-col-student-id-c-col-name",
+      identityColumnIndices: identityColumnIndices,
+      questionColumnStart: abQuestionSheet ? 2 : null,
     });
   }
 
@@ -5147,8 +5313,20 @@
     return t;
   }
 
-  function isSkippableCategoryHeader(name, colIdx) {
-    if (typeof colIdx === "number" && isFixedSurveyColumnIndex(colIdx)) return true;
+  function isSkippableCategoryHeader(name, colIdx, sheetMeta) {
+    if (typeof colIdx === "number") {
+      var identity =
+        (sheetMeta && sheetMeta.identityColumnIndices) ||
+        getSheetIdentityColumnIndices(getActiveSheetAnalysis());
+      if (identity && identity.indexOf(colIdx) >= 0) return true;
+      if (
+        !identity &&
+        (!sheetMeta || sheetMeta.layout === "survey-b-col-student-id-c-col-name") &&
+        isFixedSurveyColumnIndex(colIdx)
+      ) {
+        return true;
+      }
+    }
     var n = normalizeHeader(name);
     if (!n) return true;
     var skipWords = ["타임스탬프", "timestamp", "이메일", "email", "제출", "응답시간"];
@@ -5303,12 +5481,12 @@
         });
       });
       (sheet.headers || []).forEach(function (headerName, colIdx) {
-        if (isSkippableCategoryHeader(headerName, colIdx)) return;
+        if (isSkippableCategoryHeader(headerName, colIdx, sheet.meta)) return;
         registerTitle(headerName);
       });
       (sheet.columnInsights || []).forEach(function (col) {
         if (!col || !col.열 || col.입력건수 <= 0) return;
-        if (isSkippableCategoryHeader(col.열, col.colIdx)) return;
+        if (isSkippableCategoryHeader(col.열, col.colIdx, sheet.meta)) return;
         registerTitle(col.열);
       });
     });
@@ -6650,10 +6828,30 @@
     });
   }
 
+  function cleanStudentNameForDisplay(name, num) {
+    var nameStr = name ? String(name).trim() : "";
+    if (!nameStr || num == null || num === "") return nameStr;
+    var numStr = String(num).replace(/\s*번\s*$/, "").trim();
+    var lead = nameStr.match(/^(\d{1,2})\s*(?:번\s*)?(.+)?$/);
+    if (lead && String(lead[1]) === numStr) {
+      return (lead[2] || "").trim();
+    }
+    return nameStr;
+  }
+
+  function formatStudentCompactLabel(num, name) {
+    var numStr =
+      num != null && num !== "" ? String(num).replace(/\s*번\s*$/, "").trim() : "";
+    var nameStr = cleanStudentNameForDisplay(name, numStr || num);
+    if (numStr && nameStr) return numStr + "번 " + nameStr;
+    if (numStr) return numStr + "번";
+    return nameStr;
+  }
+
   function resolveStudentDisplayName(row, sheetName, classKey) {
     if (!row) return "";
     var name = row.이름 || (row._raw && row._raw.이름) || "";
-    if (name) return name;
+    if (name) return cleanStudentNameForDisplay(name, row.번호);
     var meta = lastMultiResult && lastMultiResult.participationMeta;
     if (!meta || !meta.roster || !meta.roster.length || row.번호 == null) return "";
     var rosterKey = classKey || sheetName || row.반 || "";
@@ -6801,8 +6999,15 @@
     });
   }
 
+  function rowHasAdaptiveSurveyContent(row) {
+    if (!usesClassBasedResultsPicker()) return false;
+    var sheet = getActiveSheetAnalysis();
+    return collectAdaptiveSurveyItems(row, sheet).length > 0;
+  }
+
   function rowHasVisibleSections(row) {
     if (usesClassBasedResultsPicker()) {
+      if (rowHasAdaptiveSurveyContent(row)) return true;
       return (row.sections || []).some(isMeaningfulSection);
     }
     return (row.sections || []).some(function (sec) {
@@ -7052,7 +7257,9 @@
     var sheet = getActiveSheetAnalysis();
     var isProfile = analysis.meta && analysis.meta.format === "profile";
     var hasCategories =
-      isProfile || (analysis.rows && analysis.rows.some(rowHasVisibleSections));
+      isProfile ||
+      sheetHasQuestionColumns(analysis) ||
+      (analysis.rows && analysis.rows.some(rowHasVisibleSections));
     var rows = (analysis.rows || []).slice().sort(compareRowsByStudentId);
     var classLabel = getClassLabelFromFilter();
     var html = '<div class="class-results-panel">';
@@ -7303,7 +7510,7 @@
     var q = formatAdaptiveQuestionTitle(header);
     if (!q || isPlaceholderSheetHeader(header)) return "";
     if (/^Q\s*\d/i.test(q)) {
-      return q.replace(/^Q\s+(\d)/i, "Q$1");
+      return q.replace(/^Q\s*(\d+)/i, "Q$1");
     }
     var m = q.match(/^(\d+)\s*([-–.])\s*(\d+)(.*)$/);
     if (m) {
@@ -7386,6 +7593,7 @@
     var items = [];
     var seen = {};
     var headers = sheet && sheet.headers ? sheet.headers : [];
+    var sheetMeta = sheet && sheet.meta ? sheet.meta : null;
 
     function pushItem(question, answer, order) {
       var q =
@@ -7412,20 +7620,31 @@
       for (var i = 0; i < keys.length; i++) {
         if (formatAdaptiveQuestionTitle(keys[i]) === want) return row._raw[keys[i]];
       }
+      if (typeof colIdx === "number" && "col_" + colIdx in row._raw) {
+        return row._raw["col_" + colIdx];
+      }
       return "";
     }
 
     if (headers.length) {
       headers.forEach(function (h, colIdx) {
-        if (isSkippableCategoryHeader(h, colIdx)) return;
+        if (isSkippableCategoryHeader(h, colIdx, sheetMeta)) return;
         var displayQ = normalizeQuestionHeaderDisplay(h);
-        if (!displayQ) return;
-        pushItem(displayQ, rawValueForHeader(h, colIdx), colIdx);
+        if (!displayQ && !isQuestionColumnHeader(h)) return;
+        if (!displayQ) displayQ = formatAdaptiveQuestionTitle(h);
+        pushItem(h, rawValueForHeader(h, colIdx), colIdx);
+      });
+    } else if (row._raw) {
+      Object.keys(row._raw).forEach(function (key, idx) {
+        if (isSkippableCategoryHeader(key, idx, sheetMeta)) return;
+        if (!isQuestionColumnHeader(key) && !normalizeQuestionHeaderDisplay(key)) return;
+        pushItem(key, row._raw[key], idx);
       });
     }
 
     (row.sections || []).forEach(function (sec, idx) {
       if (!isMeaningfulSection(sec) || isTeacherMessageSection(sec)) return;
+      if (sheetMeta && sheetMeta.layout === "class-number-name-questions") return;
       if (sec.fields && sec.fields.length) {
         sec.fields.forEach(function (f, fi) {
           pushItem(f.key || sec.title, f.value, 9000 + idx * 100 + fi);
@@ -7521,17 +7740,18 @@
     if (opts.compactHeader) {
       html += '<header class="student-response-header student-response-header--compact">';
       html += '<div class="header-meta">';
-      var compactLabel = "";
-      if (num && name) compactLabel = esc(num) + "번 " + esc(name);
-      else if (num) compactLabel = esc(num) + "번";
-      else if (name) compactLabel = esc(name);
-      html += '<span class="student-name">' + (compactLabel || "—") + "</span>";
+      html +=
+        '<span class="student-name">' +
+        esc(formatStudentCompactLabel(num, name) || "—") +
+        "</span>";
       html += "</div></header>";
     } else {
       html += renderStudentResponseHeader(row);
     }
     html += '<div class="student-response-body">';
-    if (hasCategories && rowHasVisibleSections(row)) {
+    if (usesClassBasedResultsPicker()) {
+      html += renderCategoryBlocks(row, activeSubjectView || "all");
+    } else if (hasCategories && rowHasVisibleSections(row)) {
       html += renderCategoryBlocks(row, activeSubjectView || "all");
     } else if (hasCategories) {
       html += '<p class="muted response-empty">작성된 상담 내용이 없습니다.</p>';
@@ -7546,7 +7766,7 @@
 
   function formatMissingStudentLabel(student) {
     if (!student) return "";
-    var num = student.번호 != null ? student.번호 + "번" : "";
+    var num = student.번호 != null ? student.번호 : null;
     var name = student.이름 ? String(student.이름) : "";
     if (!name && student.번호 != null) {
       var sheet = getActiveSheetAnalysis();
@@ -7556,8 +7776,7 @@
         activeClassFilter
       );
     }
-    if (num && name) return num + " " + name;
-    return num || name || "";
+    return formatStudentCompactLabel(num, name) || "";
   }
 
   function renderParticipationBanner(data, classLabel) {
@@ -7635,11 +7854,10 @@
     if (!opts.compactHeader && sheetName) {
       html += '<span class="student-class">' + esc(sheetName) + "</span>";
     }
-    var absentLabel = "";
-    if (num != null && name) absentLabel = esc(num) + "번 " + esc(name);
-    else if (num != null) absentLabel = esc(num) + "번";
-    else absentLabel = esc(name);
-    html += '<span class="student-name">' + absentLabel + "</span>";
+    html +=
+      '<span class="student-name">' +
+      esc(formatStudentCompactLabel(num, name) || "—") +
+      "</span>";
     html += "</div></header>";
     html += '<div class="student-response-body"><p class="absent-note">설문에 참여하지 않았습니다.</p></div>';
     html += '<hr class="student-card-divider" aria-hidden="true" />';
@@ -7789,7 +8007,8 @@
   }
 
   function getPrintablePageHeightPx() {
-    return Math.round((277 * 96) / 25.4);
+    /* A4 297mm − 상하 여백 8mm×2 ≈ 281mm 인쇄 가능 높이 */
+    return Math.round((281 * 96) / 25.4);
   }
 
   var PRINT_FIT_SPACING_PROPS = [
@@ -7802,11 +8021,21 @@
     "--print-header-pb",
     "--print-body-pb",
     "--print-title-mb",
+    "--print-qa-gap",
+    "--print-qa-pad",
+    "--print-qa-q-mb",
+    "--print-report-gap",
+    "--print-likert-mt",
+    "--print-likert-legend-mb",
+    "--print-likert-track-gap",
+    "--print-likert-step-h",
+    "--print-likert-summary-mt",
+    "--print-zoom",
   ];
 
   function clearStudentCardsPrintFit() {
     document.querySelectorAll("#results .student-card").forEach(function (card) {
-      card.classList.remove("print-fit-applied");
+      card.classList.remove("print-fit-applied", "print-fit-compact-likert");
       PRINT_FIT_SPACING_PROPS.forEach(function (prop) {
         card.style.removeProperty(prop);
       });
@@ -7818,7 +8047,25 @@
     var tier = compactTier || 0;
     card.style.setProperty("--print-font-pt", fontPt + "pt");
     card.style.setProperty("--print-line-height", String(lineH));
-    if (tier >= 2) {
+    card.classList.toggle("print-fit-compact-likert", tier >= 2);
+    if (tier >= 3) {
+      card.style.setProperty("--print-block-gap", "2px");
+      card.style.setProperty("--print-block-pad", "3px 5px 2px");
+      card.style.setProperty("--print-card-pad", "4px 6px 0");
+      card.style.setProperty("--print-header-mb", "3px");
+      card.style.setProperty("--print-header-pb", "3px");
+      card.style.setProperty("--print-body-pb", "4px");
+      card.style.setProperty("--print-title-mb", "1px");
+      card.style.setProperty("--print-qa-gap", "2px");
+      card.style.setProperty("--print-qa-pad", "3px 5px");
+      card.style.setProperty("--print-qa-q-mb", "2px");
+      card.style.setProperty("--print-report-gap", "0");
+      card.style.setProperty("--print-likert-mt", "1px");
+      card.style.setProperty("--print-likert-legend-mb", "2px");
+      card.style.setProperty("--print-likert-track-gap", "2px");
+      card.style.setProperty("--print-likert-step-h", "14px");
+      card.style.setProperty("--print-likert-summary-mt", "2px");
+    } else if (tier >= 2) {
       card.style.setProperty("--print-block-gap", "3px");
       card.style.setProperty("--print-block-pad", "4px 6px 3px");
       card.style.setProperty("--print-card-pad", "6px 8px 0");
@@ -7826,6 +8073,15 @@
       card.style.setProperty("--print-header-pb", "4px");
       card.style.setProperty("--print-body-pb", "6px");
       card.style.setProperty("--print-title-mb", "2px");
+      card.style.setProperty("--print-qa-gap", "3px");
+      card.style.setProperty("--print-qa-pad", "4px 6px");
+      card.style.setProperty("--print-qa-q-mb", "2px");
+      card.style.setProperty("--print-report-gap", "0");
+      card.style.setProperty("--print-likert-mt", "2px");
+      card.style.setProperty("--print-likert-legend-mb", "2px");
+      card.style.setProperty("--print-likert-track-gap", "3px");
+      card.style.setProperty("--print-likert-step-h", "16px");
+      card.style.setProperty("--print-likert-summary-mt", "2px");
     } else if (tier >= 1) {
       card.style.setProperty("--print-block-gap", "5px");
       card.style.setProperty("--print-block-pad", "6px 8px 5px");
@@ -7834,6 +8090,15 @@
       card.style.setProperty("--print-header-pb", "6px");
       card.style.setProperty("--print-body-pb", "8px");
       card.style.setProperty("--print-title-mb", "3px");
+      card.style.setProperty("--print-qa-gap", "4px");
+      card.style.setProperty("--print-qa-pad", "5px 7px");
+      card.style.setProperty("--print-qa-q-mb", "3px");
+      card.style.setProperty("--print-report-gap", "0");
+      card.style.setProperty("--print-likert-mt", "2px");
+      card.style.setProperty("--print-likert-legend-mb", "3px");
+      card.style.setProperty("--print-likert-track-gap", "4px");
+      card.style.setProperty("--print-likert-step-h", "20px");
+      card.style.setProperty("--print-likert-summary-mt", "3px");
     } else {
       card.style.setProperty("--print-block-gap", "7px");
       card.style.setProperty("--print-block-pad", "8px 10px 6px");
@@ -7842,6 +8107,15 @@
       card.style.setProperty("--print-header-pb", "8px");
       card.style.setProperty("--print-body-pb", "10px");
       card.style.setProperty("--print-title-mb", "4px");
+      card.style.setProperty("--print-qa-gap", "6px");
+      card.style.setProperty("--print-qa-pad", "6px 8px");
+      card.style.setProperty("--print-qa-q-mb", "4px");
+      card.style.setProperty("--print-report-gap", "0");
+      card.style.setProperty("--print-likert-mt", "3px");
+      card.style.setProperty("--print-likert-legend-mb", "4px");
+      card.style.setProperty("--print-likert-track-gap", "5px");
+      card.style.setProperty("--print-likert-step-h", "22px");
+      card.style.setProperty("--print-likert-summary-mt", "4px");
     }
   }
 
@@ -7849,39 +8123,55 @@
     return card.scrollHeight <= pageBudget;
   }
 
+  function applyPrintZoomToFit(card, pageBudget) {
+    card.style.removeProperty("--print-zoom");
+    if (card.scrollHeight <= pageBudget) return;
+    var scale = Math.max(0.72, Math.min(1, (pageBudget - 2) / card.scrollHeight));
+    card.style.setProperty("--print-zoom", String(Math.round(scale * 1000) / 1000));
+    if (card.scrollHeight > pageBudget) {
+      scale = Math.max(0.72, (pageBudget - 2) / card.scrollHeight);
+      card.style.setProperty("--print-zoom", String(Math.round(scale * 1000) / 1000));
+    }
+  }
+
   function fitStudentCardToOnePage(card, pageBudget) {
-    var minFontPt = 4.75;
-    var minLineH = 1.04;
-    var maxFontPt = 11;
-    var maxLineH = 1.42;
+    var minFontPt = 4.25;
+    var minLineH = 1.02;
+    var maxFontPt = 10.5;
+    var maxLineH = 1.38;
     var bestFont = minFontPt;
     var bestLine = minLineH;
-    var bestTier = 2;
+    var bestTier = 3;
 
-    for (var tier = 0; tier <= 2; tier++) {
+    card.style.removeProperty("--print-zoom");
+
+    for (var tier = 0; tier <= 3; tier++) {
       var lineH = maxLineH;
       while (lineH + 0.001 >= minLineH) {
         var lo = minFontPt;
         var hi = maxFontPt;
         var chosen = minFontPt;
-        while (hi - lo > 0.12) {
+        while (hi - lo > 0.1) {
           var mid = Math.round(((lo + hi) / 2) * 20) / 20;
           applyStudentCardPrintFitVars(card, mid, lineH, tier);
+          card.style.removeProperty("--print-zoom");
           if (studentCardFitsPage(card, pageBudget)) {
             chosen = mid;
-            lo = mid + 0.12;
+            lo = mid + 0.1;
           } else {
-            hi = mid - 0.12;
+            hi = mid - 0.1;
           }
         }
-        for (var tryFont = chosen; tryFont + 0.001 >= minFontPt; tryFont = Math.round((tryFont - 0.15) * 20) / 20) {
+        for (var tryFont = chosen; tryFont + 0.001 >= minFontPt; tryFont = Math.round((tryFont - 0.12) * 20) / 20) {
           applyStudentCardPrintFitVars(card, tryFont, lineH, tier);
+          card.style.removeProperty("--print-zoom");
           if (studentCardFitsPage(card, pageBudget)) {
             chosen = tryFont;
             break;
           }
         }
         applyStudentCardPrintFitVars(card, chosen, lineH, tier);
+        card.style.removeProperty("--print-zoom");
         if (studentCardFitsPage(card, pageBudget)) {
           bestFont = chosen;
           bestLine = lineH;
@@ -7889,21 +8179,27 @@
           applyStudentCardPrintFitVars(card, bestFont, bestLine, bestTier);
           return;
         }
-        lineH = Math.round((lineH - 0.03) * 100) / 100;
+        lineH = Math.round((lineH - 0.025) * 100) / 100;
       }
     }
 
-    applyStudentCardPrintFitVars(card, minFontPt, minLineH, 2);
+    applyStudentCardPrintFitVars(card, minFontPt, minLineH, 3);
+    applyPrintZoomToFit(card, pageBudget);
   }
 
   function prepareStudentCardsPrintFit() {
     clearStudentCardsPrintFit();
     if (!shouldPrintOneStudentPerPage()) return;
-    var cards = document.querySelectorAll("#results .student-card");
+    var cards = document.querySelectorAll(
+      "#results .student-card:not(.student-card--absent)"
+    );
     if (!cards.length) return;
 
     document.body.classList.add("print-fit-measuring", "print-one-student-per-page");
-    var pageBudget = getPrintablePageHeightPx() - 6;
+    if (!document.body.classList.contains("is-printing-results")) {
+      document.body.classList.add("is-printing-results");
+    }
+    var pageBudget = getPrintablePageHeightPx() - 12;
 
     cards.forEach(function (card) {
       fitStudentCardToOnePage(card, pageBudget);
