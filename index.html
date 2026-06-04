@@ -1960,6 +1960,12 @@
     #results .student-survey-report--adaptive .survey-qa-multi-choice__detail {
       font-size: calc(var(--text-sm) + 1pt);
     }
+    #results .student-survey-report--adaptive.student-survey-report--smart .survey-qa-item__question,
+    #results .student-survey-report--adaptive.student-survey-report--smart .survey-qa-item__answer-text,
+    #results .student-survey-report--adaptive.student-survey-report--smart .survey-qa-multi-choice__type,
+    #results .student-survey-report--adaptive.student-survey-report--smart .survey-qa-multi-choice__detail {
+      font-size: calc(var(--text-sm) + 2pt);
+    }
     .likert-scale {
       margin-top: 4px;
     }
@@ -2275,6 +2281,32 @@
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type {
       margin-bottom: var(--print-multi-type-mb, 2px) !important;
       font-size: calc(var(--print-font-pt, 9pt) * 0.95) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .student-survey-report--smart
+      .survey-qa-item__question {
+      font-size: calc(var(--print-font-pt, 9pt) * 0.92 + 1pt) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .student-survey-report--smart
+      .survey-qa-item__answer-text,
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .student-survey-report--smart
+      .survey-qa-multi-choice__type,
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .student-survey-report--smart
+      .survey-qa-multi-choice__detail {
+      font-size: calc(var(--print-font-pt, 9pt) + 1pt) !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode)
+      #results
+      .student-survey-report--smart
+      .survey-qa-multi-choice__type {
+      font-size: calc(var(--print-font-pt, 9pt) * 0.95 + 1pt) !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale {
       margin-top: var(--print-likert-mt, 2px) !important;
@@ -5944,7 +5976,7 @@
       return true;
     }
     var label = SurveyForm.normalizeDisplayText(entry.label || "");
-    return /SMART\s*학습종합검사/.test(label);
+    return /SMART\s*학습(?:종합검사|검사\s*피드백\s*설문|피드백\s*설문)/.test(label);
   }
 
   function isProtectedLegacySurvey(entry) {
@@ -7834,7 +7866,12 @@
     if (!items.length) {
       return '<p class="muted response-empty">작성된 응답이 없습니다.</p>';
     }
-    var html = '<div class="student-survey-report student-survey-report--adaptive">';
+    var reportClass =
+      "student-survey-report student-survey-report--adaptive" +
+      (isDesignatedClassViewSurvey(currentLaunchEntry)
+        ? " student-survey-report--smart"
+        : "");
+    var html = '<div class="' + reportClass + '">';
     items.forEach(function (item) {
       html += renderAdaptiveSurveyItem(item);
     });
