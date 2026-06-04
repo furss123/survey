@@ -339,11 +339,12 @@
       }
       var remoteRev = registryLabelRevision(prev);
       var localRev = registryLabelRevision(entry);
-      var localWinsLabel = localRev > remoteRev;
+      var localWinsLabel = localRev >= remoteRev;
       if (localWinsLabel) {
         byId[entry.id] = Object.assign({}, prev, entry, {
           label: coerceText(entry.label) ? entry.label : prev.label,
           url: coerceText(entry.url) ? entry.url : prev.url,
+          updatedAt: localRev || remoteRev,
         });
         return;
       }
@@ -592,8 +593,83 @@
     var live = await fetchLiveRegistryFromSheet();
     var published = combineRemoteRegistrySources(bundled, live);
     var merged = mergeRemoteAndLocalRegistry(published, local);
+    if (options.preferLocalEntries && options.preferLocalEntries.length) {
+      merged = applyRegistryEntriesPreferLocal(merged, options.preferLocalEntries);
+    }
     saveRegistry(merged, { silent: options.silent });
     return merged;
+  }
+
+  function applyRegistryEntriesPreferLocal(registry, preferEntries) {
+    var byId = {};
+    (registry || []).forEach(function (entry) {
+      if (entry && entry.id) byId[entry.id] = entry;
+    });
+    (preferEntries || []).forEach(function (local) {
+      if (!local || !local.id) return;
+      var prev = byId[local.id];
+      var normalized = ensureSurveyFullyPublic(normalizeRegistryEntry(local));
+      var rev = registryLabelRevision(normalized) || Date.now();
+      byId[local.id] = Object.assign({}, prev, normalized, {
+        label: coerceText(normalized.label)
+          ? normalized.label
+          : prev && prev.label,
+        url: coerceText(normalized.url) ? normalized.url : prev && prev.url,
+        updatedAt: rev,
+      });
+    });
+    return dedupeRegistryEntries(
+      Object.keys(byId).map(function (id) {
+        return byId[id];
+      })
+    );
+  }
+
+  async function syncRegistryEntryAfterEdit(entry) {
+    if (!entry || !entry.id) throw new Error("저장할 설문 정보가 없습니다.");
+    var saved = ensureSurveyFullyPublic(
+      normalizeRegistryEntry(
+        Object.assign({}, entry, {
+          updatedAt: registryLabelRevision(entry) || Date.now(),
+        })
+      )
+    );
+    var list = dedupeRegistryEntries(loadRegistry());
+    var idx = list.findIndex(function (item) {
+      return item && item.id === saved.id;
+    });
+    if (idx >= 0) list[idx] = Object.assign({}, list[idx], saved);
+    else list.push(saved);
+    saveRegistry(list, { silent: true });
+
+    var publishResult = { ok: true, skipped: true, reason: "no-webapp" };
+    try {
+      publishResult = await publishRegistryEntry(saved);
+    } catch (pubErr) {
+      publishResult = {
+        ok: false,
+        error: (pubErr && pubErr.message) || String(pubErr),
+      };
+    }
+
+    var merged = list;
+    try {
+      merged = await refreshRegistryFromServer({
+        silent: true,
+        preferLocalEntries: [saved],
+      });
+    } catch (refreshErr) {
+      merged = applyRegistryEntriesPreferLocal(loadRegistry(), [saved]);
+      saveRegistry(merged);
+      return {
+        entry: saved,
+        publish: publishResult,
+        registry: merged,
+        refreshError: (refreshErr && refreshErr.message) || String(refreshErr),
+      };
+    }
+
+    return { entry: saved, publish: publishResult, registry: merged };
   }
 
   function partitionRegistryByStatus(registry) {
@@ -996,6 +1072,8 @@
     setSurveyStatus: setSurveyStatus,
     setSurveyStatusAsync: setSurveyStatusAsync,
     refreshRegistryFromServer: refreshRegistryFromServer,
+    applyRegistryEntriesPreferLocal: applyRegistryEntriesPreferLocal,
+    syncRegistryEntryAfterEdit: syncRegistryEntryAfterEdit,
     partitionRegistryByStatus: partitionRegistryByStatus,
     findSurvey: findSurvey,
     parseStudentId: parseStudentId,
