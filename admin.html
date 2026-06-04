@@ -837,7 +837,7 @@
 
   <script src="scripts/admin-session.js?v=20260530"></script>
   <script src="scripts/korean-orthography.js?v=20260608"></script>
-  <script src="scripts/survey-form-shared.js?v=20260608"></script>
+  <script src="scripts/survey-form-shared.js?v=20260611"></script>
   <script>
 (function () {
   "use strict";
@@ -1579,6 +1579,8 @@
           return;
         }
         var saved = updateRegistryEntry(editingSheetId, label, url);
+        renderAdminRegistryList();
+        flashAdminRegistryGroups();
         var syncResult = await SurveyForm.syncRegistryEntryAfterEdit(saved);
         cancelEditSheet();
         renderAdminRegistryList();

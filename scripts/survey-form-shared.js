@@ -437,17 +437,16 @@
       }
       var remoteRev = registryLabelRevision(built);
       var localRev = registryLabelRevision(prev);
-      if (remoteRev >= localRev) {
-        byId[built.id] = Object.assign({}, built, prev, {
-          label: coerceText(built.label) ? built.label : prev.label,
-          url: coerceText(built.url) ? built.url : prev.url,
-          viewMode: built.viewMode || prev.viewMode,
-          resultsLayout: built.resultsLayout || prev.resultsLayout,
-          updatedAt: built.updatedAt || prev.updatedAt,
-          categorySelectAll:
-            built.categorySelectAll != null ? built.categorySelectAll : prev.categorySelectAll,
-        });
-      }
+      var stamp = Math.max(remoteRev, localRev, Date.now());
+      byId[built.id] = Object.assign({}, built, prev, {
+        label: coerceText(prev.label) ? prev.label : built.label,
+        url: coerceText(prev.url) ? prev.url : built.url,
+        viewMode: prev.viewMode || built.viewMode,
+        resultsLayout: prev.resultsLayout || built.resultsLayout,
+        updatedAt: stamp,
+        categorySelectAll:
+          prev.categorySelectAll != null ? prev.categorySelectAll : built.categorySelectAll,
+      });
     });
     return Object.keys(byId).map(function (id) {
       return byId[id];
@@ -636,7 +635,11 @@
       if (!local || !local.id) return;
       var prev = byId[local.id];
       var normalized = ensureSurveyFullyPublic(normalizeRegistryEntry(local));
-      var rev = registryLabelRevision(normalized) || Date.now();
+      var rev = Math.max(
+        registryLabelRevision(normalized),
+        registryLabelRevision(prev),
+        Date.now()
+      );
       byId[local.id] = Object.assign({}, prev, normalized, {
         label: coerceText(normalized.label)
           ? normalized.label
@@ -650,6 +653,30 @@
         return byId[id];
       })
     );
+  }
+
+  function pinRegistryEntryAfterEdit(registry, entry) {
+    if (!entry || !entry.id) return registry || [];
+    var list = (registry || []).slice();
+    var idx = list.findIndex(function (item) {
+      return item && item.id === entry.id;
+    });
+    var label = coerceText(entry.label);
+    var url = coerceText(entry.url);
+    var stamp = Math.max(registryLabelRevision(entry), Date.now());
+    var pinned = ensureSurveyFullyPublic(
+      normalizeRegistryEntry(Object.assign({}, entry, { updatedAt: stamp }))
+    );
+    if (idx < 0) {
+      list.push(pinned);
+      return dedupeRegistryEntries(list);
+    }
+    list[idx] = Object.assign({}, list[idx], pinned, {
+      label: label || list[idx].label,
+      url: url || list[idx].url,
+      updatedAt: stamp,
+    });
+    return dedupeRegistryEntries(list);
   }
 
   async function syncRegistryEntryAfterEdit(entry) {
@@ -687,6 +714,7 @@
       });
     } catch (refreshErr) {
       merged = applyRegistryEntriesPreferLocal(loadRegistry(), [saved]);
+      merged = pinRegistryEntryAfterEdit(merged, saved);
       saveRegistry(merged);
       return {
         entry: saved,
@@ -696,7 +724,17 @@
       };
     }
 
-    return { entry: saved, publish: publishResult, registry: merged };
+    merged = applyRegistryEntriesPreferLocal(merged, [saved]);
+    merged = pinRegistryEntryAfterEdit(merged, saved);
+    saveRegistry(merged);
+    var pinned = merged.find(function (item) {
+      return item && item.id === saved.id;
+    });
+    return {
+      entry: pinned || saved,
+      publish: publishResult,
+      registry: merged,
+    };
   }
 
   function partitionRegistryByStatus(registry) {

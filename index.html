@@ -2082,6 +2082,11 @@
       word-break: keep-all;
       white-space: pre-wrap;
     }
+    .survey-qa-multi-choice--single-line .survey-qa-multi-choice__detail {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: keep-all;
+    }
     #results .student-survey-report--adaptive .survey-qa-item__question,
     #results .student-survey-report--adaptive .survey-qa-item__answer-text,
     #results .student-survey-report--adaptive .survey-qa-multi-choice__type,
@@ -3438,7 +3443,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260609">
+  <link rel="stylesheet" href="styles/survey-ui-clean.css?v=20260611">
 </head>
 <body>
   <header class="site-header no-print">
@@ -3572,7 +3577,7 @@
   </footer>
 
   <script src="scripts/korean-orthography.js?v=20260608"></script>
-  <script src="scripts/survey-form-shared.js?v=20260608"></script>
+  <script src="scripts/survey-form-shared.js?v=20260611"></script>
   <script src="scripts/admin-session.js?v=20260530"></script>
   <script>
 (function () {
@@ -8809,6 +8814,13 @@
         detail: trimMultiChoiceDetailLead(m[2].trim()),
       };
     }
+    var arrow = s.match(/^(.+?)\s*(?:->|→|➔|⇒)\s*(.+)$/);
+    if (arrow) {
+      return {
+        type: arrow[1].trim(),
+        detail: trimMultiChoiceDetailLead(arrow[2].trim()),
+      };
+    }
     var dash = s.search(/\s[-–—]\s/);
     if (dash > 0) {
       return {
@@ -8825,22 +8837,23 @@
     var choices = parseMultiSelectAnswer(raw, question);
     if (!choices || !choices.length) {
       var text = formatAdaptiveAnswerText(raw, question) || raw || "—";
-      var answerClass = "survey-qa-item__answer-text";
-      if (isNarrativeSingleLineQuestion(question)) {
-        answerClass += " survey-qa-item__answer-text--single-line";
+      if (!text || text === "—") {
+        return {
+          isMulti: false,
+          single: false,
+          html: '<p class="survey-qa-item__answer-text">—</p>',
+        };
       }
-      return {
-        isMulti: false,
-        single: false,
-        html: '<p class="' + answerClass + '">' + esc(text) + "</p>",
-      };
+      choices = [text];
     }
+    var singleLine = isNarrativeSingleLineQuestion(question);
     var html = "";
     choices.forEach(function (seg) {
       var part = splitMultiSelectChoiceSegment(seg);
       var cellClass = "survey-qa-multi-choice";
       if (!part.type) cellClass += " survey-qa-multi-choice--plain";
       else cellClass += " survey-qa-multi-choice--typed";
+      if (singleLine) cellClass += " survey-qa-multi-choice--single-line";
       html += '<div class="' + cellClass + '">';
       if (part.type) {
         html +=
@@ -8863,12 +8876,7 @@
   function renderSurveyAnswerValueHtml(raw, question) {
     var rendered = renderMultiSelectAnswerHtml(raw, question);
     if (!rendered.isMulti) {
-      var text = formatAdaptiveAnswerText(raw, question) || raw || "—";
-      var valClass = "survey-field-line__value";
-      if (isNarrativeSingleLineQuestion(question)) {
-        valClass += " survey-field-line__value--single-line";
-      }
-      return '<span class="' + valClass + '">' + esc(text) + "</span>";
+      return '<span class="survey-field-line__value">—</span>';
     }
     var wrapClass =
       "survey-field-line__value survey-field-line__value--multi";
@@ -9208,7 +9216,7 @@
     if (!card) return "—";
     var num = card.getAttribute("data-student-num");
     var name = card.getAttribute("data-student-name") || "";
-    if (num && name) return num + "번 · " + name;
+    if (num && name) return num + "번 " + name;
     if (num) return num + "번";
     if (name) return name;
     return "—";

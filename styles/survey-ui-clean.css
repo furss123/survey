@@ -270,6 +270,11 @@
     line-height: var(--multi-choice-line-height, 1.5);
     white-space: pre-wrap;
   }
+  html:not([data-theme="dark"]) .survey-qa-multi-choice--single-line .survey-qa-multi-choice__detail {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: keep-all;
+  }
   html:not([data-theme="dark"]) #results .student-survey-report--adaptive .survey-qa-item__question,
   html:not([data-theme="dark"]) #results .student-survey-report--adaptive .survey-qa-item__answer-text,
   html:not([data-theme="dark"]) #results .student-survey-report--adaptive .survey-qa-multi-choice__type,
