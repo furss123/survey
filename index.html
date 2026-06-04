@@ -2310,6 +2310,11 @@
       max-height: none;
       overflow: visible;
       box-sizing: border-box;
+      border: none !important;
+      border-left: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: #ffffff !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card .student-response-header {
       margin-bottom: var(--print-header-mb, 8px) !important;
@@ -2395,8 +2400,8 @@
       box-sizing: border-box !important;
       margin: 0 !important;
       padding: var(--print-multi-wrap-pad, 8px 10px) !important;
-      background: var(--print-multi-wrap-bg, #fafafa) !important;
-      border: 1px solid var(--print-multi-wrap-border, #cccccc) !important;
+      background: var(--print-multi-wrap-bg, #f4f8fc) !important;
+      border: 1px solid var(--print-multi-wrap-border, #c5d4e6) !important;
       border-radius: 4px !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-field-line__value--multi .survey-qa-multi-choice {
@@ -2426,7 +2431,7 @@
       height: 4px !important;
       margin-top: 0 !important;
       border-radius: 50% !important;
-      background: #333333 !important;
+      background: #3d6b9e !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
@@ -2451,7 +2456,7 @@
       font-size: var(--print-font-pt, 11pt) !important;
       font-weight: 700 !important;
       line-height: var(--multi-choice-line-height, 1.32) !important;
-      color: #333333 !important;
+      color: #1e3a5f !important;
       white-space: nowrap !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__type::after {
@@ -2463,48 +2468,56 @@
       font-size: inherit !important;
       font-weight: 400 !important;
       line-height: 1 !important;
-      color: #555555 !important;
+      color: #5a7291 !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-multi-choice__detail {
       margin: 0 !important;
       padding: 0 !important;
       line-height: var(--multi-choice-line-height, 1.32) !important;
-      color: #333333 !important;
+      color: #2c4a6e !important;
       white-space: pre-wrap !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__legend,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__legend em,
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step-num {
-      color: #333333 !important;
+      color: #1e3a5f !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step {
-      background: #f5f5f5 !important;
-      border: 1px solid #cccccc !important;
+      background: #f4f8fc !important;
+      border: 1px solid #c5d4e6 !important;
       box-shadow: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step.is-filled {
-      background: #eeeeee !important;
+      background: #eef4fb !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .likert-scale__step.is-selected {
       background: #ffffff !important;
-      border: 2px solid #333333 !important;
+      border: 2px solid #3d6b9e !important;
       box-shadow: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item {
       background: #ffffff !important;
-      border-color: #cccccc !important;
-      color: #333333 !important;
+      border: 1px solid #c5d4e6 !important;
+      border-radius: 6px !important;
+      color: #2c4a6e !important;
       box-shadow: none !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .survey-qa-item__question {
-      color: #333333 !important;
+      color: #1e3a5f !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode) #results .student-card {
       background: #ffffff !important;
-      color: #333333 !important;
-      border-color: #cccccc !important;
-      border-left-color: #666666 !important;
+      color: #2c4a6e !important;
+      border: none !important;
+      border-left: none !important;
       box-shadow: none !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-response-header {
+      border-bottom-color: #c5d4e6 !important;
+      color: #1e3a5f !important;
+    }
+    body.print-one-student-per-page:not(.print-teacher-mode) #results .student-name {
+      color: #1e3a5f !important;
     }
     body.print-one-student-per-page:not(.print-teacher-mode)
       #results
@@ -2594,53 +2607,61 @@
       max-width: 184mm;
     }
     @media print {
-      /* 인쇄 편집: 흰 배경(#FFF)·본문 #333·그라데이션·그림자 제거(흑백 가독성) */
+      /* 인쇄 편집: 흰 배경·학교 푸른 톤·좌측 강조선 없음·그림자·그라데이션 제거 */
       html {
         color-scheme: light !important;
       }
       :root,
       html,
       html[data-theme="dark"] {
-        --print-ink: #333333;
-        --print-ink-muted: #555555;
+        --print-blue-dark: #1e3a5f;
+        --print-blue-body: #2c4a6e;
+        --print-blue-muted: #5a7291;
+        --print-blue-accent: #3d6b9e;
+        --print-blue-border: #c5d4e6;
+        --print-blue-border-soft: #dce4ee;
+        --print-blue-fill: #f4f8fc;
+        --print-blue-fill-strong: #eef4fb;
+        --print-ink: #2c4a6e;
+        --print-ink-muted: #5a7291;
         --print-bg: #ffffff;
-        --print-border: #cccccc;
-        --print-border-light: #e0e0e0;
-        --print-fill-subtle: #f5f5f5;
-        --print-multi-wrap-bg: #fafafa;
-        --print-multi-wrap-border: #cccccc;
+        --print-border: #c5d4e6;
+        --print-border-light: #dce4ee;
+        --print-fill-subtle: #f4f8fc;
+        --print-multi-wrap-bg: #f4f8fc;
+        --print-multi-wrap-border: #c5d4e6;
         --theme-bg-page: #ffffff;
         --theme-bg-panel: #ffffff;
-        --theme-bg-muted: #f5f5f5;
-        --theme-text: #333333;
-        --theme-text-muted: #555555;
-        --theme-border: #cccccc;
-        --theme-border-light: #e0e0e0;
-        --theme-heading-strong: #333333;
-        --theme-heading: #333333;
-        --theme-heading-accent: #333333;
+        --theme-bg-muted: #f4f8fc;
+        --theme-text: #2c4a6e;
+        --theme-text-muted: #5a7291;
+        --theme-border: #c5d4e6;
+        --theme-border-light: #dce4ee;
+        --theme-heading-strong: #1e3a5f;
+        --theme-heading: #1e3a5f;
+        --theme-heading-accent: #3d6b9e;
         --theme-accent-soft: #ffffff;
         --bg-page: #ffffff;
         --bg-surface: #ffffff;
-        --bg-muted: #f5f5f5;
+        --bg-muted: #f4f8fc;
         --bg-category: #ffffff;
         --bg-accent-soft: #ffffff;
         --bg-accent-banner: #ffffff;
-        --border: #cccccc;
-        --border-strong: #999999;
-        --border-accent: #666666;
-        --text: #333333;
-        --text-muted: #555555;
-        --text-subtle: #444444;
-        --text-accent: #333333;
-        --accent: #333333;
-        --accent-hover: #333333;
+        --border: #c5d4e6;
+        --border-strong: #9fb1c6;
+        --border-accent: #3d6b9e;
+        --text: #2c4a6e;
+        --text-muted: #5a7291;
+        --text-subtle: #3d5a7a;
+        --text-accent: #1e3a5f;
+        --accent: #3d6b9e;
+        --accent-hover: #1e3a5f;
         --chip-bg: #ffffff;
-        --chip-inactive-text: #333333;
-        --badge-done-bg: #f5f5f5;
-        --badge-done-text: #333333;
-        --badge-pending-bg: #f5f5f5;
-        --badge-pending-text: #555555;
+        --chip-inactive-text: #2c4a6e;
+        --badge-done-bg: #eef4fb;
+        --badge-done-text: #1e3a5f;
+        --badge-pending-bg: #f4f8fc;
+        --badge-pending-text: #5a7291;
       }
       body.is-printing-results #results,
       body.is-printing-results #results * {
@@ -2668,7 +2689,7 @@
       body {
         padding: 0 !important;
         background: #ffffff !important;
-        color: #333333 !important;
+        color: #2c4a6e !important;
       }
       /* 인쇄 시 #results를 body 직속으로 옮긴 뒤, 나머지 UI는 숨기고 결과만 출력 */
       body.is-printing-results.survey-print-detached > *:not(#results) {
@@ -2694,7 +2715,7 @@
         border: none !important;
         box-shadow: none !important;
         background: #ffffff !important;
-        color: #333333 !important;
+        color: #2c4a6e !important;
         overflow: visible !important;
       }
       body.is-printing-results .site-header,
@@ -2727,7 +2748,7 @@
         padding: 0 !important;
         margin: 0 !important;
         background: #ffffff !important;
-        color: #333333 !important;
+        color: #2c4a6e !important;
         overflow: visible !important;
       }
       body.is-printing-results #results.visible *,
@@ -2745,123 +2766,126 @@
       }
       body.is-printing-results #results .class-section {
         background: #ffffff !important;
-        border-color: #cccccc !important;
+        border: none !important;
         box-shadow: none !important;
       }
       body.is-printing-results #results .class-section__head {
         background: #ffffff !important;
-        color: #333333 !important;
-        border: 1px solid #cccccc !important;
-        border-bottom: 2px solid #333333 !important;
+        color: #1e3a5f !important;
+        border: none !important;
+        border-bottom: 2px solid #3d6b9e !important;
       }
       body.is-printing-results #results .class-section__missing {
         background: #ffffff !important;
-        border-color: #cccccc !important;
-        color: #555555 !important;
+        border-color: #c5d4e6 !important;
+        color: #5a7291 !important;
       }
       body.is-printing-results #results .class-section__missing strong {
-        color: #333333 !important;
+        color: #1e3a5f !important;
       }
       body.is-printing-results #results .student-card {
         background: #ffffff !important;
-        color: #333333 !important;
-        border-color: #cccccc !important;
-        border-left-color: #666666 !important;
+        color: #2c4a6e !important;
+        border: none !important;
+        border-left: none !important;
+        border-radius: 0 !important;
         box-shadow: none !important;
       }
       body.is-printing-results #results .student-response-header {
-        border-bottom-color: #cccccc !important;
-        color: #333333 !important;
+        border-bottom: 1px solid #c5d4e6 !important;
+        color: #1e3a5f !important;
       }
       body.is-printing-results #results .student-num,
       body.is-printing-results #results .student-name,
       body.is-printing-results #results .student-id {
-        color: #333333 !important;
+        color: #1e3a5f !important;
       }
       body.is-printing-results #results .category-block,
       body.is-printing-results #results .subject-sector {
         background: #ffffff !important;
-        border-color: #cccccc !important;
-        color: #333333 !important;
+        border-color: #c5d4e6 !important;
+        color: #2c4a6e !important;
       }
       body.is-printing-results #results .subject-sector__title {
-        background: #f5f5f5 !important;
-        color: #333333 !important;
-        border-bottom: 1px solid #cccccc !important;
+        background: #f4f8fc !important;
+        color: #1e3a5f !important;
+        border-bottom: 1px solid #c5d4e6 !important;
       }
       body.is-printing-results #results .student-survey-report__subject-name,
       body.is-printing-results #results .student-survey-report__teacher-title {
-        color: #333333 !important;
-        border-bottom-color: #666666 !important;
+        color: #1e3a5f !important;
+        border-bottom-color: #3d6b9e !important;
       }
       body.is-printing-results #results .survey-field-line__label {
-        color: #444444 !important;
+        color: #3d5a7a !important;
       }
       body.is-printing-results #results .category-block .cat-title {
-        color: #333333 !important;
+        color: #1e3a5f !important;
       }
       body.is-printing-results #results .category-block .cat-body,
       body.is-printing-results #results .category-block .cat-field,
       body.is-printing-results #results .preview,
-      body.is-printing-results #results .survey-qa-item,
-      body.is-printing-results #results .survey-qa-item__question,
       body.is-printing-results #results .survey-qa-item__answer-text,
-      body.is-printing-results #results .survey-qa-multi-choice__type,
       body.is-printing-results #results .survey-qa-multi-choice__detail,
       body.is-printing-results #results .survey-qa-pair__q,
       body.is-printing-results #results .survey-qa-pair__a {
-        color: #333333 !important;
+        color: #2c4a6e !important;
+      }
+      body.is-printing-results #results .survey-qa-item__question,
+      body.is-printing-results #results .survey-qa-multi-choice__type {
+        color: #1e3a5f !important;
       }
       body.is-printing-results #results .survey-qa-item {
         background: #ffffff !important;
-        border: 1px solid #cccccc !important;
+        border: 1px solid #c5d4e6 !important;
+        border-radius: 6px !important;
       }
       body.is-printing-results #results .category-block .cat-field span {
-        color: #444444 !important;
+        color: #3d5a7a !important;
       }
       body.is-printing-results #results .muted,
       body.is-printing-results #results .subject-empty,
       body.is-printing-results #results .absent-note {
-        color: #555555 !important;
+        color: #5a7291 !important;
       }
       body.is-printing-results #results .student-card-divider {
-        border-top-color: #cccccc !important;
+        border-top-color: #dce4ee !important;
       }
       body.is-printing-results #results .sheet-banner {
         background: #ffffff !important;
-        color: #333333 !important;
-        border-color: #cccccc !important;
+        color: #1e3a5f !important;
+        border-color: #c5d4e6 !important;
       }
       body.is-printing-results #results .student-survey-report__teacher {
         background: #ffffff !important;
-        border: 1px solid #cccccc !important;
+        border: 1px solid #c5d4e6 !important;
       }
       body.is-printing-results #results .category-block--teacher {
         background: #ffffff !important;
-        border-color: #cccccc !important;
+        border-color: #c5d4e6 !important;
       }
       body.is-printing-results #results .status-badge {
-        background: #f5f5f5 !important;
-        color: #333333 !important;
-        border: 1px solid #cccccc !important;
+        background: #eef4fb !important;
+        color: #1e3a5f !important;
+        border: 1px solid #c5d4e6 !important;
         box-shadow: none !important;
       }
       body.is-printing-results #results .likert-scale__legend,
       body.is-printing-results #results .likert-scale__legend em,
       body.is-printing-results #results .likert-scale__step-num {
-        color: #333333 !important;
+        color: #1e3a5f !important;
       }
       body.is-printing-results #results .likert-scale__step {
-        background: #f5f5f5 !important;
-        border: 1px solid #cccccc !important;
+        background: #f4f8fc !important;
+        border: 1px solid #c5d4e6 !important;
         box-shadow: none !important;
       }
       body.is-printing-results #results .likert-scale__step.is-filled {
-        background: #eeeeee !important;
+        background: #eef4fb !important;
       }
       body.is-printing-results #results .likert-scale__step.is-selected {
         background: #ffffff !important;
-        border: 2px solid #333333 !important;
+        border: 2px solid #3d6b9e !important;
         box-shadow: none !important;
       }
       body.is-printing-results .results-sticky-chrome,
@@ -2896,7 +2920,10 @@
         max-width: 100%;
         margin-bottom: 10px;
         background: #ffffff !important;
-        color: #333333 !important;
+        color: #2c4a6e !important;
+        border: none !important;
+        border-left: none !important;
+        box-shadow: none !important;
       }
       /* 특정 반 + 전체과목: 학생 1명당 1페이지 */
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .class-section {
@@ -2955,8 +2982,8 @@
         gap: var(--print-multi-row-gap, 8px) var(--print-multi-col-gap, 14px) !important;
         align-items: start !important;
         padding: var(--print-multi-wrap-pad, 8px 10px) !important;
-        background: var(--print-multi-wrap-bg, #fafafa) !important;
-        border: 1px solid var(--print-multi-wrap-border, #cccccc) !important;
+        background: var(--print-multi-wrap-bg, #f4f8fc) !important;
+        border: 1px solid var(--print-multi-wrap-border, #c5d4e6) !important;
         border-radius: 4px !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
@@ -2983,22 +3010,27 @@
         width: 4px !important;
         height: 4px !important;
         border-radius: 50% !important;
-        background: #333333 !important;
+        background: #3d6b9e !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
         .survey-qa-multi-choice__type {
-        color: #333333 !important;
+        color: #1e3a5f !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
         .survey-qa-multi-choice__type::after {
-        color: #555555 !important;
+        color: #5a7291 !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
         .survey-qa-multi-choice__detail {
-        color: #333333 !important;
+        color: #2c4a6e !important;
+      }
+      body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode) .student-card {
+        border: none !important;
+        border-left: none !important;
+        box-shadow: none !important;
       }
       body.is-printing-results.print-one-student-per-page:not(.print-teacher-mode)
         .student-card
@@ -3063,11 +3095,12 @@
         break-inside: auto !important;
         margin: 0 !important;
         padding: 3px 4px 2px !important;
-        border: 1px solid #cccccc !important;
+        border: 1px solid #c5d4e6 !important;
+        border-left: none !important;
         border-radius: 4px !important;
         box-shadow: none !important;
         background: #ffffff !important;
-        color: #333333 !important;
+        color: #2c4a6e !important;
       }
       body.is-printing-results.print-teacher-mode .student-card-divider,
       body.is-printing-results.print-teacher-mode .status-badge,
@@ -3077,9 +3110,9 @@
       body.is-printing-results.print-teacher-mode .student-response-header {
         margin: 0 0 2px !important;
         padding: 0 0 2px !important;
-        border-bottom: 1px solid #cccccc !important;
+        border-bottom: 1px solid #c5d4e6 !important;
         gap: 4px !important;
-        color: #333333 !important;
+        color: #1e3a5f !important;
       }
       body.is-printing-results.print-teacher-mode .student-response-header .header-meta {
         gap: 3px 5px !important;
@@ -3107,7 +3140,7 @@
       body.is-printing-results.print-teacher-mode .category-block--teacher .cat-body {
         font-size: 5.5pt !important;
         line-height: 1.15 !important;
-        color: #333333 !important;
+        color: #2c4a6e !important;
         max-height: 2.6em;
         overflow: hidden;
         display: -webkit-box;
