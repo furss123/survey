@@ -426,6 +426,143 @@
     });
   }
 
+  var PUBLIC_REGISTRY_SHEET = "SurveyRegistry";
+
+  function toPublicRegistrySnapshot(entry) {
+    if (!entry || !entry.id) return null;
+    var updatedAt = registryLabelRevision(entry) || Date.now();
+    var snap = {
+      id: entry.id,
+      label: normalizeDisplayText(entry.label) || entry.label,
+      url: coerceText(entry.url),
+      sourceType: "sheet",
+      visibility: "public",
+      viewMode: entry.viewMode || entry.resultsLayout || "class",
+      resultsLayout: entry.resultsLayout || entry.viewMode || "class",
+      categorySelectAll:
+        entry.categorySelectAll != null ? entry.categorySelectAll : true,
+      updatedAt: updatedAt,
+      registeredAt: entry.registeredAt || updatedAt,
+      surveyStatus: entry.surveyStatus || defaultSurveyStatus(),
+      completedAt: entry.completedAt != null ? entry.completedAt : null,
+    };
+    var meta = {};
+    if (entry.tab) meta.tab = entry.tab;
+    if (Array.isArray(entry.categories) && entry.categories.length) {
+      meta.categories = entry.categories;
+    }
+    if (Array.isArray(entry.classes) && entry.classes.length) {
+      meta.classes = entry.classes;
+    }
+    if (Object.keys(meta).length) snap.metaJson = JSON.stringify(meta);
+    return snap;
+  }
+
+  function parseRegistrySheetValues(values) {
+    if (!values || values.length < 2) return [];
+    var out = [];
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+      var id = coerceText(row[0]);
+      if (!id) continue;
+      var entry = {
+        id: id,
+        label: row[1],
+        url: row[2],
+        viewMode: coerceText(row[3]) || "class",
+        resultsLayout: coerceText(row[4]) || coerceText(row[3]) || "class",
+        categorySelectAll:
+          row[5] === false ||
+          row[5] === 0 ||
+          String(row[5]).toLowerCase() === "false" ||
+          String(row[5]).toLowerCase() === "0"
+            ? false
+            : true,
+        updatedAt: Number(row[6]) || 0,
+        registeredAt: Number(row[7]) || 0,
+        surveyStatus: coerceText(row[8]) || defaultSurveyStatus(),
+        sourceType: "sheet",
+        visibility: "public",
+      };
+      var metaRaw = row[9];
+      if (metaRaw) {
+        try {
+          var meta =
+            typeof metaRaw === "string" ? JSON.parse(metaRaw) : metaRaw;
+          if (meta && typeof meta === "object") {
+            if (meta.tab) entry.tab = meta.tab;
+            if (meta.categories) entry.categories = meta.categories;
+            if (meta.classes) entry.classes = meta.classes;
+          }
+        } catch (e) { /* ignore */ }
+      }
+      var built = expandBundledRegistryEntry(entry);
+      if (built && !isSurveyDeleted(built.id)) out.push(built);
+    }
+    return out;
+  }
+
+  async function fetchLiveRegistryFromSheet() {
+    try {
+      var values = await fetchGvizValues(
+        DEFAULT_RESPONSE_SPREADSHEET_ID,
+        PUBLIC_REGISTRY_SHEET
+      );
+      return parseRegistrySheetValues(values);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function combineRemoteRegistrySources() {
+    var merged = [];
+    for (var i = 0; i < arguments.length; i++) {
+      merged = mergeRemoteAndLocalRegistry(merged, arguments[i] || []);
+    }
+    return merged;
+  }
+
+  async function publishRegistryEntry(entry) {
+    var snap = toPublicRegistrySnapshot(entry);
+    if (!snap) return { ok: false, error: "invalid entry" };
+    unmarkSurveyDeleted(snap.id);
+    var webAppUrl = resolveWebAppUrl(entry);
+    if (!webAppUrl) {
+      return { ok: true, skipped: true, reason: "no-webapp" };
+    }
+    var res = await fetch(webAppUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "upsertRegistry", entry: snap }),
+    });
+    var data = await readJsonResponse(res);
+    if (!data || data.ok === false) {
+      throw new Error(
+        (data && data.error) || "공개 설문 목록(SurveyRegistry) 반영에 실패했습니다."
+      );
+    }
+    return data;
+  }
+
+  async function removeRegistryEntryFromLive(id) {
+    if (!id) return { ok: false, error: "id required" };
+    var webAppUrl = resolveWebAppUrl({ id: id });
+    if (!webAppUrl) return { ok: true, skipped: true, reason: "no-webapp" };
+    var res = await fetch(webAppUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "deleteRegistry", surveyId: id, id: id }),
+    });
+    var data = await readJsonResponse(res);
+    if (!data || data.ok === false) {
+      return {
+        ok: false,
+        error: (data && data.error) || "공개 목록에서 삭제하지 못했습니다.",
+      };
+    }
+    return data;
+  }
+
   async function fetchBundledSheetRegistry() {
     try {
       var res = await fetch(BUNDLED_REGISTRY_PATH + "?v=" + Date.now(), { cache: "no-store" });
@@ -451,7 +588,9 @@
   async function refreshRegistryFromServer(options) {
     options = options || {};
     var local = loadRegistry();
-    var published = appendRequiredPublicSurveys(await fetchBundledSheetRegistry());
+    var bundled = appendRequiredPublicSurveys(await fetchBundledSheetRegistry());
+    var live = await fetchLiveRegistryFromSheet();
+    var published = combineRemoteRegistrySources(bundled, live);
     var merged = mergeRemoteAndLocalRegistry(published, local);
     saveRegistry(merged, { silent: options.silent });
     return merged;
@@ -784,7 +923,15 @@
     if (!id) return { ok: false, localOnly: true, warnings: ["설문 ID 없음"] };
     markSurveyDeleted(id);
     var result = await deleteSurveyOnServer(entryOrId);
+    var liveResult = await removeRegistryEntryFromLive(id);
     var warnings = [];
+    if (liveResult && liveResult.skipped) {
+      warnings.push(
+        "웹 앱 URL이 없어 SurveyRegistry 시트에는 반영되지 않았습니다. 다른 PC 목록은 GitHub 공개 JSON·시트 동기화에 의존합니다."
+      );
+    } else if (liveResult && liveResult.ok === false) {
+      warnings.push(liveResult.error || "SurveyRegistry 삭제 실패");
+    }
     if (result && result.skipped) {
       warnings.push(
         "웹 앱 URL이 없어 Config 시트에서는 삭제되지 않았습니다. 관리자에서 URL을 저장한 뒤 다시 삭제하거나, Config 시트에서 해당 행을 직접 지워 주세요."
@@ -840,6 +987,10 @@
     loadRegistry: loadRegistry,
     saveRegistry: saveRegistry,
     fetchBundledSheetRegistry: fetchBundledSheetRegistry,
+    fetchLiveRegistryFromSheet: fetchLiveRegistryFromSheet,
+    publishRegistryEntry: publishRegistryEntry,
+    removeRegistryEntryFromLive: removeRegistryEntryFromLive,
+    toPublicRegistrySnapshot: toPublicRegistrySnapshot,
     isSurveyCompleted: isSurveyCompleted,
     defaultSurveyStatus: defaultSurveyStatus,
     setSurveyStatus: setSurveyStatus,

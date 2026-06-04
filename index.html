@@ -6529,7 +6529,7 @@
     if (resultsEl) resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function confirmAdminSetup() {
+  async function confirmAdminSetup() {
     if (!adminSetupLabel || !adminSetupUrl) return;
     syncAdminCategoriesFromDom();
     if (
@@ -6563,6 +6563,7 @@
         /* 게시 시 관리자가 고른 표시 방식 우선 */
       }
     }
+    var now = Date.now();
     var payload = {
       label: SurveyForm.normalizeDisplayText(adminSetupLabel) || adminSetupLabel,
       url: adminSetupUrl,
@@ -6572,6 +6573,7 @@
       viewMode: resolvedViewMode,
       categorySelectAll:
         resolvedLayout === "class" ? true : adminCategorySelectAll,
+      updatedAt: now,
       categories: adminSetupCategories.map(function (c, i) {
         return {
           id: c.id,
@@ -6604,13 +6606,24 @@
         Object.assign(
           {
             id: newId,
-            registeredAt: Date.now(),
+            registeredAt: now,
           },
           payload
         )
       );
     }
     saveSheetRegistry(registry);
+    var targetId = adminSetupEditId || parseSpreadsheetId(adminSetupUrl);
+    var savedEntry = registry.find(function (item) {
+      return item && item.id === targetId;
+    });
+    if (savedEntry) {
+      try {
+        await SurveyForm.publishRegistryEntry(savedEntry);
+      } catch (pubErr) {
+        console.warn(pubErr);
+      }
+    }
     sessionStorage.removeItem(ADMIN_SETUP_DRAFT_KEY);
     location.href = INDEX_PAGE_PATH;
   }
@@ -8368,6 +8381,14 @@
   window.addEventListener("load", scheduleHeaderTitleFit);
 
   refreshHomeSurveyList({ sync: true, flash: false });
+  window.addEventListener("pageshow", function () {
+    refreshHomeSurveyList({ sync: true, flash: false });
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+      refreshHomeSurveyList({ sync: true, flash: false });
+    }
+  });
   window.addEventListener("survey-registry-updated", function () {
     refreshHomeSurveyList({ sync: false });
   });

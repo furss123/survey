@@ -1166,6 +1166,7 @@
     registry = normalizeSheetRegistry(registry);
     saveSheetRegistry(registry);
     SurveyForm.saveRegistry(registry);
+    return registry[idx];
   }
 
   var adminRegistryRefreshToken = 0;
@@ -1504,17 +1505,24 @@
         if (submitBtn) submitBtn.disabled = false;
         return;
       }
-      updateRegistryEntry(editingSheetId, label, url);
+      var saved = updateRegistryEntry(editingSheetId, label, url);
       cancelEditSheet();
       renderAdminRegistryList();
       flashAdminRegistryGroups();
-      refreshAdminRegistryList({
-        sync: false,
-        message: "시트 정보를 수정했습니다.",
-        kind: "is-ok",
-      }).finally(function () {
-        if (submitBtn) submitBtn.disabled = false;
-      });
+      SurveyForm.publishRegistryEntry(saved)
+        .catch(function (pubErr) {
+          console.warn(pubErr);
+        })
+        .finally(function () {
+          refreshAdminRegistryList({
+            sync: true,
+            message: "시트 정보를 수정했습니다.",
+            kind: "is-ok",
+          }).finally(function () {
+            if (submitBtn) submitBtn.disabled = false;
+          });
+        });
+      return;
     } catch (err) {
       setAdminRegistryStatus(err.message || "등록에 실패했습니다.", "is-warn");
       if (submitBtn) submitBtn.disabled = false;
