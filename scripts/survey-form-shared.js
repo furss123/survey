@@ -348,6 +348,8 @@
 
   function registryLabelRevision(entry) {
     if (!entry) return 0;
+    var labelAt = Number(entry.labelUpdatedAt);
+    if (Number.isFinite(labelAt) && labelAt > 0) return labelAt;
     var n = Number(entry.updatedAt);
     return Number.isFinite(n) && n > 0 ? n : 0;
   }
@@ -437,6 +439,7 @@
           label: coerceText(entry.label) ? entry.label : prev.label,
           url: coerceText(entry.url) ? entry.url : prev.url,
           updatedAt: localRev || remoteRev,
+          labelUpdatedAt: entry.labelUpdatedAt || entry.updatedAt || localRev || remoteRev,
           listOrder: orderPick.listOrder,
           orderUpdatedAt: orderPick.orderUpdatedAt,
         });
@@ -446,6 +449,7 @@
         label: coerceText(prev.label) ? prev.label : entry.label,
         url: coerceText(prev.url) ? prev.url : entry.url,
         updatedAt: prev.updatedAt || entry.updatedAt,
+        labelUpdatedAt: prev.labelUpdatedAt || prev.updatedAt || remoteRev || localRev,
         listOrder: orderPick.listOrder,
         orderUpdatedAt: orderPick.orderUpdatedAt,
         categories: entry.categories || prev.categories,
@@ -556,6 +560,9 @@
     if (entry.orderUpdatedAt != null) {
       meta.orderUpdatedAt = Number(entry.orderUpdatedAt) || 0;
     }
+    if (entry.labelUpdatedAt != null) {
+      meta.labelUpdatedAt = Number(entry.labelUpdatedAt) || 0;
+    }
     if (Object.keys(meta).length) snap.metaJson = JSON.stringify(meta);
     return snap;
   }
@@ -600,6 +607,9 @@
             }
             if (meta.orderUpdatedAt != null) {
               entry.orderUpdatedAt = Number(meta.orderUpdatedAt) || 0;
+            }
+            if (meta.labelUpdatedAt != null) {
+              entry.labelUpdatedAt = Number(meta.labelUpdatedAt) || 0;
             }
           }
         } catch (e) { /* ignore */ }
@@ -701,13 +711,19 @@
     var published = combineRemoteRegistrySources(bundled, live);
     var merged = mergeRemoteAndLocalRegistry(published, local);
     if (options.preferLocalEntries && options.preferLocalEntries.length) {
-      merged = applyRegistryEntriesPreferLocal(merged, options.preferLocalEntries);
+      merged = applyRegistryEntriesPreferLocal(
+        merged,
+        options.preferLocalEntries,
+        options.preferLocalOptions
+      );
     }
     saveRegistry(merged, { silent: options.silent });
     return merged;
   }
 
-  function applyRegistryEntriesPreferLocal(registry, preferEntries) {
+  function applyRegistryEntriesPreferLocal(registry, preferEntries, options) {
+    options = options || {};
+    var bumpLabelRevision = options.bumpLabelRevision !== false;
     var byId = {};
     (registry || []).forEach(function (entry) {
       if (entry && entry.id) byId[entry.id] = entry;
@@ -716,9 +732,14 @@
       if (!local || !local.id) return;
       var prev = byId[local.id];
       var normalized = ensureSurveyFullyPublic(normalizeRegistryEntry(local));
-      var rev = Math.max(
+      var labelRev = Math.max(
         registryLabelRevision(normalized),
         registryLabelRevision(prev),
+        bumpLabelRevision ? Date.now() : 0
+      );
+      var orderRev = Math.max(
+        registryOrderRevision(normalized),
+        registryOrderRevision(prev),
         Date.now()
       );
       byId[local.id] = Object.assign({}, prev, normalized, {
@@ -730,12 +751,15 @@
           normalized.listOrder != null
             ? normalized.listOrder
             : prev && prev.listOrder,
-        orderUpdatedAt: Math.max(
-          registryOrderRevision(normalized),
-          registryOrderRevision(prev),
-          Date.now()
-        ),
-        updatedAt: rev,
+        orderUpdatedAt: orderRev,
+        labelUpdatedAt: bumpLabelRevision
+          ? labelRev
+          : normalized.labelUpdatedAt != null
+            ? normalized.labelUpdatedAt
+            : prev && prev.labelUpdatedAt,
+        updatedAt: bumpLabelRevision
+          ? labelRev
+          : prev && prev.updatedAt,
       });
     });
     return dedupeRegistryEntries(
@@ -765,16 +789,19 @@
       label: label || list[idx].label,
       url: url || list[idx].url,
       updatedAt: stamp,
+      labelUpdatedAt: stamp,
     });
     return dedupeRegistryEntries(list);
   }
 
   async function syncRegistryEntryAfterEdit(entry) {
     if (!entry || !entry.id) throw new Error("저장할 설문 정보가 없습니다.");
+    var stamp = Date.now();
     var saved = ensureSurveyFullyPublic(
       normalizeRegistryEntry(
         Object.assign({}, entry, {
-          updatedAt: registryLabelRevision(entry) || Date.now(),
+          updatedAt: stamp,
+          labelUpdatedAt: stamp,
         })
       )
     );
@@ -803,7 +830,9 @@
         preferLocalEntries: [saved],
       });
     } catch (refreshErr) {
-      merged = applyRegistryEntriesPreferLocal(loadRegistry(), [saved]);
+      merged = applyRegistryEntriesPreferLocal(loadRegistry(), [saved], {
+        bumpLabelRevision: true,
+      });
       merged = pinRegistryEntryAfterEdit(merged, saved);
       saveRegistry(merged);
       return {
@@ -814,7 +843,9 @@
       };
     }
 
-    merged = applyRegistryEntriesPreferLocal(merged, [saved]);
+    merged = applyRegistryEntriesPreferLocal(merged, [saved], {
+      bumpLabelRevision: true,
+    });
     merged = pinRegistryEntryAfterEdit(merged, saved);
     saveRegistry(merged);
     var pinned = merged.find(function (item) {

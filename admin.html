@@ -875,7 +875,7 @@
 
   <script src="scripts/admin-session.js?v=20260530"></script>
   <script src="scripts/korean-orthography.js?v=20260608"></script>
-  <script src="scripts/survey-form-shared.js?v=20260611"></script>
+  <script src="scripts/survey-form-shared.js?v=20260621"></script>
   <script>
 (function () {
   "use strict";
@@ -910,15 +910,16 @@
 
   function loadSheetRegistry() {
     try {
+      var list = SurveyForm.loadRegistry();
+      if (list && list.length) {
+        return normalizeSheetRegistry(list);
+      }
       var raw = localStorage.getItem(SHEET_REGISTRY_KEY);
       if (raw) {
         var parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           var cleaned = normalizeSheetRegistry(parsed);
-          if (cleaned.length !== parsed.length) {
-            saveSheetRegistry(cleaned);
-            SurveyForm.saveRegistry(cleaned);
-          }
+          if (cleaned.length) saveSheetRegistry(cleaned, { silent: true });
           return cleaned;
         }
       }
@@ -1214,10 +1215,12 @@
     });
     if (idx < 0) throw new Error("수정할 시트를 찾을 수 없습니다.");
     var newId = parseSpreadsheetId(url);
+    var stamp = Date.now();
     var payload = {
       label: SurveyForm.normalizeDisplayText(label) || label,
       url: url,
-      updatedAt: Date.now(),
+      updatedAt: stamp,
+      labelUpdatedAt: stamp,
     };
     if (newId && newId !== id) {
       var moved = Object.assign({}, registry[idx], payload, { id: newId });
@@ -1312,8 +1315,12 @@
     );
     try {
       if (options.sync !== false) {
+        var localBefore = loadSheetRegistry();
         var merged = normalizeSheetRegistry(
-          await SurveyForm.refreshRegistryFromServer()
+          await SurveyForm.refreshRegistryFromServer({
+            silent: true,
+            preferLocalEntries: localBefore,
+          })
         );
         saveSheetRegistry(merged);
       }
@@ -1451,6 +1458,7 @@
         await SurveyForm.refreshRegistryFromServer({
           silent: true,
           preferLocalEntries: touched,
+          preferLocalOptions: { bumpLabelRevision: false },
         });
         if (token !== adminRegistryOrderSaveToken) return;
       } catch (err) {
@@ -1694,9 +1702,20 @@
     location.href = setupUrl;
   });
 
+  function readSurveyNameForSave() {
+    var input = getSurveyNameInput();
+    if (!input) return "";
+    if (document.activeElement === input) input.blur();
+    var value = normalizeSurveyName(input.value);
+    if (!value && surveyNameSuggested && !surveyNameUserEdited) {
+      return surveyNameSuggested;
+    }
+    return value;
+  }
+
   document.getElementById("adminSheetForm").addEventListener("submit", function (e) {
     e.preventDefault();
-    var label = getSurveyNameValue();
+    var label = readSurveyNameForSave();
     var url = coerceText(document.getElementById("adminSheetUrl").value);
     if (!label || !url) {
       alert("설문 이름과 주소를 입력해 주세요.");
