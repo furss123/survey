@@ -3811,7 +3811,7 @@
   const BRACKET_TABLE_COL_STUDENT = 1;
   const BRACKET_TABLE_COL_FIRST_CATEGORY = 2;
 
-  const CLASS_ALIASES = ["반", "class", "학급", "클래스", "반명"];
+  const CLASS_ALIASES = ["반", "반선택", "class", "학급", "클래스", "반명"];
   const STUDENT_ID_ALIASES = ["학번", "student_id", "학생번호", "studentid"];
   const NUMBER_ALIASES = ["번호", "number", "no", "no."];
   const NAME_ALIASES = ["이름", "name", "성명", "학생"];
@@ -3821,6 +3821,7 @@
     "반번호 이름",
     "반 번호 이름",
     "반번호이름",
+    "번호이름선택",
   ];
   const ROSTER_NAME_ALIASES = ["이름", "name", "성명", "성함", "studentname", "학생이름"];
   const COMPLETION_ALIASES = ["완료", "제출", "응답", "status", "상태", "completed", "done", "체크"];
@@ -4503,13 +4504,20 @@
     return { grade: null, 반: null, 번호: num, 학번: "" };
   }
 
+  function isClassSelectorHeader(name) {
+    var n = normalizeHeader(name);
+    if (!n) return false;
+    if (n === "반" || n === "반선택") return true;
+    return n.indexOf("반") >= 0 && n.indexOf("선택") >= 0;
+  }
+
   function isStudentSelectorHeader(name) {
     var n = normalizeHeader(name);
     if (!n) return false;
     for (var i = 0; i < STUDENT_SELECTOR_HEADER_HINTS.length; i++) {
       if (n.indexOf(normalizeHeader(STUDENT_SELECTOR_HEADER_HINTS[i])) >= 0) return true;
     }
-    return false;
+    return /번호/.test(n) && /이름/.test(n) && /선택/.test(n);
   }
 
   function findStudentSelectorColumnIndices(headerRow) {
@@ -4636,11 +4644,33 @@
     return merged;
   }
 
+  function findFirstQuestionColumnIndex(headerRow) {
+    for (var i = 0; i < (headerRow || []).length; i++) {
+      if (isQuestionColumnHeader(headerRow[i])) return i;
+    }
+    return -1;
+  }
+
+  function headerHasClassAndStudentSelectors(headerRow) {
+    if (!headerRow || !headerRow.length) return false;
+    var hasClass =
+      headerRow.some(function (h) {
+        return isClassSelectorHeader(h) || findColumnIndex([h], CLASS_ALIASES) >= 0;
+      }) || isClassSelectorHeader(headerRow[0]);
+    if (!hasClass) return false;
+    if (findStudentSelectorColumnIndices(headerRow).length) return true;
+    return headerRow.some(function (h) {
+      var n = normalizeHeader(h);
+      return /번호/.test(n) && /이름/.test(n);
+    });
+  }
+
   function findSurveyHeaderRowIndex(rawValues) {
     if (!rawValues || !rawValues.length) return SURVEY_HEADER_ROW_INDEX;
     var max = Math.min(10, rawValues.length);
     for (var i = 0; i < max; i++) {
       var headerRow = rawValues[i].map(coerceText);
+      if (headerHasClassAndStudentSelectors(headerRow)) return i;
       if (findStudentSelectorColumnIndices(headerRow).length) return i;
       if (findColumnIndex(headerRow, STUDENT_ID_ALIASES) >= 0) return i;
       if (findColumnIndex(headerRow, NAME_ALIASES) >= 0) return i;
@@ -4714,17 +4744,14 @@
     return false;
   }
 
-  /** A=반, B=번호·이름, C~=Q1… 형식 (SMART 학습종합검사 등) */
+  /** A=반(선택), B~=번호·이름 선택, Q1… 형식 (Google Forms·SMART 설문 등) */
   function isAbClassNumberNameQuestionSheet(headerRow) {
     if (!headerRow || headerRow.length < 4) return false;
-    var c0 = normalizeHeader(headerRow[0] || "");
-    var c1 = normalizeHeader(headerRow[1] || "");
-    var hasClass =
-      c0 === "반" || findColumnIndex([headerRow[0]], CLASS_ALIASES) >= 0;
-    var hasNumName = /번호/.test(c1) && /이름/.test(c1);
-    if (!hasClass || !hasNumName) return false;
+    if (!headerHasClassAndStudentSelectors(headerRow)) return false;
+    var qStart = findFirstQuestionColumnIndex(headerRow);
+    if (qStart < 0) return false;
     var qCount = 0;
-    for (var i = 2; i < headerRow.length; i++) {
+    for (var i = qStart; i < headerRow.length; i++) {
       if (isQuestionColumnHeader(headerRow[i])) qCount++;
     }
     return qCount >= 3;
@@ -4732,7 +4759,25 @@
 
   function buildIdentityColumnIndices(cols, headerRow, options) {
     options = options || {};
-    if (options.abQuestionSheet) return [0, 1];
+    if (options.abQuestionSheet) {
+      var abIndices = [];
+      function addAb(idx) {
+        if (typeof idx === "number" && idx >= 0 && abIndices.indexOf(idx) < 0) {
+          abIndices.push(idx);
+        }
+      }
+      addAb(cols.classIdx >= 0 ? cols.classIdx : 0);
+      (cols.studentSelectorIndices || []).forEach(addAb);
+      if (!cols.studentSelectorIndices || !cols.studentSelectorIndices.length) {
+        addAb(cols.numberIdx >= 0 ? cols.numberIdx : 1);
+        addAb(cols.nameIdx >= 0 ? cols.nameIdx : 1);
+      }
+      addAb(cols.studentIdIdx);
+      addAb(cols.completionIdx);
+      return abIndices.sort(function (a, b) {
+        return a - b;
+      });
+    }
     var indices = [];
     function add(idx) {
       if (typeof idx === "number" && idx >= 0 && indices.indexOf(idx) < 0) {
@@ -5234,8 +5279,14 @@
     var abQuestionSheet = isAbClassNumberNameQuestionSheet(headerRow);
     if (abQuestionSheet) {
       if (cols.classIdx < 0) cols.classIdx = 0;
-      if (cols.numberIdx < 0) cols.numberIdx = 1;
-      if (cols.nameIdx < 0) cols.nameIdx = 1;
+      var selectorCols = cols.studentSelectorIndices || [];
+      if (selectorCols.length) {
+        if (cols.numberIdx < 0) cols.numberIdx = selectorCols[0];
+        if (cols.nameIdx < 0) cols.nameIdx = selectorCols[0];
+      } else {
+        if (cols.numberIdx < 0) cols.numberIdx = 1;
+        if (cols.nameIdx < 0) cols.nameIdx = 1;
+      }
     }
     var identityColumnIndices = buildIdentityColumnIndices(cols, headerRow, {
       abQuestionSheet: abQuestionSheet,
@@ -5352,7 +5403,7 @@
         ? "class-number-name-questions"
         : "survey-b-col-student-id-c-col-name",
       identityColumnIndices: identityColumnIndices,
-      questionColumnStart: abQuestionSheet ? 2 : null,
+      questionColumnStart: abQuestionSheet ? findFirstQuestionColumnIndex(headerRow) : null,
     });
   }
 
@@ -6315,6 +6366,7 @@
     for (var i = 0; i < skipWords.length; i++) {
       if (n.indexOf(skipWords[i]) >= 0) return true;
     }
+    if (isClassSelectorHeader(name)) return true;
     if (findColumnIndex([name], CLASS_ALIASES) >= 0) return true;
     if (findColumnIndex([name], STUDENT_ID_ALIASES) >= 0) return true;
     if (findColumnIndex([name], NUMBER_ALIASES) >= 0) return true;
@@ -6860,7 +6912,10 @@
   }
 
   /** 새 UI(1~8반) 대상 시트 ID — SMART 학습종합검사 */
-  var CLASS_VIEW_DEFAULT_SHEET_IDS = ["1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM"];
+  var CLASS_VIEW_DEFAULT_SHEET_IDS = [
+    "1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM",
+    "1KqK_4EThQnBFbpuBHn0jr_AlX4pCRkpYgrLynqgc9Ic",
+  ];
 
   function normalizeRegistryEntryId(entry) {
     return String((entry && entry.id) || "").split("::")[0];
@@ -6872,7 +6927,10 @@
       return true;
     }
     var label = SurveyForm.normalizeDisplayText(entry.label || "");
-    return /SMART\s*학습(?:종합검사|검사\s*피드백\s*설문|피드백\s*설문)/.test(label);
+    return (
+      /SMART\s*학습(?:종합검사|검사\s*피드백\s*설문|피드백\s*설문)/.test(label) ||
+      /스마트\s*검사/.test(label)
+    );
   }
 
   function isProtectedLegacySurvey(entry) {

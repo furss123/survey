@@ -808,10 +808,18 @@
             />
             <label for="adminSheetUrl">구글 시트 주소</label>
             <div class="admin-url-row">
-              <input type="url" id="adminSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required />
+              <input
+                type="url"
+                id="adminSheetUrl"
+                placeholder="https://docs.google.com/spreadsheets/d/…/edit?usp=sharing"
+                required
+              />
               <button type="button" class="admin-btn admin-btn-primary" id="adminSheetPreviewBtn">미리보기·등록</button>
             </div>
-            <p class="admin-field-hint" id="adminSheetFormHint">「미리보기·등록」으로 구성·미리보기 후 게시합니다. 목록에 있는 설문은 「변경 저장」으로 이름·주소만 빠르게 수정할 수 있습니다.</p>
+            <p class="admin-field-hint" id="adminSheetFormHint">
+              Google Forms 응답 시트(반 선택·번호와 이름 선택·Q1…)와 공유 링크(?usp=sharing)를 지원합니다.
+              「미리보기·등록」으로 구성·미리보기 후 게시하세요. 등록된 설문은 「변경 저장」으로 이름·주소만 빠르게 수정할 수 있습니다.
+            </p>
             <div class="admin-actions">
               <button type="submit" class="admin-btn admin-btn-primary" id="adminSheetSubmitBtn" hidden>변경 저장</button>
               <button type="button" class="admin-btn" id="adminSheetCancelEditBtn" hidden>수정 취소</button>

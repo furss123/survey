@@ -20,5 +20,17 @@
     "resultsLayout": "class",
     "categorySelectAll": true,
     "registeredAt": 1767225600001
+  },
+  {
+    "id": "1KqK_4EThQnBFbpuBHn0jr_AlX4pCRkpYgrLynqgc9Ic",
+    "label": "스마트 검사 이후 최종",
+    "updatedAt": 1767225600002,
+    "url": "https://docs.google.com/spreadsheets/d/1KqK_4EThQnBFbpuBHn0jr_AlX4pCRkpYgrLynqgc9Ic/edit?usp=sharing",
+    "sourceType": "sheet",
+    "visibility": "public",
+    "viewMode": "class",
+    "resultsLayout": "class",
+    "categorySelectAll": true,
+    "registeredAt": 1767225600002
   }
 ]
