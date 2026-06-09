@@ -352,6 +352,70 @@
     return Number.isFinite(n) && n > 0 ? n : 0;
   }
 
+  function registryOrderRevision(entry) {
+    if (!entry) return 0;
+    var n = Number(entry.orderUpdatedAt);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function registryListOrder(entry) {
+    if (!entry) return 999999;
+    var n = Number(entry.listOrder);
+    return Number.isFinite(n) ? n : 999999;
+  }
+
+  function pickRegistryListOrder(local, remote) {
+    var localRev = registryOrderRevision(local);
+    var remoteRev = registryOrderRevision(remote);
+    var localHas =
+      local &&
+      local.listOrder != null &&
+      Number.isFinite(Number(local.listOrder));
+    var remoteHas =
+      remote &&
+      remote.listOrder != null &&
+      Number.isFinite(Number(remote.listOrder));
+    if (localHas && (!remoteHas || localRev >= remoteRev)) {
+      return {
+        listOrder: Number(local.listOrder),
+        orderUpdatedAt: localRev || remoteRev || undefined,
+      };
+    }
+    if (remoteHas) {
+      return {
+        listOrder: Number(remote.listOrder),
+        orderUpdatedAt: remoteRev || localRev || undefined,
+      };
+    }
+    if (localHas) {
+      return {
+        listOrder: Number(local.listOrder),
+        orderUpdatedAt: localRev || undefined,
+      };
+    }
+    return {};
+  }
+
+  function sortRegistryEntriesForDisplay(entries) {
+    return (entries || []).slice().sort(function (a, b) {
+      var ac = isSurveyCompleted(a) ? 1 : 0;
+      var bc = isSurveyCompleted(b) ? 1 : 0;
+      if (ac !== bc) return ac - bc;
+      var orderDiff = registryListOrder(a) - registryListOrder(b);
+      if (orderDiff !== 0) return orderDiff;
+      return String(a.label || "").localeCompare(String(b.label || ""), "ko");
+    });
+  }
+
+  function nextRegistryListOrder(registry) {
+    var max = -1;
+    (registry || []).forEach(function (entry) {
+      var n = registryListOrder(entry);
+      if (n < 999999 && n > max) max = n;
+    });
+    return max + 1;
+  }
+
   function mergeRemoteAndLocalRegistry(remote, local) {
     var byId = {};
     (remote || []).forEach(function (entry) {
@@ -367,11 +431,14 @@
       var remoteRev = registryLabelRevision(prev);
       var localRev = registryLabelRevision(entry);
       var localWinsLabel = localRev >= remoteRev;
+      var orderPick = pickRegistryListOrder(entry, prev);
       if (localWinsLabel) {
         byId[entry.id] = Object.assign({}, prev, entry, {
           label: coerceText(entry.label) ? entry.label : prev.label,
           url: coerceText(entry.url) ? entry.url : prev.url,
           updatedAt: localRev || remoteRev,
+          listOrder: orderPick.listOrder,
+          orderUpdatedAt: orderPick.orderUpdatedAt,
         });
         return;
       }
@@ -379,6 +446,8 @@
         label: coerceText(prev.label) ? prev.label : entry.label,
         url: coerceText(prev.url) ? prev.url : entry.url,
         updatedAt: prev.updatedAt || entry.updatedAt,
+        listOrder: orderPick.listOrder,
+        orderUpdatedAt: orderPick.orderUpdatedAt,
         categories: entry.categories || prev.categories,
         classes: entry.classes || prev.classes,
         categorySelectAll:
@@ -437,7 +506,7 @@
       }
       var remoteRev = registryLabelRevision(built);
       var localRev = registryLabelRevision(prev);
-      var stamp = Math.max(remoteRev, localRev, Date.now());
+      var stamp = Math.max(remoteRev, localRev);
       byId[built.id] = Object.assign({}, built, prev, {
         label: coerceText(prev.label) ? prev.label : built.label,
         url: coerceText(prev.url) ? prev.url : built.url,
@@ -481,6 +550,12 @@
     if (Array.isArray(entry.classes) && entry.classes.length) {
       meta.classes = entry.classes;
     }
+    if (entry.listOrder != null && Number.isFinite(Number(entry.listOrder))) {
+      meta.listOrder = Number(entry.listOrder);
+    }
+    if (entry.orderUpdatedAt != null) {
+      meta.orderUpdatedAt = Number(entry.orderUpdatedAt) || 0;
+    }
     if (Object.keys(meta).length) snap.metaJson = JSON.stringify(meta);
     return snap;
   }
@@ -520,6 +595,12 @@
             if (meta.tab) entry.tab = meta.tab;
             if (meta.categories) entry.categories = meta.categories;
             if (meta.classes) entry.classes = meta.classes;
+            if (meta.listOrder != null && Number.isFinite(Number(meta.listOrder))) {
+              entry.listOrder = Number(meta.listOrder);
+            }
+            if (meta.orderUpdatedAt != null) {
+              entry.orderUpdatedAt = Number(meta.orderUpdatedAt) || 0;
+            }
           }
         } catch (e) { /* ignore */ }
       }
@@ -645,6 +726,15 @@
           ? normalized.label
           : prev && prev.label,
         url: coerceText(normalized.url) ? normalized.url : prev && prev.url,
+        listOrder:
+          normalized.listOrder != null
+            ? normalized.listOrder
+            : prev && prev.listOrder,
+        orderUpdatedAt: Math.max(
+          registryOrderRevision(normalized),
+          registryOrderRevision(prev),
+          Date.now()
+        ),
         updatedAt: rev,
       });
     });
@@ -1135,6 +1225,8 @@
     publishRegistryEntry: publishRegistryEntry,
     removeRegistryEntryFromLive: removeRegistryEntryFromLive,
     toPublicRegistrySnapshot: toPublicRegistrySnapshot,
+    sortRegistryEntriesForDisplay: sortRegistryEntriesForDisplay,
+    nextRegistryListOrder: nextRegistryListOrder,
     isSurveyCompleted: isSurveyCompleted,
     defaultSurveyStatus: defaultSurveyStatus,
     setSurveyStatus: setSurveyStatus,

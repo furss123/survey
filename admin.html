@@ -641,11 +641,40 @@
       margin-bottom: 8px;
       font-size: var(--text-sm);
       color: var(--theme-text);
-      transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+      transition: background 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
     }
     .admin-registry-list li:hover {
       border-color: var(--border-accent);
       background: var(--theme-hover-surface);
+    }
+    .admin-registry-item.is-dragging {
+      opacity: 0.55;
+    }
+    .admin-registry-item.is-drag-over {
+      border-color: var(--border-accent);
+      box-shadow: 0 0 0 2px rgba(74, 122, 176, 0.25);
+    }
+    .admin-registry-drag {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      color: var(--theme-text-muted);
+      font-size: 0.95rem;
+      line-height: 1;
+      letter-spacing: -0.08em;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+    .admin-registry-drag:active {
+      cursor: grabbing;
+    }
+    .admin-registry-order-hint {
+      margin: 0 0 8px;
+      font-size: var(--text-sm);
+      color: var(--theme-text-muted);
     }
     .registry-meta { min-width: 0; flex: 1; }
     .registry-meta strong { display: block; color: var(--theme-heading-strong); }
@@ -831,6 +860,7 @@
           </div>
           <div id="adminRegistryGroups">
             <h3 class="registry-section-title">설문 조사 결과</h3>
+            <p class="admin-registry-order-hint">⋮⋮ 핸들을 드래그해 메인 화면 표시 순서를 바꿀 수 있습니다.</p>
             <ul id="adminRegistryList" class="admin-registry-list" aria-label="설문 조사 결과"></ul>
             <p id="adminRegistryEmpty" class="registry-section-empty" hidden>등록된 설문이 없습니다.</p>
           </div>
@@ -1318,12 +1348,7 @@
   }
 
   function sortRegistryForDisplay(registry) {
-    return (registry || []).slice().sort(function (a, b) {
-      var ac = SurveyForm.isSurveyCompleted(a) ? 1 : 0;
-      var bc = SurveyForm.isSurveyCompleted(b) ? 1 : 0;
-      if (ac !== bc) return ac - bc;
-      return String(a.label || "").localeCompare(String(b.label || ""), "ko");
-    });
+    return SurveyForm.sortRegistryEntriesForDisplay(registry);
   }
 
   async function deleteRegistryEntry(entry) {
@@ -1368,7 +1393,9 @@
   function buildRegistryItemHtml(item) {
     var label = SurveyForm.normalizeDisplayText(item.label) || "설문";
     return (
-      "<li><div class=\"registry-meta\"><strong>" +
+      "<li class=\"admin-registry-item admin-registry-item--draggable\" data-registry-id=\"" +
+      esc(item.id) +
+      "\"><span class=\"admin-registry-drag\" draggable=\"true\" title=\"드래그하여 순서 변경\" aria-label=\"순서 변경\">⋮⋮</span><div class=\"registry-meta\"><strong>" +
       esc(label) +
       "</strong><span>" +
       esc(item.url || "") +
@@ -1383,6 +1410,113 @@
       esc(item.id) +
       "\">삭제</button></div></li>"
     );
+  }
+
+  var adminRegistryOrderSaveToken = 0;
+
+  function persistRegistryListOrder(listEl) {
+    if (!listEl) return;
+    var items = listEl.querySelectorAll("li[data-registry-id]");
+    var registry = loadSheetRegistry();
+    var byId = {};
+    registry.forEach(function (entry) {
+      if (entry && entry.id) byId[entry.id] = entry;
+    });
+    var now = Date.now();
+    var touched = [];
+    var activeIdx = 0;
+    var completedIdx = 0;
+    items.forEach(function (li) {
+      var id = li.getAttribute("data-registry-id");
+      if (!id || !byId[id]) return;
+      var order = SurveyForm.isSurveyCompleted(byId[id])
+        ? completedIdx++
+        : activeIdx++;
+      var next = Object.assign({}, byId[id], {
+        listOrder: order,
+        orderUpdatedAt: now,
+      });
+      byId[id] = next;
+      touched.push(next);
+    });
+    var nextRegistry = registry.map(function (entry) {
+      return byId[entry.id] || entry;
+    });
+    saveSheetRegistry(normalizeSheetRegistry(nextRegistry));
+    setAdminRegistryStatus("순서를 저장했습니다.", "is-ok");
+    flashAdminRegistryGroups();
+    var token = ++adminRegistryOrderSaveToken;
+    (async function () {
+      try {
+        await SurveyForm.refreshRegistryFromServer({
+          silent: true,
+          preferLocalEntries: touched,
+        });
+        if (token !== adminRegistryOrderSaveToken) return;
+      } catch (err) {
+        if (token === adminRegistryOrderSaveToken) {
+          setAdminRegistryStatus(
+            "순서는 저장됐으나 서버 동기화에 실패했습니다.",
+            "is-warn"
+          );
+        }
+      }
+    })();
+  }
+
+  function bindRegistryListDragReorder(listEl) {
+    if (!listEl) return;
+    var dragId = null;
+    listEl.querySelectorAll(".admin-registry-item--draggable").forEach(function (item) {
+      var handle = item.querySelector(".admin-registry-drag");
+      if (!handle) return;
+      handle.addEventListener("dragstart", function (e) {
+        dragId = item.getAttribute("data-registry-id");
+        item.classList.add("is-dragging");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", dragId || "");
+        }
+      });
+      handle.addEventListener("dragend", function () {
+        item.classList.remove("is-dragging");
+        listEl.querySelectorAll(".is-drag-over").forEach(function (el) {
+          el.classList.remove("is-drag-over");
+        });
+        dragId = null;
+      });
+      item.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        item.classList.add("is-drag-over");
+      });
+      item.addEventListener("dragleave", function () {
+        item.classList.remove("is-drag-over");
+      });
+      item.addEventListener("drop", function (e) {
+        e.preventDefault();
+        item.classList.remove("is-drag-over");
+        var targetId = item.getAttribute("data-registry-id");
+        if (!dragId || !targetId || dragId === targetId) return;
+        var dragEntry = findRegistryEntry(dragId);
+        var targetEntry = findRegistryEntry(targetId);
+        if (
+          dragEntry &&
+          targetEntry &&
+          SurveyForm.isSurveyCompleted(dragEntry) !==
+            SurveyForm.isSurveyCompleted(targetEntry)
+        ) {
+          return;
+        }
+        var dragItem = listEl.querySelector(
+          '[data-registry-id="' + dragId.replace(/"/g, "") + '"]'
+        );
+        if (!dragItem || dragItem === item) return;
+        var rect = item.getBoundingClientRect();
+        var before = e.clientY < rect.top + rect.height / 2;
+        listEl.insertBefore(dragItem, before ? item : item.nextSibling);
+        persistRegistryListOrder(listEl);
+      });
+    });
   }
 
   function bindRegistryListEvents(listEl) {
@@ -1451,6 +1585,7 @@
     listEl.hidden = false;
     listEl.innerHTML = items.map(buildRegistryItemHtml).join("");
     bindRegistryListEvents(listEl);
+    bindRegistryListDragReorder(listEl);
   }
 
   function renderAdminRegistryList() {

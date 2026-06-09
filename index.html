@@ -5899,17 +5899,49 @@
     }, 600);
   }
 
+  function refreshActiveSurveyLabelsFromRegistry() {
+    if (!currentLaunchEntry || !currentLaunchEntry.id) return;
+    var baseId = String(currentLaunchEntry.id).split("::")[0];
+    var registryId = currentLaunchEntry.registryId || baseId;
+    var fresh =
+      findRegistryEntry(registryId) || findRegistryEntry(baseId);
+    if (!fresh) return;
+    var nextLabel =
+      SurveyForm.normalizeDisplayText(fresh.label) || fresh.label || "설문";
+    if (String(currentLaunchEntry.id).indexOf("::") >= 0 && fresh.classes) {
+      var parts = String(currentLaunchEntry.id).split("::");
+      var cls = fresh.classes.find(function (c) {
+        return c.id === parts[1];
+      });
+      if (cls) {
+        nextLabel =
+          SurveyForm.normalizeDisplayText(cls.label || cls.sheetName) ||
+          cls.label ||
+          cls.sheetName ||
+          nextLabel;
+      }
+    }
+    currentLaunchEntry = Object.assign({}, currentLaunchEntry, {
+      label: nextLabel,
+      url: fresh.url || currentLaunchEntry.url,
+    });
+    var titleEl = document.querySelector(".survey-view-title");
+    if (titleEl) titleEl.textContent = nextLabel;
+    scheduleHeaderTitleFit();
+  }
+
   async function refreshHomeSurveyList(options) {
     options = options || {};
     var token = ++homeSurveyListRefreshToken;
-    var localMerged = SurveyForm.filterSheetEntriesOnly(loadSheetRegistry());
     renderSheetButtonGrid();
+    refreshActiveSurveyLabelsFromRegistry();
     if (options.sync === false) return;
     try {
       var merged = await SurveyForm.refreshRegistryFromServer({ silent: true });
       if (token !== homeSurveyListRefreshToken) return;
       merged = SurveyForm.filterSheetEntriesOnly(merged);
       renderSheetButtonGrid();
+      refreshActiveSurveyLabelsFromRegistry();
       if (options.flash !== false) flashHomeSurveyList();
     } catch (err) {
       /* 로컬 목록 유지 */
@@ -5978,12 +6010,7 @@
   }
 
   function sortSurveyEntriesForDisplay(entries) {
-    return (entries || []).slice().sort(function (a, b) {
-      var ac = SurveyForm.isSurveyCompleted(a) ? 1 : 0;
-      var bc = SurveyForm.isSurveyCompleted(b) ? 1 : 0;
-      if (ac !== bc) return ac - bc;
-      return String(a.label || "").localeCompare(String(b.label || ""), "ko");
-    });
+    return SurveyForm.sortRegistryEntriesForDisplay(entries);
   }
 
   function formatSurveyListDate(entry) {
@@ -7641,6 +7668,8 @@
           {
             id: newId,
             registeredAt: now,
+            listOrder: SurveyForm.nextRegistryListOrder(registry),
+            orderUpdatedAt: now,
           },
           payload
         )
