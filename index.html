@@ -3645,7 +3645,7 @@
   </div>
 
   <script src="scripts/korean-orthography.js?v=20260608"></script>
-  <script src="scripts/survey-form-shared.js?v=20260621"></script>
+  <script src="scripts/survey-form-shared.js?v=20260622"></script>
   <script src="scripts/admin-session.js?v=20260530"></script>
   <script>
 (function () {
@@ -5937,7 +5937,10 @@
     refreshActiveSurveyLabelsFromRegistry();
     if (options.sync === false) return;
     try {
-      var merged = await SurveyForm.refreshRegistryFromServer({ silent: true });
+      var merged = await SurveyForm.refreshRegistryFromServer({
+        silent: true,
+        preferLiveRegistry: options.preferLive !== false,
+      });
       if (token !== homeSurveyListRefreshToken) return;
       merged = SurveyForm.filterSheetEntriesOnly(merged);
       renderSheetButtonGrid();
@@ -10137,7 +10140,9 @@
   window.addEventListener("resize", scheduleHeaderTitleFit);
   window.addEventListener("load", scheduleHeaderTitleFit);
 
-  refreshHomeSurveyList({ sync: true, flash: false });
+  SurveyForm.initSurveyConfig().then(function () {
+    refreshHomeSurveyList({ sync: true, flash: false });
+  });
   window.addEventListener("pageshow", function (e) {
     refreshHomeSurveyList({ sync: true, flash: false });
     if (e.persisted) restoreViewOnLoad();

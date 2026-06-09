@@ -1,0 +1,34 @@
+# SurveyRegistry 시트 → data/sheet-registry.json 자동 동기화
+name: Sync survey registry
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: index
+
+      - name: Sync from Google Sheet
+        run: node scripts/sync-registry-from-sheet.mjs
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "Survey Registry Sync"
+          git config user.email "survey-sync@local"
+          git add data/sheet-registry.json
+          if git diff --staged --quiet; then
+            echo "No registry changes."
+            exit 0
+          fi
+          git commit -m "chore: SurveyRegistry 시트에서 목록 자동 동기화"
+          git push origin HEAD:index

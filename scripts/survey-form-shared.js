@@ -14,6 +14,9 @@
   var DEFAULT_ROSTER_SPREADSHEET_ID = MASTER_ROSTER_SPREADSHEET_ID;
   var DEFAULT_RESPONSE_SPREADSHEET_ID = "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
   var BUNDLED_REGISTRY_PATH = "data/sheet-registry.json";
+  var BUNDLED_CONFIG_PATH = "data/survey-config.json";
+  var bundledSurveyConfig = null;
+  var bundledSurveyConfigPromise = null;
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
   var GRADE = 1;
 
@@ -70,14 +73,53 @@
     );
   }
 
+  function getBundledWebAppUrl() {
+    var config = bundledSurveyConfig;
+    if (!config) return "";
+    var url = coerceText(config.webAppUrl);
+    return isValidWebAppUrl(url) ? url : "";
+  }
+
   function resolveWebAppUrl(entry) {
     var fromEntry = entry && coerceText(entry.webAppUrl);
     var fromSession = loadWebAppUrlSession();
     var global = loadWebAppUrl();
+    var fromBundled = getBundledWebAppUrl();
     if (fromEntry && isValidWebAppUrl(fromEntry)) return fromEntry;
     if (fromSession && isValidWebAppUrl(fromSession)) return fromSession;
     if (global && isValidWebAppUrl(global)) return global;
+    if (fromBundled) return fromBundled;
     return "";
+  }
+
+  async function fetchBundledSurveyConfig() {
+    if (bundledSurveyConfig) return bundledSurveyConfig;
+    if (bundledSurveyConfigPromise) return bundledSurveyConfigPromise;
+    bundledSurveyConfigPromise = (async function () {
+      try {
+        var res = await fetch(BUNDLED_CONFIG_PATH + "?v=" + Date.now(), {
+          cache: "no-store",
+        });
+        if (!res.ok) return {};
+        var data = await res.json();
+        bundledSurveyConfig = data && typeof data === "object" ? data : {};
+        return bundledSurveyConfig;
+      } catch (e) {
+        return {};
+      }
+    })();
+    return bundledSurveyConfigPromise;
+  }
+
+  async function initSurveyConfig(options) {
+    options = options || {};
+    var config = await fetchBundledSurveyConfig();
+    var webAppUrl = coerceText(config.webAppUrl);
+    if (webAppUrl && isValidWebAppUrl(webAppUrl)) {
+      if (!loadWebAppUrl() || options.forceWebAppUrl) saveWebAppUrl(webAppUrl);
+      saveWebAppUrlSession(webAppUrl);
+    }
+    return config;
   }
 
   function getResponseSpreadsheetId(entry) {
@@ -433,6 +475,17 @@
       var remoteRev = registryLabelRevision(prev);
       var localRev = registryLabelRevision(entry);
       var localWinsLabel = localRev >= remoteRev;
+      if (
+        !entry.labelUpdatedAt &&
+        prev.labelUpdatedAt &&
+        remoteRev > 0 &&
+        (remoteRev > localRev ||
+          (coerceText(entry.label) &&
+            coerceText(prev.label) &&
+            entry.label !== prev.label))
+      ) {
+        localWinsLabel = false;
+      }
       var orderPick = pickRegistryListOrder(entry, prev);
       if (localWinsLabel) {
         byId[entry.id] = Object.assign({}, prev, entry, {
@@ -620,10 +673,19 @@
     return out;
   }
 
+  function getLiveRegistrySpreadsheetId() {
+    var config = bundledSurveyConfig;
+    var fromConfig =
+      config && coerceText(config.responseSpreadsheetId)
+        ? coerceText(config.responseSpreadsheetId)
+        : "";
+    return fromConfig || DEFAULT_RESPONSE_SPREADSHEET_ID;
+  }
+
   async function fetchLiveRegistryFromSheet() {
     try {
       var values = await fetchGvizValues(
-        DEFAULT_RESPONSE_SPREADSHEET_ID,
+        getLiveRegistrySpreadsheetId(),
         PUBLIC_REGISTRY_SHEET
       );
       return parseRegistrySheetValues(values);
@@ -708,8 +770,11 @@
     var local = loadRegistry();
     var bundled = appendRequiredPublicSurveys(await fetchBundledSheetRegistry());
     var live = await fetchLiveRegistryFromSheet();
-    var published = combineRemoteRegistrySources(bundled, live);
+    var published = combineRemoteRegistrySources(live, bundled);
     var merged = mergeRemoteAndLocalRegistry(published, local);
+    if (options.preferLiveRegistry && live.length) {
+      merged = mergeRemoteAndLocalRegistry(merged, live);
+    }
     if (options.preferLocalEntries && options.preferLocalEntries.length) {
       merged = applyRegistryEntriesPreferLocal(
         merged,
@@ -719,6 +784,34 @@
     }
     saveRegistry(merged, { silent: options.silent });
     return merged;
+  }
+
+  async function syncRegistryAllToServer() {
+    if (!resolveWebAppUrl({})) {
+      return { ok: true, skipped: true, reason: "no-webapp", published: 0 };
+    }
+    var list = dedupeRegistryEntries(loadRegistry());
+    var results = [];
+    for (var i = 0; i < list.length; i++) {
+      try {
+        results.push(await publishRegistryEntry(list[i]));
+      } catch (err) {
+        results.push({
+          ok: false,
+          error: (err && err.message) || String(err),
+        });
+      }
+    }
+    var failed = results.filter(function (item) {
+      return item && item.ok === false;
+    });
+    return {
+      ok: !failed.length,
+      skipped: false,
+      published: list.length,
+      failed: failed.length,
+      results: results,
+    };
   }
 
   function applyRegistryEntriesPreferLocal(registry, preferEntries, options) {
@@ -848,12 +941,23 @@
     });
     merged = pinRegistryEntryAfterEdit(merged, saved);
     saveRegistry(merged);
+    var bulkPublish = { ok: true, skipped: true, reason: "no-webapp", published: 0 };
+    try {
+      bulkPublish = await syncRegistryAllToServer();
+    } catch (bulkErr) {
+      bulkPublish = {
+        ok: false,
+        error: (bulkErr && bulkErr.message) || String(bulkErr),
+        published: 0,
+      };
+    }
     var pinned = merged.find(function (item) {
       return item && item.id === saved.id;
     });
     return {
       entry: pinned || saved,
       publish: publishResult,
+      bulkPublish: bulkPublish,
       registry: merged,
     };
   }
@@ -1262,6 +1366,9 @@
     defaultSurveyStatus: defaultSurveyStatus,
     setSurveyStatus: setSurveyStatus,
     setSurveyStatusAsync: setSurveyStatusAsync,
+    initSurveyConfig: initSurveyConfig,
+    fetchBundledSurveyConfig: fetchBundledSurveyConfig,
+    syncRegistryAllToServer: syncRegistryAllToServer,
     refreshRegistryFromServer: refreshRegistryFromServer,
     applyRegistryEntriesPreferLocal: applyRegistryEntriesPreferLocal,
     syncRegistryEntryAfterEdit: syncRegistryEntryAfterEdit,

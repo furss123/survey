@@ -102,6 +102,9 @@ function registryRowToEntry_(row) {
       if (meta.tab) entry.tab = meta.tab;
       if (meta.categories) entry.categories = meta.categories;
       if (meta.classes) entry.classes = meta.classes;
+      if (meta.listOrder != null) entry.listOrder = Number(meta.listOrder);
+      if (meta.orderUpdatedAt != null) entry.orderUpdatedAt = Number(meta.orderUpdatedAt);
+      if (meta.labelUpdatedAt != null) entry.labelUpdatedAt = Number(meta.labelUpdatedAt);
     } catch (e) { /* ignore */ }
   }
   return entry;
