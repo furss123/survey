@@ -129,6 +129,22 @@
     );
   }
 
+  function explainWebAppHtmlError(text) {
+    if (!text) return "";
+    if (/script function not found|doGet|doPost|συνάρτηση|関数が見つかりません/i.test(text)) {
+      return (
+        "Apps Script에 survey-api.gs 코드(doGet/doPost)가 없습니다. " +
+        "스프레드시트 → 확장 프로그램 → Apps Script에 scripts/google-apps-script/survey-api.gs 전체를 붙여넣고 「새 배포」 후 같은 /exec URL을 쓰세요."
+      );
+    }
+    if (/Authorization|권한|authorize|sign in|로그인/i.test(text)) {
+      return (
+        "웹 앱 권한이 아직 허용되지 않았습니다. 배포한 Google 계정으로 웹 앱 URL을 브라우저에서 한 번 열고 「허용」을 눌러 주세요."
+      );
+    }
+    return "";
+  }
+
   async function readJsonResponse(res) {
     var text = await res.text();
     if (!text) return null;
@@ -136,11 +152,70 @@
       return JSON.parse(text);
     } catch (e) {
       if (/^\s*<!DOCTYPE/i.test(text) || /^\s*<html/i.test(text)) {
+        var hint = explainWebAppHtmlError(text);
         throw new Error(
-          "서버가 HTML을 반환했습니다. Apps Script 웹 앱 URL(/exec)이 맞는지 확인하세요."
+          hint ||
+            "서버가 HTML을 반환했습니다. Apps Script 웹 앱 URL(/exec)과 재배포를 확인하세요."
         );
       }
       throw new Error("서버 응답을 JSON으로 읽을 수 없습니다.");
+    }
+  }
+
+  async function postToWebApp(webAppUrl, payload) {
+    var body = JSON.stringify(payload);
+    try {
+      var res = await fetch(webAppUrl, {
+        method: "POST",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: body,
+      });
+      return { response: res, opaque: false };
+    } catch (err) {
+      try {
+        await fetch(webAppUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: body,
+        });
+        return { response: null, opaque: true, networkError: err };
+      } catch (noCorsErr) {
+        throw err;
+      }
+    }
+  }
+
+  async function probeWebAppHealth(webAppUrl) {
+    webAppUrl = coerceText(webAppUrl);
+    if (!isValidWebAppUrl(webAppUrl)) {
+      return { ok: false, reason: "invalid-url" };
+    }
+    try {
+      var testUrl =
+        webAppUrl +
+        (webAppUrl.indexOf("?") >= 0 ? "&" : "?") +
+        "action=listRegistry";
+      var res = await fetch(testUrl, { redirect: "follow" });
+      var text = await res.text();
+      var htmlHint = explainWebAppHtmlError(text);
+      if (htmlHint) return { ok: false, error: htmlHint };
+      try {
+        var data = JSON.parse(text);
+        if (data && data.ok !== false) return { ok: true, data: data };
+        return {
+          ok: false,
+          error: (data && data.error) || "웹 앱 응답이 올바르지 않습니다.",
+        };
+      } catch (parseErr) {
+        return { ok: false, error: "웹 앱이 JSON이 아닌 응답을 반환했습니다." };
+      }
+    } catch (err) {
+      return {
+        ok: false,
+        error: (err && err.message) || "웹 앱에 연결하지 못했습니다.",
+      };
     }
   }
 
@@ -710,12 +785,28 @@
     if (!webAppUrl) {
       return { ok: true, skipped: true, reason: "no-webapp" };
     }
-    var res = await fetch(webAppUrl, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action: "upsertRegistry", entry: snap }),
+    var posted = await postToWebApp(webAppUrl, {
+      action: "upsertRegistry",
+      entry: snap,
     });
-    var data = await readJsonResponse(res);
+    if (posted.opaque) {
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 900);
+      });
+      var live = await fetchLiveRegistryFromSheet();
+      var found = live.find(function (item) {
+        return item && item.id === snap.id;
+      });
+      if (found && coerceText(found.label)) {
+        return { ok: true, opaque: true, verified: true };
+      }
+      return {
+        ok: false,
+        error:
+          "서버에 요청은 보냈으나 SurveyRegistry에 반영 여부를 확인하지 못했습니다. Apps Script에 survey-api.gs를 붙여넣고 재배포했는지 확인하세요.",
+      };
+    }
+    var data = await readJsonResponse(posted.response);
     if (!data || data.ok === false) {
       throw new Error(
         (data && data.error) || "공개 설문 목록(SurveyRegistry) 반영에 실패했습니다."
@@ -728,12 +819,15 @@
     if (!id) return { ok: false, error: "id required" };
     var webAppUrl = resolveWebAppUrl({ id: id });
     if (!webAppUrl) return { ok: true, skipped: true, reason: "no-webapp" };
-    var res = await fetch(webAppUrl, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action: "deleteRegistry", surveyId: id, id: id }),
+    var posted = await postToWebApp(webAppUrl, {
+      action: "deleteRegistry",
+      surveyId: id,
+      id: id,
     });
-    var data = await readJsonResponse(res);
+    if (posted.opaque) {
+      return { ok: true, opaque: true };
+    }
+    var data = await readJsonResponse(posted.response);
     if (!data || data.ok === false) {
       return {
         ok: false,
@@ -1264,12 +1358,14 @@
         : findSurvey(id) || { id: id };
     var webAppUrl = resolveWebAppUrl(local);
     if (!webAppUrl) return { ok: true, skipped: true, reason: "no-webapp" };
-    var res = await fetch(webAppUrl, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action: "delete", surveyId: id }),
+    var posted = await postToWebApp(webAppUrl, {
+      action: "delete",
+      surveyId: id,
     });
-    var data = await readJsonResponse(res);
+    if (posted.opaque) {
+      return { ok: true, opaque: true };
+    }
+    var data = await readJsonResponse(posted.response);
     if (!data || data.ok === false) {
       return {
         ok: false,
@@ -1368,6 +1464,7 @@
     setSurveyStatusAsync: setSurveyStatusAsync,
     initSurveyConfig: initSurveyConfig,
     fetchBundledSurveyConfig: fetchBundledSurveyConfig,
+    probeWebAppHealth: probeWebAppHealth,
     syncRegistryAllToServer: syncRegistryAllToServer,
     refreshRegistryFromServer: refreshRegistryFromServer,
     applyRegistryEntriesPreferLocal: applyRegistryEntriesPreferLocal,

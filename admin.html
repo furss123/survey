@@ -875,7 +875,7 @@
 
   <script src="scripts/admin-session.js?v=20260530"></script>
   <script src="scripts/korean-orthography.js?v=20260608"></script>
-  <script src="scripts/survey-form-shared.js?v=20260622"></script>
+  <script src="scripts/survey-form-shared.js?v=20260623"></script>
   <script>
 (function () {
   "use strict";
@@ -1662,7 +1662,14 @@
   SurveyForm.initSurveyConfig()
     .then(function () {
       initAdminWebAppUrlField();
-      return SurveyForm.syncRegistryAllToServer();
+      var webAppUrl = SurveyForm.resolveWebAppUrl({});
+      if (!webAppUrl) return SurveyForm.syncRegistryAllToServer();
+      return SurveyForm.probeWebAppHealth(webAppUrl).then(function (health) {
+        if (!health.ok) {
+          setAdminRegistryStatus(health.error || "웹 앱 연결에 실패했습니다.", "is-warn");
+        }
+        return SurveyForm.syncRegistryAllToServer();
+      });
     })
     .catch(function () { /* ignore */ })
     .finally(function () {
