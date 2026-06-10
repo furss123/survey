@@ -9524,19 +9524,23 @@
 
   function showHomeView() {
     restoreResultsAfterPrint();
+    adminSetupMode = false;
+    document.body.classList.remove("admin-setup-mode");
+    setSiteHeaderAdminMode(false);
+    var setupPanel = document.getElementById("adminSetupPanel");
+    if (setupPanel) setupPanel.hidden = true;
+    if (analysisInFlight) {
+      analysisInFlight = false;
+      stopSheetLaunchButtonProgress(false);
+      setSheetButtonsDisabled(false, null);
+    }
     var homePanel = document.getElementById("homePanel");
     var results = document.getElementById("results");
     var errorEl = document.getElementById("error");
-    if (!adminSetupMode) {
-      document.body.classList.remove("admin-setup-mode");
-      setSiteHeaderAdminMode(false);
-      var setupPanel = document.getElementById("adminSetupPanel");
-      if (setupPanel) setupPanel.hidden = true;
-    }
     activeSheetView = null;
     activeClassFilter = null;
     activeSubjectView = null;
-    if (!adminSetupMode) currentLaunchEntry = null;
+    currentLaunchEntry = null;
     if (errorEl) errorEl.hidden = true;
     if (homePanel) homePanel.hidden = false;
     if (results) {
@@ -10330,11 +10334,8 @@
   var headerLogoHome = document.getElementById("headerLogoHome");
   if (headerLogoHome) {
     headerLogoHome.addEventListener("click", function (e) {
-      var results = document.getElementById("results");
-      if (results && results.classList.contains("visible")) {
-        e.preventDefault();
-        showHomeView();
-      }
+      e.preventDefault();
+      showHomeView();
     });
   }
 
