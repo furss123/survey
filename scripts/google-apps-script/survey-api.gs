@@ -81,8 +81,12 @@ function ensureSheets_() {
   return { config: config, registry: registry };
 }
 
+function isRegistrySpreadsheetId_(id) {
+  return /^[a-zA-Z0-9_-]{20,60}$/.test(String(id || "").trim());
+}
+
 function registryRowToEntry_(row) {
-  if (!row || !row[0]) return null;
+  if (!row || !row[0] || !isRegistrySpreadsheetId_(row[0])) return null;
   var entry = {
     id: String(row[0]),
     label: row[1],
@@ -125,6 +129,7 @@ function listRegistry_() {
 function upsertRegistry_(entry) {
   entry = entry && entry.entry ? entry.entry : entry;
   if (!entry || !entry.id) throw new Error("entry.id required");
+  if (!isRegistrySpreadsheetId_(entry.id)) throw new Error("invalid entry.id");
   var sheets = ensureSheets_();
   var registry = sheets.registry;
   var data = registry.getDataRange().getValues();

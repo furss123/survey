@@ -871,7 +871,7 @@
               placeholder="https://script.google.com/macros/s/…/exec"
               autocomplete="off"
             />
-            <p class="admin-field-hint">저장·변경 시 SurveyRegistry 시트에 자동 반영됩니다. 사이트에 배포된 <code>data/survey-config.json</code>의 webAppUrl이 있으면 모든 PC에 자동 적용됩니다.</p>
+            <p class="admin-field-hint">저장·변경 시 SurveyRegistry 시트에 자동 반영됩니다. Apps Script는 <strong>응답 스프레드시트</strong>(<code>data/survey-config.json</code>의 responseSpreadsheetId)에 바인딩·배포해야 합니다. webAppUrl이 있으면 모든 PC에 자동 적용됩니다.</p>
           </div>
           <form id="adminSheetForm" class="admin-form">
             <label for="adminSurveyName">설문 이름</label>

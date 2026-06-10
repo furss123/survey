@@ -18,7 +18,18 @@
   var bundledSurveyConfig = null;
   var bundledSurveyConfigPromise = null;
   var SPREADSHEET_ID_PATTERN = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
+  var REGISTRY_SPREADSHEET_ID_RE = /^[a-zA-Z0-9_-]{20,60}$/;
   var GRADE = 1;
+
+  function isRegistrySpreadsheetId(id) {
+    return REGISTRY_SPREADSHEET_ID_RE.test(coerceText(id));
+  }
+
+  function isRegistrySheetHeaderRow(row) {
+    if (!row || !row.length) return false;
+    var h0 = coerceText(row[0]).toLowerCase();
+    return h0 === "id" || h0 === "surveyid" || h0 === "sheetid";
+  }
 
   function parseSpreadsheetId(url) {
     var trimmed = coerceText(url);
@@ -697,11 +708,12 @@
 
   function parseRegistrySheetValues(values) {
     if (!values || values.length < 2) return [];
+    if (!isRegistrySheetHeaderRow(values[0])) return [];
     var out = [];
     for (var i = 1; i < values.length; i++) {
       var row = values[i];
       var id = coerceText(row[0]);
-      if (!id) continue;
+      if (!id || !isRegistrySpreadsheetId(id)) continue;
       var entry = {
         id: id,
         label: row[1],
@@ -769,6 +781,36 @@
     }
   }
 
+  async function fetchLiveRegistryFromWebApp() {
+    try {
+      var webAppUrl = resolveWebAppUrl({});
+      if (!webAppUrl) return [];
+      var listUrl =
+        webAppUrl +
+        (webAppUrl.indexOf("?") >= 0 ? "&" : "?") +
+        "action=listRegistry";
+      var res = await fetch(listUrl, { redirect: "follow" });
+      var data = await readJsonResponse(res);
+      if (!data || data.ok === false || !Array.isArray(data.registry)) return [];
+      return data.registry
+        .map(function (entry) {
+          if (!entry || !isRegistrySpreadsheetId(entry.id)) return null;
+          return expandBundledRegistryEntry(entry);
+        })
+        .filter(function (entry) {
+          return entry && entry.id && !isSurveyDeleted(entry.id);
+        });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function fetchLiveRegistry() {
+    var fromWebApp = await fetchLiveRegistryFromWebApp();
+    if (fromWebApp.length) return fromWebApp;
+    return fetchLiveRegistryFromSheet();
+  }
+
   function combineRemoteRegistrySources() {
     var merged = [];
     for (var i = 0; i < arguments.length; i++) {
@@ -793,7 +835,7 @@
       await new Promise(function (resolve) {
         setTimeout(resolve, 900);
       });
-      var live = await fetchLiveRegistryFromSheet();
+      var live = await fetchLiveRegistry();
       var found = live.find(function (item) {
         return item && item.id === snap.id;
       });
@@ -863,7 +905,7 @@
     options = options || {};
     var local = loadRegistry();
     var bundled = appendRequiredPublicSurveys(await fetchBundledSheetRegistry());
-    var live = await fetchLiveRegistryFromSheet();
+    var live = await fetchLiveRegistry();
     var published = combineRemoteRegistrySources(live, bundled);
     var merged = mergeRemoteAndLocalRegistry(published, local);
     if (options.preferLiveRegistry && live.length) {
@@ -1453,6 +1495,9 @@
     saveRegistry: saveRegistry,
     fetchBundledSheetRegistry: fetchBundledSheetRegistry,
     fetchLiveRegistryFromSheet: fetchLiveRegistryFromSheet,
+    fetchLiveRegistryFromWebApp: fetchLiveRegistryFromWebApp,
+    fetchLiveRegistry: fetchLiveRegistry,
+    isRegistrySpreadsheetId: isRegistrySpreadsheetId,
     publishRegistryEntry: publishRegistryEntry,
     removeRegistryEntryFromLive: removeRegistryEntryFromLive,
     toPublicRegistrySnapshot: toPublicRegistrySnapshot,

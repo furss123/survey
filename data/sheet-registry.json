@@ -2,35 +2,40 @@
   {
     "id": "1hEX2Y8LxDi9I4l48DiAuu-xtXZ5z7IAIY7mAX11NJM0",
     "label": "중간고사 이후 자기 점검표 — 과목별 분석 및 기말 계획",
-    "updatedAt": 1767225600000,
     "url": "https://docs.google.com/spreadsheets/d/1hEX2Y8LxDi9I4l48DiAuu-xtXZ5z7IAIY7mAX11NJM0/edit?usp=sharing",
-    "sourceType": "sheet",
-    "visibility": "public",
-    "categorySelectAll": true,
-    "registeredAt": 1780000000000
-  },
-  {
-    "id": "1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM",
-    "label": "SMART 학습검사 피드백 설문",
-    "updatedAt": 1767225600001,
-    "url": "https://docs.google.com/spreadsheets/d/1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM/edit?usp=sharing",
-    "sourceType": "sheet",
-    "visibility": "public",
     "viewMode": "class",
     "resultsLayout": "class",
     "categorySelectAll": true,
-    "registeredAt": 1767225600001
+    "updatedAt": 1767225600000,
+    "registeredAt": 1780000000000,
+    "surveyStatus": "active",
+    "sourceType": "sheet",
+    "visibility": "public"
   },
   {
     "id": "1KqK_4EThQnBFbpuBHn0jr_AlX4pCRkpYgrLynqgc9Ic",
     "label": "스마트 검사 이후 최종",
-    "updatedAt": 1767225600002,
     "url": "https://docs.google.com/spreadsheets/d/1KqK_4EThQnBFbpuBHn0jr_AlX4pCRkpYgrLynqgc9Ic/edit?usp=sharing",
-    "sourceType": "sheet",
-    "visibility": "public",
     "viewMode": "class",
     "resultsLayout": "class",
     "categorySelectAll": true,
-    "registeredAt": 1767225600002
+    "updatedAt": 1767225600002,
+    "registeredAt": 1767225600002,
+    "surveyStatus": "active",
+    "sourceType": "sheet",
+    "visibility": "public"
+  },
+  {
+    "id": "1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM",
+    "label": "SMART 학습검사 피드백 설문",
+    "url": "https://docs.google.com/spreadsheets/d/1E_YTgoLt5ti6eNBv6H9A-mAmZVjpBR2RKhUN_yAJNXM/edit?usp=sharing",
+    "viewMode": "class",
+    "resultsLayout": "class",
+    "categorySelectAll": true,
+    "updatedAt": 1767225600001,
+    "registeredAt": 1767225600001,
+    "surveyStatus": "active",
+    "sourceType": "sheet",
+    "visibility": "public"
   }
 ]

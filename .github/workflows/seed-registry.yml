@@ -1,0 +1,35 @@
+# SurveyRegistry 시드 — workflow_dispatch로 수동 실행
+name: Seed survey registry
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: index
+
+      - name: Seed via Apps Script web app
+        run: node scripts/seed-registry-via-webapp.mjs
+
+      - name: Sync to sheet-registry.json
+        run: node scripts/sync-registry-from-sheet.mjs
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "Survey Registry Sync"
+          git config user.email "survey-sync@local"
+          git add data/sheet-registry.json
+          if git diff --staged --quiet; then
+            echo "No registry changes after seed."
+            exit 0
+          fi
+          git commit -m "chore: SurveyRegistry 시드 후 목록 동기화"
+          git push origin HEAD:index

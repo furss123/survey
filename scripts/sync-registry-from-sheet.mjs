@@ -1,5 +1,7 @@
 /**
- * SurveyRegistry 시트 → data/sheet-registry.json 동기화 (GitHub Actions용)
+ * SurveyRegistry → data/sheet-registry.json 동기화 (GitHub Actions용)
+ * 1) Apps Script listRegistry (우선)
+ * 2) gviz SurveyRegistry 탭 (헤더·ID 검증)
  */
 import { writeFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -10,12 +12,24 @@ const repoRoot = join(__dirname, "..");
 const configPath = join(repoRoot, "data", "survey-config.json");
 const outPath = join(repoRoot, "data", "sheet-registry.json");
 
+const REGISTRY_ID_RE = /^[a-zA-Z0-9_-]{20,60}$/;
+
 function loadConfig() {
   try {
     return JSON.parse(readFileSync(configPath, "utf8"));
   } catch {
     return {};
   }
+}
+
+function isRegistrySheetHeaderRow(row) {
+  if (!row || !row.length) return false;
+  const h0 = String(row[0] || "").trim().toLowerCase();
+  return h0 === "id" || h0 === "surveyid" || h0 === "sheetid";
+}
+
+function isRegistrySpreadsheetId(id) {
+  return REGISTRY_ID_RE.test(String(id || "").trim());
 }
 
 function parseGviz(text) {
@@ -40,16 +54,18 @@ function gvizToRows(gviz) {
 }
 
 function rowsToRegistry(rows) {
-  if (!rows.length) return [];
+  if (!rows.length || !isRegistrySheetHeaderRow(rows[0])) return [];
   const out = [];
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const id = String(row[0] || "").trim();
-    if (!id) continue;
+    if (!id || !isRegistrySpreadsheetId(id)) continue;
+    const url = String(row[2] || "").trim();
+    if (!url.includes("spreadsheets/d/")) continue;
     const entry = {
       id,
       label: row[1] || "",
-      url: row[2] || "",
+      url,
       viewMode: String(row[3] || "class"),
       resultsLayout: String(row[4] || row[3] || "class"),
       categorySelectAll:
@@ -93,27 +109,94 @@ function rowsToRegistry(rows) {
   return out;
 }
 
+function normalizeWebAppRegistry(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((entry) => entry && isRegistrySpreadsheetId(entry.id))
+    .map((entry) => ({
+      id: entry.id,
+      label: entry.label || "",
+      url: entry.url || "",
+      viewMode: entry.viewMode || entry.resultsLayout || "class",
+      resultsLayout: entry.resultsLayout || entry.viewMode || "class",
+      categorySelectAll: entry.categorySelectAll !== false,
+      updatedAt: Number(entry.updatedAt) || 0,
+      registeredAt: Number(entry.registeredAt) || 0,
+      surveyStatus: entry.surveyStatus || "active",
+      sourceType: "sheet",
+      visibility: "public",
+      ...(entry.listOrder != null ? { listOrder: Number(entry.listOrder) } : {}),
+      ...(entry.orderUpdatedAt != null
+        ? { orderUpdatedAt: Number(entry.orderUpdatedAt) || 0 }
+        : {}),
+      ...(entry.labelUpdatedAt != null
+        ? { labelUpdatedAt: Number(entry.labelUpdatedAt) || 0 }
+        : {}),
+      ...(Array.isArray(entry.categories) ? { categories: entry.categories } : {}),
+      ...(Array.isArray(entry.classes) ? { classes: entry.classes } : {}),
+      ...(entry.tab ? { tab: entry.tab } : {}),
+    }))
+    .filter((entry) => entry.url.includes("spreadsheets/d/"));
+}
+
+async function fetchRegistryFromWebApp(webAppUrl) {
+  const listUrl =
+    webAppUrl +
+    (webAppUrl.includes("?") ? "&" : "?") +
+    "action=listRegistry";
+  const res = await fetch(listUrl, { redirect: "follow" });
+  if (!res.ok) return [];
+  const data = await res.json();
+  if (!data || data.ok === false || !Array.isArray(data.registry)) return [];
+  return normalizeWebAppRegistry(data.registry);
+}
+
+async function fetchRegistryFromGviz(spreadsheetId) {
+  const url =
+    "https://docs.google.com/spreadsheets/d/" +
+    encodeURIComponent(spreadsheetId) +
+    "/gviz/tq?tqx=out:json&sheet=" +
+    encodeURIComponent("SurveyRegistry");
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("gviz fetch failed: " + res.status);
+  const text = await res.text();
+  const rows = gvizToRows(parseGviz(text));
+  return rowsToRegistry(rows);
+}
+
 const config = loadConfig();
 const spreadsheetId =
   String(config.responseSpreadsheetId || "").trim() ||
   "1oH3Er_9UF_A6HDQEK_1KjFxp54M_JJrU";
-const url =
-  "https://docs.google.com/spreadsheets/d/" +
-  encodeURIComponent(spreadsheetId) +
-  "/gviz/tq?tqx=out:json&sheet=" +
-  encodeURIComponent("SurveyRegistry");
+const webAppUrl = String(config.webAppUrl || "").trim();
 
-const res = await fetch(url);
-if (!res.ok) {
-  console.error("Failed to fetch SurveyRegistry:", res.status);
-  process.exit(1);
+let registry = [];
+if (webAppUrl.includes("script.google.com") && /\/exec/.test(webAppUrl)) {
+  try {
+    registry = await fetchRegistryFromWebApp(webAppUrl);
+    if (registry.length) {
+      console.log("Loaded " + registry.length + " entries from web app.");
+    }
+  } catch (err) {
+    console.warn("Web app listRegistry failed:", err.message || err);
+  }
 }
-const text = await res.text();
-const rows = gvizToRows(parseGviz(text));
-const registry = rowsToRegistry(rows);
 
 if (!registry.length) {
-  console.log("SurveyRegistry is empty — sheet-registry.json not updated.");
+  try {
+    registry = await fetchRegistryFromGviz(spreadsheetId);
+    if (registry.length) {
+      console.log("Loaded " + registry.length + " entries from gviz.");
+    }
+  } catch (err) {
+    console.warn("gviz SurveyRegistry failed:", err.message || err);
+  }
+}
+
+if (!registry.length) {
+  console.log(
+    "SurveyRegistry가 비어 있거나 잘못된 시트입니다 — sheet-registry.json 유지."
+  );
   process.exit(0);
 }
 
